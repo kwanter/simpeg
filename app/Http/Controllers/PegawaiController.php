@@ -21,7 +21,7 @@ class PegawaiController extends Controller
 
     public function index()
     {
-        $pegawai = Pegawai::get();   
+        $pegawai = Pegawai::get();
         return view('pegawai.index', ['pegawai' => $pegawai]);
     }
 
@@ -38,11 +38,11 @@ class PegawaiController extends Controller
             'tempat_lahir' => 'required|string|max:255',
             'tanggal_lahir' => 'required|date',
             'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'agama' => 'required|string|max:255',
-            'status_perkawinan' => 'required|string|max:255',
+            'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
+            'status_perkawinan' => 'required|in:Kawin,Belum Kawin,Duda,Janda',
             'alamat' => 'required|string',
             'no_hp' => 'required|string|max:20',
-            'status_pegawai' => 'required|string|max:255',
+            'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
         ]);
 
         $request->merge($validatedData);
@@ -67,16 +67,16 @@ class PegawaiController extends Controller
     {
         $pegawai = Pegawai::where('uuid', $uuid)->firstOrFail();
         $validatedData = $request->validate([
-            'nip' => 'required|string|max:255',
+            'nip' => 'required|string|max:255|unique:pegawai,nip,'.$pegawai->id,
             'nama' => 'required|string|max:255',
             'tempat_lahir' => 'required|string|max:255',
             'tanggal_lahir' => 'required|date',
             'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'agama' => 'required|string|max:255',
-            'status_perkawinan' => 'required|string|max:255',
+            'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
+            'status_perkawinan' => 'required|in:Kawin,Belum Kawin,Duda,Janda',
             'alamat' => 'required|string',
             'no_hp' => 'required|string|max:20',
-            'status_pegawai' => 'required|string|max:255',
+            'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
         ]);
 
         $request->merge($validatedData);
@@ -104,13 +104,14 @@ class PegawaiController extends Controller
     public function detail($uuid)
     {
         $pegawai = Pegawai::where('uuid', $uuid)->first();
-        if ($pegawai) {
-            $user = User::where('nip', $pegawai->nip)->first();
-            if (!$user) {
-                return redirect()->route('pegawai.index')->with('error', 'Data Pegawai Belum Dihubungkan Dengan Akun');
-            }
-            return view('pegawai.detail', ['pegawai' => $pegawai, 'user' => $user->email]);
+        if (!$pegawai) {
+            return redirect()->route('pegawai.index')->with('error', 'Data Pegawai tidak ditemukan');
         }
+        $user = User::where('nip', $pegawai->nip)->first();
+        if (!$user) {
+            return redirect()->route('pegawai.index')->with('error', 'Data Pegawai Belum Dihubungkan Dengan Akun');
+        }
+        return view('pegawai.detail', ['pegawai' => $pegawai, 'user' => $user->email]);
     }
 
     private function handleFotoUpload(Request $request, Pegawai $pegawai)
@@ -146,7 +147,7 @@ class PegawaiController extends Controller
 
         $filename = time() . '_' . $originalFilename;
         $image->save(storage_path("app/public/pic/pegawai/{$filename}"));
-        
+
         $pegawai->foto = $filename;
         $pegawai->save();
     }
