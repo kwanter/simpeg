@@ -17,6 +17,7 @@ class PegawaiSeeder extends Seeder
             Pegawai::create([
                 'uuid' => Str::uuid(),
                 'nama' => $faker->name,
+                'email' => $faker->unique()->safeEmail,
                 'nip' => $faker->unique()->numerify('##################'),
                 'tempat_lahir' => $faker->city,
                 'tanggal_lahir' => $faker->date('Y-m-d', '-30 years'),

@@ -31,7 +31,7 @@ return [
     |
     */
 
-    'lifetime' => env('SESSION_LIFETIME', 120),
+    'lifetime' => 120,
 
     'expire_on_close' => false,
 
@@ -46,8 +46,8 @@ return [
     |
     */
 
-    'encrypt' => false,
-
+    //'encrypt' => false,
+    'encrypt' => true,
     /*
     |--------------------------------------------------------------------------
     | Session File Location
@@ -125,12 +125,13 @@ return [
     | new session cookie is created by the framework for every driver.
     |
     */
-
+    /*
     'cookie' => env(
         'SESSION_COOKIE',
         Str::slug(env('APP_NAME', 'laravel'), '_').'_session'
     ),
-
+    */
+    'cookie' => env('SESSION_COOKIE', 'laravel_session'),
     /*
     |--------------------------------------------------------------------------
     | Session Cookie Path
@@ -168,7 +169,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => false,
 
     /*
     |--------------------------------------------------------------------------

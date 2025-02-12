@@ -7,11 +7,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
 use App\Models\User;
+use Illuminate\Cache\RateLimiter;
+use Illuminate\Support\Facades\Log;
+
 class PegawaiController extends Controller
 {
     public function __construct()
     {
+        $this->middleware('throttle:60,1'); // 60 requests per minute
         $this->middleware('auth');
+        $this->middleware('verify.csrf.token', ['except' => ['index', 'show']]);
         $this->middleware('permission:view pegawai', ['only' => ['index']]);
         $this->middleware('permission:create pegawai', ['only' => ['create','store']]);
         $this->middleware('permission:update pegawai', ['only' => ['update','edit']]);
@@ -21,7 +26,7 @@ class PegawaiController extends Controller
 
     public function index()
     {
-        $pegawai = Pegawai::get();
+        $pegawai = Pegawai::paginate(15);
         return view('pegawai.index', ['pegawai' => $pegawai]);
     }
 
@@ -32,28 +37,34 @@ class PegawaiController extends Controller
 
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'nip' => 'required|string|max:255|unique:pegawai,nip',
-            'nama' => 'required|string|max:255',
-            'tempat_lahir' => 'required|string|max:255',
-            'tanggal_lahir' => 'required|date',
-            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-            'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
-            'status_perkawinan' => 'required|in:Kawin,Belum Kawin,Duda,Janda',
-            'alamat' => 'required|string',
-            'no_hp' => 'required|string|max:20',
-            'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
-        ]);
+        try {
+            $validatedData = $request->validate([
+                'nip' => 'required|string|max:255|unique:pegawai,nip',
+                'nama' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
+                'tempat_lahir' => 'required|string|max:255',
+                'tanggal_lahir' => 'required|date|before:today',
+                'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
+                'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
+                'status_perkawinan' => 'required|in:Kawin,Belum Kawin,Duda,Janda',
+                'alamat' => 'required|string|max:500',
+                'no_hp' => 'required|string|max:20|regex:/^[0-9]+$/',
+                'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
+            ]);
 
-        $request->merge($validatedData);
-        $pegawai = Pegawai::create($request->except('foto'));
-        if ($request->hasFile('foto')) {
-            $this->handleFotoUpload($request, $pegawai);
-        }
-        if ($pegawai) {
-            return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil ditambahkan');
-        } else {
-            return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal ditambahkan');
+            $request->merge($validatedData);
+            $pegawai = Pegawai::create($request->except('foto'));
+            if ($request->hasFile('foto')) {
+                $this->handleFotoUpload($request, $pegawai);
+            }
+            if ($pegawai) {
+                return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil ditambahkan');
+            } else {
+                return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal ditambahkan');
+            }
+            Log::info('Pegawai created successfully', ['id' => $pegawai->id]);
+        } catch (\Exception $e) {
+            Log::error('Error creating pegawai', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Failed to create pegawai');
         }
     }
 
@@ -93,12 +104,14 @@ class PegawaiController extends Controller
 
     public function destroy($uuid)
     {
-        $pegawai = Pegawai::where('uuid', $uuid)->delete();
-        if ($pegawai) {
-            return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil dihapus');
-        } else {
-            return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal dihapus');
+        $pegawai = Pegawai::where('uuid', $uuid)->first();
+        if (!$pegawai) {
+            return redirect()->route('pegawai.index')->with('error', 'Data Pegawai tidak ditemukan');
         }
+        if ($pegawai->delete()) {
+            return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil dihapus');
+        }
+        return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal dihapus');
     }
 
     public function detail($uuid)
@@ -117,37 +130,27 @@ class PegawaiController extends Controller
     private function handleFotoUpload(Request $request, Pegawai $pegawai)
     {
         $request->validate([
-            'foto' => 'required|image|mimes:jpg,jpeg,png,gif|max:20480',
+            'foto' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png',
+                'max:2048',
+                'dimensions:min_width=100,min_height=100,max_width=2000,max_height=2000',
+            ],
         ]);
-        // Check file size
-        if ($request->file('foto')->getSize() > 20480 * 1024) { // 20480 KB = 20 MB
-            return back()->withErrors(['foto' => 'Ukuran file tidak boleh lebih dari 20 MB.']);
-        }
 
-        // Check file type
-        $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-        if (!in_array($request->file('foto')->getMimeType(), $allowedMimeTypes)) {
-            return back()->withErrors(['foto' => 'File harus berupa gambar JPG, JPEG, PNG, atau GIF.']);
-        }
+        // Generate unique filename
+        $filename = Str::uuid() . '.' . $request->file('foto')->getClientOriginalExtension();
 
-        // Get the original filename
-        $originalFilename = $request->file('foto')->getClientOriginalName();
+        // Store using Storage facade
+        $path = $request->file('foto')->storeAs('public/pic/pegawai', $filename);
 
-        // Shrink file size
-        $image = Image::make($request->file('foto'));
-        $image->resize(800, null, function ($constraint) {
-            $constraint->aspectRatio();
-            $constraint->upsize();
-        });
-        $image->encode('jpg', 80);
-
+        // Delete old file if exists
         if ($pegawai->foto) {
-            Storage::delete("app/public/pic/pegawai/{$pegawai->foto}");
+            Storage::delete('public/pic/pegawai/' . $pegawai->foto);
         }
 
-        $filename = time() . '_' . $originalFilename;
-        $image->save(storage_path("app/public/pic/pegawai/{$filename}"));
-
+        // Update pegawai record
         $pegawai->foto = $filename;
         $pegawai->save();
     }

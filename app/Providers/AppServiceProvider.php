@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Query\Grammars\MySqlGrammar;
+use Illuminate\Events\Dispatcher;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (config('app.env') === 'production') {
+            DB::connection()->setQueryGrammar(new MySqlGrammar());
+            DB::connection()->setEventDispatcher(new Dispatcher());
+        }
     }
 }

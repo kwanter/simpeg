@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('pegawai', function (Blueprint $table) {
             $table->uuid('uuid')->unique()->primary();
-            $table->string('nip')->unique();
+            $table->string('nip')->unique()->index();
+            $table->string('email')->index();
             $table->string('nama')->nullable();
             $table->string('tempat_lahir')->nullable();
             $table->date('tanggal_lahir')->nullable();
@@ -26,6 +27,7 @@ return new class extends Migration
             $table->enum('status_pegawai', ['CPNS', 'Hakim', 'PNS', 'PPPK', 'PPNPN'])->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->index('created_at');
         });
     }
 
