@@ -15,7 +15,7 @@ class JabatanController extends Controller
         $this->middleware('can:update jabatan')->only('edit', 'update');
         $this->middleware('can:delete jabatan')->only('destroy');
     }
-    
+
     public function index()
     {
         $jabatans = Jabatan::all();
@@ -43,12 +43,13 @@ class JabatanController extends Controller
 
     public function show(Jabatan $jabatan)
     {
-        return view('jabatan.show', compact('jabatan'));
+        return view('jabatan.show', compact('jabatans'));
     }
 
     public function edit(Jabatan $jabatan)
     {
-        return view('jabatan.edit', compact('jabatans'));
+        $jabatans = Jabatan::all();
+        return view('jabatan.edit', compact('jabatan', 'jabatans'));
     }
 
     public function update(Request $request, Jabatan $jabatan)

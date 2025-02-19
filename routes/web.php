@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\JabatanController;
 use App\Http\Controllers\RiwayatJabatanController;
+use App\Http\Controllers\RiwayatPangkatController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,6 +45,26 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
         Route::put(uri: 'riwayat_jabatan/{riwayatJabatanId}', action: [App\Http\Controllers\RiwayatJabatanController::class, 'update']);
         Route::get(uri: 'riwayat_jabatan/{riwayatJabatanId}/delete', action: [App\Http\Controllers\RiwayatJabatanController::class, 'destroy']);
 
+        // Riwayat Pangkat Routes - Order matters!
+        Route::prefix('riwayat_pangkat')->name('riwayat_pangkat.')->group(function () {
+            Route::get('/create/{uuid}', [RiwayatPangkatController::class, 'create'])->name('create');
+            Route::post('/', [RiwayatPangkatController::class, 'store'])->name('store');
+            Route::get('/{uuid}', [RiwayatPangkatController::class, 'index'])->name('index');
+            Route::get('/{uuid}/edit', [RiwayatPangkatController::class, 'edit'])->name('edit');
+            Route::put('/{uuid}', [RiwayatPangkatController::class, 'update'])->name('update');
+            Route::delete('/{uuid}', [RiwayatPangkatController::class, 'destroy'])->name('destroy');
+        });
+
+        // Riwayat Jabatan Routes - Order matters!
+        Route::prefix('riwayat_jabatan')->name('riwayat_jabatan.')->group(function () {
+            Route::get('/create/{uuid}', [RiwayatJabatanController::class, 'create'])->name('create');
+            Route::post('/', [RiwayatJabatanController::class, 'store'])->name('store');
+            Route::get('/{uuid}', [RiwayatJabatanController::class, 'index'])->name('index');
+            Route::get('/{uuid}/edit', [RiwayatJabatanController::class, 'edit'])->name('edit');
+            Route::put('/{uuid}', [RiwayatJabatanController::class, 'update'])->name('update');
+            Route::delete('/{uuid}', [RiwayatJabatanController::class, 'destroy'])->name('destroy');
+        });
+
     })->middleware(['auth', 'verified'])->name('pegawai.');
 
 });
@@ -61,8 +82,5 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-
-Route::resource('jabatan', JabatanController::class);
-Route::resource('riwayat_jabatan', RiwayatJabatanController::class);
 
 require __DIR__.'/auth.php';

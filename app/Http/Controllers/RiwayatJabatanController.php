@@ -24,9 +24,12 @@ class RiwayatJabatanController extends Controller
 
     public function index($uuid)
     {
-        $riwayatJabatan = RiwayatJabatan::with(['pegawai', 'jabatan'])->where('pegawai_uuid', $uuid)->get();
-
         $pegawai = Pegawai::where('uuid', $uuid)->first();
+        $riwayatJabatan = RiwayatJabatan::with(['jabatan'])
+            ->where('pegawai_uuid', $uuid)
+            ->orderBy('tanggal_mulai', 'desc')
+            ->paginate(10);
+
         return view('riwayat_jabatan.index', compact('riwayatJabatan', 'pegawai'));
     }
 
@@ -36,8 +39,18 @@ class RiwayatJabatanController extends Controller
     public function create($uuid)
     {
         $pegawai = Pegawai::where('uuid', $uuid)->first();
-        $jabatan = Jabatan::all()->sortBy('parent_uuid');
-        return view('riwayat_jabatan.create', compact('pegawai', 'jabatan'));
+        $jabatans = Jabatan::all()->sortBy('parent_uuid');  // Changed $jabatan to $jabatans
+        return view('riwayat_jabatan.create', compact('pegawai', 'jabatans'));  // Changed 'jabatan' to 'jabatans'
+    }
+     /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit($riwayatJabatanId)
+    {
+        $riwayatJabatan = RiwayatJabatan::where('uuid', $riwayatJabatanId)->firstOrFail();
+        $pegawai = Pegawai::where('uuid', $riwayatJabatan->pegawai_uuid)->first();
+        $jabatans = Jabatan::all()->sortBy('parent_uuid');
+        return view('riwayat_jabatan.edit', compact('riwayatJabatan', 'pegawai', 'jabatans'));
     }
 
     /**
@@ -50,46 +63,41 @@ class RiwayatJabatanController extends Controller
             'jabatan_uuid' => 'required|exists:jabatan,uuid',
             'satuan_kerja' => 'required|string',
             'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'nullable|date|after:tanggal_mulai',
             'keterangan' => 'nullable|string',
         ]);
 
         $validated['uuid'] = Str::uuid();
 
-        RiwayatJabatan::create($validated);
+        try {
+            RiwayatJabatan::create($validated);
 
-        return redirect()->to('riwayat_jabatan/'.$validated['pegawai_uuid'])
-            ->with('success', 'Riwayat Jabatan berhasil ditambahkan.');
-
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(RiwayatJabatan $riwayatJabatan)
-    {
-        $pegawai = Pegawai::where('uuid', $riwayatJabatan->pegawai_uuid)->first();
-        $jabatan = Jabatan::all();
-        return view('riwayat_jabatan.edit', compact('riwayatJabatan', 'pegawai', 'jabatan'));
+            return redirect()->route('riwayat_jabatan.index', $validated['pegawai_uuid'])
+                ->with('success', 'Riwayat Jabatan berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Gagal menambahkan Riwayat Jabatan.')
+                ->withInput();
+        }
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, RiwayatJabatan $riwayatJabatan)
+    public function update(Request $request, $riwayatJabatanId)
     {
+        $riwayatJabatan = RiwayatJabatan::where('uuid', $riwayatJabatanId)->firstOrFail();
         $validated = $request->validate([
             'pegawai_uuid' => 'required|exists:pegawai,uuid',
             'jabatan_uuid' => 'required|exists:jabatan,uuid',
             'satuan_kerja' => 'required|string',
             'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'nullable|date|after:tanggal_mulai',
             'keterangan' => 'nullable|string',
         ]);
 
         $riwayatJabatan->update($validated);
 
-        return redirect()->route('riwayat_jabatan.index')->with('success', 'Riwayat Jabatan berhasil diperbarui.');
+        return redirect()->to('riwayat_jabatan/'.$riwayatJabatan->pegawai_uuid)
+            ->with('success', 'Riwayat Jabatan berhasil diperbarui.');
     }
 
     /**

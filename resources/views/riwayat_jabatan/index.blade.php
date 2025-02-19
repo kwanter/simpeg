@@ -41,38 +41,45 @@
 
                         <table class="table table-bordered table-striped">
                             <thead>
-                                <tr>
+                                <tr class="text-center">
                                     <th>No</th>
                                     <th>Nama Jabatan</th>
                                     <th>Satuan Kerja</th>
                                     <th>Tanggal Mulai</th>
-                                    <th>Tanggal Selesai</th>
                                     <th>Keterangan</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($riwayatJabatan as $key => $user)
-                                <tr>
-                                    <td class="text-center">{{ $key + 1 }}</td>
-                                    <td>{{ $user->jabatan->nama }}</td>
-                                    <td>{{ $user->satuan_kerja }}</td>
-                                    <td>{{ $user->tanggal_mulai }}</td>
-                                    <td>{{ $user->tanggal_selesai }}</td>
-                                    <td>{{ $user->keterangan }}</td>
-                                    <td>
-                                        @can('update riwayat jabatan')
-                                        <a href="{{ url('riwayat_jabatan/'.$user->uuid.'/edit') }}" class="btn btn-success">Ubah</a>
-                                        @endcan
+                                @forelse($riwayatJabatan as $index => $riwayat)
+                                    <tr class="text-center">
+                                        <td class="align-middle">{{ ($riwayatJabatan->currentPage() - 1) * $riwayatJabatan->perPage() + $index + 1 }}</td>
+                                        <td class="align-middle">{{ $riwayat->jabatan->nama }}</td>
+                                        <td class="align-middle">{{ $riwayat->satuan_kerja }}</td>
+                                        <td class="align-middle">{{ $riwayat->tanggal_mulai->format('d-m-Y') }}</td>
+                                        <td class="align-middle">{{ $riwayat->keterangan }}</td>
+                                        <td class="align-middle">
+                                            @can('update riwayat jabatan')
+                                            <a href="{{ url('riwayat_jabatan/'.$riwayat->uuid.'/edit') }}" class="btn btn-success">Ubah</a>
+                                            @endcan
 
-                                        @can('delete riwayat jabatan')
-                                        <a href="{{ url('riwayat_jabatan/'.$user->uuid.'/delete') }}" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deleteModal">Hapus</a>
-                                        @endcan
-                                    </td>
-                                </tr>
-                                @endforeach
+                                            @can('delete riwayat jabatan')
+                                            <a href="{{ url('riwayat_jabatan/'.$riwayat->uuid.'/delete') }}" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deleteModal">Hapus</a>
+                                            @endcan
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center">Tidak ada data riwayat jabatan</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
+
+                        <!-- Add pagination links -->
+                        <div class="d-flex justify-content-center mt-3">
+                            {{ $riwayatJabatan->links() }}
+                        </div>
 
                     </div>
                 </div>

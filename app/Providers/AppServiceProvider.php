@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Query\Grammars\MySqlGrammar;
 use Illuminate\Events\Dispatcher;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,5 +27,8 @@ class AppServiceProvider extends ServiceProvider
             DB::connection()->setQueryGrammar(new MySqlGrammar());
             DB::connection()->setEventDispatcher(new Dispatcher());
         }
+
+        // Add this line to use Bootstrap pagination styling
+        Paginator::useBootstrap();
     }
 }

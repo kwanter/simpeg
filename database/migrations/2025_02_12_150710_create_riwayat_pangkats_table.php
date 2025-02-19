@@ -6,24 +6,30 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
     {
-        Schema::create('riwayat_jabatan', function (Blueprint $table) {
+        Schema::create('riwayat_pangkat', function (Blueprint $table) {
             $table->uuid('uuid')->primary();
             $table->uuid('pegawai_uuid');
-            $table->uuid('jabatan_uuid');
-            $table->string('satuan_kerja');
-            $table->date('tanggal_mulai');
+            $table->string('pangkat_golongan');
+            $table->date('tmt');
+            $table->string('nomor_sk');
+            $table->date('tanggal_sk');
             $table->text('keterangan')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->foreign('pegawai_uuid')->references('uuid')->on('pegawai')->onDelete('cascade');
-            $table->foreign('jabatan_uuid')->references('uuid')->on('jabatan')->onDelete('cascade');
         });
     }
 
-    public function down()
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
     {
-        Schema::dropIfExists('riwayat_jabatan');
+        Schema::dropIfExists('riwayat_pangkats');
     }
 };

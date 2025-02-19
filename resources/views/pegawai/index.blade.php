@@ -45,47 +45,65 @@
                         </form>
                         <table class="table table-bordered table-striped">
                             <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIP</th>
-                                    <th>Nama</th>
-                                    <th>Agama</th>
-                                    <th>Jenis Kelamin</th>
-                                    <th>Status Perkawinan</th>
-                                    <th>Aksi</th>
+                                <tr class="text-center">
+                                    <th class="align-middle">No</th>
+                                    <th class="align-middle">NIP</th>
+                                    <th class="align-middle">Nama</th>
+                                    <th class="align-middle">Status Pegawai</th>
+                                    <th class="align-middle">Jenis Kelamin</th>
+                                    <th class="align-middle">Agama</th>
+                                    <th class="align-middle">No HP</th>
+                                    <th class="align-middle">Foto</th>
+                                    <th class="align-middle">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($pegawai as $key => $user)
-                                <tr>
-                                    <td class="text-center">{{ $key + 1 }}</td>
-                                    <td>{{ $user->nip }}</td>
-                                    <td>{{ $user->nama }}</td>
-                                    <td>{{ $user->agama }}</td>
-                                    <td>{{ $user->jenis_kelamin }}</td>
-                                    <td>{{ $user->status_perkawinan }}</td>
-                                    <td>
+                                @forelse($pegawai as $index => $item)
+                                <tr class="text-center">
+                                    <td class="align-middle">{{ ($pegawai->currentPage() - 1) * $pegawai->perPage() + $index + 1 }}</td>
+                                    <td class="align-middle">{{ $item->nip }}</td>
+                                    <td class="align-middle">{{ $item->nama }}</td>
+                                    <td class="align-middle">{{ $item->status_display }}</td>
+                                    <td class="align-middle">{{ $item->jenis_kelamin }}</td>
+                                    <td class="align-middle">{{ $item->agama }}</td>
+                                    <td class="align-middle">{{ $item->no_hp }}</td>
+                                    <td class="align-middle">
+                                        <!-- Existing foto code -->
+                                    </td>
+                                    <td class="align-middle">
                                         @can('view riwayat jabatan')
-                                        <a href="{{ url('riwayat_jabatan/'.$user->uuid) }}" class="btn btn-warning">Riwayat Jabatan</a>
+                                        <a href="{{ url('riwayat_jabatan/'.$item->uuid) }}" class="btn btn-warning">Riwayat Jabatan</a>
+                                        @endcan
+
+                                        @can('view riwayat pangkat')
+                                        <a href="{{ url('riwayat_pangkat/'.$item->uuid) }}" class="btn btn-info">Riwayat Pangkat</a>
                                         @endcan
 
                                         @can('view pegawai')
-                                        <a href="{{ url('pegawai/'.$user->uuid.'/detail') }}" class="btn btn-primary">Detail</a>
+                                        <a href="{{ url('pegawai/'.$item->uuid.'/detail') }}" class="btn btn-primary">Detail</a>
                                         @endcan
 
                                         @can('update pegawai')
-                                        <a href="{{ url('pegawai/'.$user->uuid.'/edit') }}" class="btn btn-success">Ubah</a>
+                                        <a href="{{ url('pegawai/'.$item->uuid.'/edit') }}" class="btn btn-success">Ubah</a>
                                         @endcan
 
                                         @can('delete pegawai')
-                                        <a href="{{ url('pegawai/'.$user->uuid.'/delete') }}" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deleteModal">Hapus</a>
+                                        <a href="{{ url('pegawai/'.$item->uuid.'/delete') }}" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deleteModal">Hapus</a>
                                         @endcan
                                     </td>
                                 </tr>
-                                @endforeach
+                                @empty
+                                <tr>
+                                    <td colspan="9" class="text-center">Tidak ada data pegawai</td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
 
+                        <!-- Add pagination links -->
+                        <div class="d-flex justify-content-center mt-3">
+                            {{ $pegawai->links() }}
+                        </div>
                     </div>
                 </div>
             </div>

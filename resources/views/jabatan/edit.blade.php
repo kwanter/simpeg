@@ -5,33 +5,34 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
                     <form action="{{ route('jabatan.update', $jabatan->uuid) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        
-                        <div class="mb-4">
-                            <label for="nama" class="block text-gray-700 text-sm font-bold mb-2">Nama Jabatan:</label>
-                            <input type="text" name="nama" id="nama" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('nama') border-red-500 @enderror" value="{{ old('nama', $jabatan->nama) }}" required>
+
+                        <div class="mb-3">
+                            <label for="nama" class="form-label">Nama Jabatan</label>
+                            <input type="text" name="nama" id="nama" class="form-control @error('nama') is-invalid @enderror" value="{{ old('nama', $jabatan->nama) }}" required>
                             @error('nama')
-                                <p class="text-red-500 text-xs italic">{{ $message }}</p>
+                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="deskripsi" class="block text-gray-700 text-sm font-bold mb-2">Deskripsi:</label>
-                            <textarea name="deskripsi" id="deskripsi" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('deskripsi') border-red-500 @enderror">{{ old('deskripsi', $jabatan->deskripsi) }}</textarea>
+                        <div class="mb-3">
+                            <label for="deskripsi" class="form-label">Deskripsi</label>
+                            <textarea name="deskripsi" id="deskripsi" rows="3" class="form-control @error('deskripsi') is-invalid @enderror">{{ old('deskripsi', $jabatan->deskripsi) }}</textarea>
                             @error('deskripsi')
-                                <p class="text-red-500 text-xs italic">{{ $message }}</p>
+                                <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="parent_uuid" class="block text-gray-700 text-sm font-bold mb-2">Parent Jabatan:</label>
-                            <select name="parent_uuid" id="parent_uuid" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <div class="mb-3">
+                            <label for="parent_uuid" class="form-label">Parent Jabatan</label>
+                            <select name="parent_uuid" id="parent_uuid" class="form-select @error('parent_uuid') is-invalid @enderror">
                                 <option value="">Pilih Parent Jabatan (Opsional)</option>
                                 @foreach($jabatans as $j)
                                     @if($j->uuid !== $jabatan->uuid)
@@ -46,15 +47,16 @@
                             @enderror
                         </div>
 
-                        <div class="flex items-center justify-between">
-                            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                                Update Jabatan
-                            </button>
-                            <a href="{{ route('jabatan.index') }}" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
+                        <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                            <a href="{{ route('jabatan.index') }}" class="btn btn-secondary">
                                 Batal
                             </a>
+                            <button type="submit" class="btn btn-primary">
+                                Update Jabatan
+                            </button>
                         </div>
                     </form>
+                                    </div>
                 </div>
             </div>
         </div>

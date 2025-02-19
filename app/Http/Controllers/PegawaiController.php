@@ -9,6 +9,7 @@ use Intervention\Image\Facades\Image;
 use App\Models\User;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;  // Add this line
 
 class PegawaiController extends Controller
 {
@@ -16,7 +17,7 @@ class PegawaiController extends Controller
     {
         $this->middleware('throttle:60,1'); // 60 requests per minute
         $this->middleware('auth');
-        $this->middleware('verify.csrf.token', ['except' => ['index', 'show']]);
+        // Remove the csrf middleware since it's already included in 'web' middleware group
         $this->middleware('permission:view pegawai', ['only' => ['index']]);
         $this->middleware('permission:create pegawai', ['only' => ['create','store']]);
         $this->middleware('permission:update pegawai', ['only' => ['update','edit']]);
@@ -26,7 +27,37 @@ class PegawaiController extends Controller
 
     public function index()
     {
-        $pegawai = Pegawai::paginate(15);
+        $pegawai = Pegawai::select([
+            'uuid',
+            'nip',
+            'nama',
+            'tempat_lahir',
+            'tanggal_lahir',
+            'jenis_kelamin',
+            'agama',
+            'status_perkawinan',
+            'alamat',
+            'no_hp',
+            'status_pegawai',
+            'foto'
+        ])
+        ->orderBy('nama', 'asc')  // Optional: sort by name
+        ->paginate(15);
+
+        // Map status pegawai to more readable format if needed
+        $pegawai->through(function ($item) {
+            $statusMap = [
+                'PNS' => 'PNS',
+                'CPNS' => 'CPNS',
+                'PPPK' => 'PPPK',
+                'PPNPN' => 'PPNPN',
+                'Hakim' => 'Hakim'
+            ];
+
+            $item->status_display = $statusMap[$item->status_pegawai] ?? $item->status_pegawai;
+            return $item;
+        });
+
         return view('pegawai.index', ['pegawai' => $pegawai]);
     }
 
@@ -78,7 +109,7 @@ class PegawaiController extends Controller
     {
         $pegawai = Pegawai::where('uuid', $uuid)->firstOrFail();
         $validatedData = $request->validate([
-            'nip' => 'required|string|max:255|unique:pegawai,nip,'.$pegawai->id,
+            'nip' => 'required|string|max:255|unique:pegawai,nip,'.$pegawai->uuid.',uuid',  // Changed from id to uuid
             'nama' => 'required|string|max:255',
             'tempat_lahir' => 'required|string|max:255',
             'tanggal_lahir' => 'required|date',

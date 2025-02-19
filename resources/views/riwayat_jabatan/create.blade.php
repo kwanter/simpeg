@@ -10,7 +10,7 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <form action="{{ route('riwayat_jabatan.store') }}" method="POST">
                         @csrf
-                        <a href="{{ url('riwayat_jabatan/'.$pegawai->uuid) }}" class="btn btn-primary mb-3">Kembali</a>
+                        <a href="{{ url('riwayat_jabatan/'.$pegawai->uuid) }}" class="btn btn-danger mb-3">Kembali</a>
                         <div class="mb-4">
                             <label for="pegawai_uuid" class="block text-gray-700 text-sm font-bold mb-2">Pegawai:</label>
                             <input type="text" name="pegawai_uuid" id="pegawai_uuid" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('pegawai_uuid') border-red-500 @enderror" value="{{ $pegawai->uuid }}" hidden>
@@ -25,7 +25,7 @@
                             <label for="jabatan_uuid" class="block text-gray-700 text-sm font-bold mb-2">Jabatan:</label>
                             <select name="jabatan_uuid" id="jabatan_uuid" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('jabatan_uuid') border-red-500 @enderror" required>
                                 <option value="">Pilih Jabatan</option>
-                                @foreach($jabatan as $j)
+                                @foreach($jabatans as $j)
                                     <option value="{{ $j->uuid }}" {{ old('jabatan_uuid') == $j->uuid ? 'selected' : '' }}>
                                         {{ $j->nama }}
                                     </option>
@@ -46,16 +46,8 @@
 
                         <div class="mb-4">
                             <label for="tanggal_mulai" class="block text-gray-700 text-sm font-bold mb-2">Tanggal Mulai:</label>
-                            <input type="date" name="tanggal_mulai" id="tanggal_mulai" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('tanggal_mulai') border-red-500 @enderror" value="{{ old('tanggal_mulai') }}" required>
+                            <input type="date" name="tanggal_mulai" id="tanggal_mulai" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('tanggal_mulai') border-red-500 @enderror" value="{{ old('tanggal_mulai') }}">
                             @error('tanggal_mulai')
-                                <p class="text-red-500 text-xs italic">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="tanggal_selesai" class="block text-gray-700 text-sm font-bold mb-2">Tanggal Selesai:</label>
-                            <input type="date" name="tanggal_selesai" id="tanggal_selesai" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline @error('tanggal_selesai') border-red-500 @enderror" value="{{ old('tanggal_selesai') }}">
-                            @error('tanggal_selesai')
                                 <p class="text-red-500 text-xs italic">{{ $message }}</p>
                             @enderror
                         </div>
