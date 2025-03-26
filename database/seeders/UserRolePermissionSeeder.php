@@ -4,8 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-//use Spatie\Permission\Models\Role;
-//use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Permission;
 use App\Models\Role;
@@ -44,7 +42,7 @@ class UserRolePermissionSeeder extends Seeder
             'view pangkat', 'create pangkat', 'update pangkat', 'delete pangkat',
             'view jabatan', 'create jabatan', 'update jabatan', 'delete jabatan',
             'view riwayat_jabatan', 'create riwayat_jabatan', 'update riwayat_jabatan', 'delete riwayat_jabatan',
-            'view cuti', 'create cuti', 'update cuti', 'verifikasi cuti', 'delete cuti',
+            'view cuti', 'create cuti', 'update cuti', 'verifikasi cuti', 'delete cuti', 'pimpinan cuti',
             'view izin', 'create izin', 'update izin', 'verifikasi izin', 'delete izin',
             'verifikasi data',
         ];
@@ -95,7 +93,7 @@ class UserRolePermissionSeeder extends Seeder
             try {
                 // Add this debug line
                 Log::info("Super-admin role: " . json_encode($superAdminRole->toArray()));
-                
+
                 // Ensure the role has a UUID before assigning permissions
                 if ($superAdminRole->uuid) {
                     // Before assigning permissions
@@ -104,7 +102,7 @@ class UserRolePermissionSeeder extends Seeder
 
                     // Inside the try block, just before $superAdminRole->givePermissionTo($allPermissionNames);
                     Log::info("Attempting to assign permissions to super-admin role");
-                    
+
                     $superAdminRole->givePermissionTo($allPermissionNames);
                 } else {
                     Log::error("Super-admin role has no UUID");
@@ -113,16 +111,16 @@ class UserRolePermissionSeeder extends Seeder
                 Log::error("Failed to give permissions to super-admin: " . $e->getMessage());
                 Log::error("Super-admin role UUID: " . $superAdminRole->uuid);
                 Log::error("Permissions: " . implode(', ', $allPermissionNames));
-                
+
                 // Add these debug lines
                 Log::error("All roles: " . json_encode(Role::all()->toArray()));
                 Log::error("All permissions: " . json_encode(Permission::all()->toArray()));
-                
+
                 throw $e;
             }
         } else {
             Log::error("Super-admin role not found");
-            
+
             // Add this debug line
             Log::error("All roles: " . json_encode(Role::all()->toArray()));
         }
@@ -142,7 +140,7 @@ class UserRolePermissionSeeder extends Seeder
         $adminRole = Role::where('name', 'admin')->first();
         $adminRole->givePermissionTo(['create user', 'view user', 'update user']);
         $adminRole->givePermissionTo(['create pegawai', 'view pegawai', 'update pegawai']);
-        $adminRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti']);
+        $adminRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti','delete cuti', 'pimpinan cuti']);
         $adminRole->givePermissionTo(['create izin', 'view izin']);
         $adminRole->givePermissionTo(['create pangkat', 'view pangkat', 'update pangkat']);
         $adminRole->givePermissionTo(['create jabatan', 'view jabatan', 'update jabatan']);
@@ -150,7 +148,7 @@ class UserRolePermissionSeeder extends Seeder
         $adminRole->givePermissionTo(['verifikasi data']);
 
         $pimpinanRole = Role::where('name', 'pimpinan')->first();
-        $pimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti','delete cuti']);
+        $pimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti','delete cuti', 'pimpinan cuti']);
         $pimpinanRole->givePermissionTo(['create izin', 'view izin', 'update izin','delete izin']);
         $pimpinanRole->givePermissionTo(['view pegawai','update pegawai']);
         $pimpinanRole->givePermissionTo(['verifikasi cuti', 'verifikasi izin']);
