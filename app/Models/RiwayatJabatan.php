@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\UserTrackingTrait;
 
 class RiwayatJabatan extends Model
 {
-    use HasFactory, SoftDeletes, HasUuids;
+    use HasFactory, SoftDeletes, HasUuids, UserTrackingTrait;
 
     protected $table = 'riwayat_jabatan';
     protected $primaryKey = 'uuid';

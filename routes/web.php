@@ -64,9 +64,24 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
             Route::put('/{uuid}', [RiwayatJabatanController::class, 'update'])->name('update');
             Route::delete('/{uuid}', [RiwayatJabatanController::class, 'destroy'])->name('destroy');
         });
-
     })->middleware(['auth', 'verified'])->name('pegawai.');
 
+   // Cuti routes - Allow super-admin access
+    Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator|user']], routes: function(): void {
+        Route::prefix('cuti')->name('cuti.')->group(function () {
+            Route::get('/', [App\Http\Controllers\CutiController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\CutiController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\CutiController::class, 'store'])->name('store');
+            Route::get('/{uuid}', [App\Http\Controllers\CutiController::class, 'show'])->name('show');
+            Route::get('/{uuid}/edit', [App\Http\Controllers\CutiController::class, 'edit'])->name('edit');
+            Route::put('/{uuid}', [App\Http\Controllers\CutiController::class, 'update'])->name('update');
+            Route::delete('/{uuid}', [App\Http\Controllers\CutiController::class, 'destroy'])->name('destroy');
+            Route::get('/{uuid}/verifikasi', [App\Http\Controllers\CutiController::class, 'verifikasi'])->name('verifikasi');
+            Route::post('/{uuid}/proses-verifikasi', [App\Http\Controllers\CutiController::class, 'prosesVerifikasi'])->name('proses-verifikasi');
+            Route::get('/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiPimpinan'])->name('verifikasi-pimpinan');
+            Route::post('/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiPimpinan'])->name('proses-verifikasi-pimpinan');
+        });
+    });
 });
 
 Route::get('/', function () {
@@ -81,23 +96,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-// Cuti routes - Move inside middleware group with proper roles
-Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator|user']], routes: function(): void {
-    Route::prefix('cuti')->name('cuti.')->middleware(['auth'])->group(function () {
-        Route::get('/', [App\Http\Controllers\CutiController::class, 'index'])->name('index');
-        Route::get('/create', [App\Http\Controllers\CutiController::class, 'create'])->name('create');
-        Route::post('/', [App\Http\Controllers\CutiController::class, 'store'])->name('store');
-        Route::get('/{uuid}', [App\Http\Controllers\CutiController::class, 'show'])->name('show');
-        Route::get('/{uuid}/edit', [App\Http\Controllers\CutiController::class, 'edit'])->name('edit');
-        Route::put('/{uuid}', [App\Http\Controllers\CutiController::class, 'update'])->name('update');
-        Route::delete('/{uuid}', [App\Http\Controllers\CutiController::class, 'destroy'])->name('destroy');
-        Route::get('/{uuid}/verifikasi', [App\Http\Controllers\CutiController::class, 'verifikasi'])->name('verifikasi');
-        Route::post('/{uuid}/proses-verifikasi', [App\Http\Controllers\CutiController::class, 'prosesVerifikasi'])->name('proses-verifikasi');
-        Route::get('/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiPimpinan'])->name('verifikasi-pimpinan');
-        Route::post('/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiPimpinan'])->name('proses-verifikasi-pimpinan');
-    });
 });
 
 // Remove the standalone cuti routes since they're now in the middleware group

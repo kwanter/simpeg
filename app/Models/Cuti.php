@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTrackingTrait;
 
 class Cuti extends Model
 {
-    use HasFactory;
+    use HasFactory, UserTrackingTrait;
 
     protected $table = 'cuti';
 

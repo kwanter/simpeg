@@ -8,12 +8,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Spatie\Permission\Traits\HasRoles;
 
 class CutiController extends Controller
 {
+    use HasRoles;
+
     public function __construct()
     {
         $this->middleware('auth');
+
+        // Allow super-admin for all actions
+        $this->middleware('role:super-admin', ['only' => ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy', 'verifikasi', 'prosesVerifikasi', 'verifikasiPimpinan', 'prosesVerifikasiPimpinan']]);
+
+        // Regular permissions for other roles
         $this->middleware('permission:view cuti', ['only' => ['index']]);
         $this->middleware('permission:create cuti', ['only' => ['create','store']]);
         $this->middleware('permission:update cuti', ['only' => ['update','edit']]);

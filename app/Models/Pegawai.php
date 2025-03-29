@@ -6,17 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\UserTrackingTrait;
 
 class Pegawai extends Model
 {
-    use HasFactory, SoftDeletes, HasUuids;
+    use HasFactory, SoftDeletes, HasUuids, UserTrackingTrait;
     /**
      * The primary key for the model.
      *
      * @var string
      */
     protected $primaryKey = 'uuid';
-    
+
     protected $keyType = 'string';
 
     protected $casts = [
