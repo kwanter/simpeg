@@ -71,4 +71,17 @@ class JabatanController extends Controller
 
         return redirect()->route('jabatan.index')->with('success', 'Jabatan deleted successfully.');
     }
+
+    /**
+     * Search for jabatan
+     */
+    public function search(Request $request)
+    {
+        $search = $request->input('search');
+
+        $jabatans = Jabatan::where('nama', 'LIKE', "%{$search}%")
+                         ->paginate(10);
+
+        return view('jabatan.index', compact('jabatans'));
+    }
 }

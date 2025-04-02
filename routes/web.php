@@ -34,9 +34,32 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
         Route::post(uri: 'users/search', action: [App\Http\Controllers\UserController::class, 'search']);
     })->middleware(['auth', 'verified'])->name('users.');
 
+    // Inside the middleware group for super-admin|admin|pimpinan|verifikator
     Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator']], routes: function(): void {
+        Route::get('pegawai/search', [App\Http\Controllers\PegawaiController::class, 'search'])->name('pegawai.search');
+        // Add this line for jabatan search
+        Route::post('jabatan/search', [App\Http\Controllers\JabatanController::class, 'search'])->name('jabatan.search');
+
         Route::resource(name: 'pegawai', controller: App\Http\Controllers\PegawaiController::class);
         Route::get(uri: 'pegawai/{pegawaiId}/detail', action: [App\Http\Controllers\PegawaiController::class, 'detail']);
+        Route::get(uri: 'pegawai/{pegawaiId}/edit', action: [App\Http\Controllers\PegawaiController::class, 'edit']);
+        Route::put(uri: 'pegawai/{pegawaiId}', action: [App\Http\Controllers\PegawaiController::class, 'update']);
+        Route::get(uri: 'pegawai/{pegawaiId}/delete', action: [App\Http\Controllers\PegawaiController::class, 'destroy']);
+        Route::get(uri: 'pegawai/{pegawaiId}/give-roles', action: [App\Http\Controllers\PegawaiController::class, 'addRoleToUser']);
+        Route::put(uri: 'pegawai/{pegawaiId}/give-roles', action: [App\Http\Controllers\PegawaiController::class, 'giveRoleToUser']);
+        Route::get(uri: 'pegawai/{pegawaiId}/give-permissions', action: [App\Http\Controllers\PegawaiController::class, 'addPermissionToUser']);
+        Route::put(uri: 'pegawai/{pegawaiId}/give-permissions', action: [App\Http\Controllers\PegawaiController::class, 'givePermissionToUser']);
+        Route::get(uri: 'pegawai/{pegawaiId}/pangkat', action: [App\Http\Controllers\PegawaiController::class, 'pangkat']);
+        Route::get(uri: 'pegawai/{pegawaiId}/jabatan', action: [App\Http\Controllers\PegawaiController::class, 'jabatan']);
+        Route::get(uri: 'pegawai/{pegawaiId}/cuti', action: [App\Http\Controllers\PegawaiController::class, 'cuti']);
+        Route::get(uri: 'pegawai/{pegawaiId}/cuti/create', action: [App\Http\Controllers\PegawaiController::class, 'createCuti']);
+        Route::post(uri: 'pegawai/{pegawaiId}/cuti', action: [App\Http\Controllers\PegawaiController::class,'storeCuti']);
+        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_pangkat', action: [App\Http\Controllers\PegawaiController::class, 'riwayatPangkat']);
+        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_jabatan', action: [App\Http\Controllers\PegawaiController::class, 'riwayatJabatan']);
+        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_cuti', action: [App\Http\Controllers\PegawaiController::class, 'riwayatCuti']);
+        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}/edit', action: [App\Http\Controllers\PegawaiController::class, 'editRiwayatCuti']);
+        Route::put(uri: 'pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}', action: [App\Http\Controllers\PegawaiController::class, 'updateRiwayatCuti']);
+        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}/delete', action: [App\Http\Controllers\PegawaiController::class, 'destroyRiwayatCuti']);
         Route::resource(name: 'jabatan', controller: App\Http\Controllers\JabatanController::class);
         Route::get(uri: 'riwayat_jabatan/{pegawai_uuid}', action: [App\Http\Controllers\RiwayatJabatanController::class, 'index']);
         Route::get(uri: 'riwayat_jabatan/{pegawai_uuid}/create', action: [App\Http\Controllers\RiwayatJabatanController::class, 'create']);
@@ -68,10 +91,17 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
 
    // Cuti routes - Allow super-admin access
     Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator|user']], routes: function(): void {
+        // Inside your cuti routes group, make sure these routes are defined correctly
         Route::prefix('cuti')->name('cuti.')->group(function () {
-            Route::get('/', [App\Http\Controllers\CutiController::class, 'index'])->name('index');
+            // First define routes with specific paths
+            Route::get('/update-balance', [App\Http\Controllers\CutiController::class, 'updateBalance'])->name('update-balance');
+            Route::get('/update-all-balances', [App\Http\Controllers\CutiController::class, 'updateAllBalances'])->name('update-all-balances');
+            Route::get('/balance', [App\Http\Controllers\CutiController::class, 'showBalance'])->name('balance');
             Route::get('/create', [App\Http\Controllers\CutiController::class, 'create'])->name('create');
+            Route::get('/', [App\Http\Controllers\CutiController::class, 'index'])->name('index');
             Route::post('/', [App\Http\Controllers\CutiController::class, 'store'])->name('store');
+
+            // Then define routes with parameters
             Route::get('/{uuid}', [App\Http\Controllers\CutiController::class, 'show'])->name('show');
             Route::get('/{uuid}/edit', [App\Http\Controllers\CutiController::class, 'edit'])->name('edit');
             Route::put('/{uuid}', [App\Http\Controllers\CutiController::class, 'update'])->name('update');
@@ -80,6 +110,9 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
             Route::post('/{uuid}/proses-verifikasi', [App\Http\Controllers\CutiController::class, 'prosesVerifikasi'])->name('proses-verifikasi');
             Route::get('/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiPimpinan'])->name('verifikasi-pimpinan');
             Route::post('/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiPimpinan'])->name('proses-verifikasi-pimpinan');
+            // Add these routes for atasan pimpinan verification
+            Route::get('/{uuid}/verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiAtasanPimpinan'])->name('verifikasi-atasan-pimpinan');
+            Route::post('/{uuid}/proses-verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiAtasanPimpinan'])->name('proses-verifikasi-atasan-pimpinan');
         });
     });
 });

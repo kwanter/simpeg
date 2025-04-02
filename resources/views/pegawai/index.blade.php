@@ -36,10 +36,10 @@
                         </h4>
                     </div>
                     <div class="card-body">
-                        <form action="{{ url('pegawai/search') }}" method="POST">
+                        <form action="{{ route('pegawai.search') }}" method="GET">
                             @csrf
                             <div class="input-group mb-3">
-                                <input type="text" name="search" class="form-control" placeholder="Cari Nama Pegawai">
+                                <input type="text" name="search" class="form-control" placeholder="Cari Nama atau NIP Pegawai">
                                 <button type="submit" class="btn btn-primary">Cari</button>
                             </div>
                         </form>

@@ -12,6 +12,14 @@ class Cuti extends Model
 
     protected $table = 'cuti';
 
+    // Add this relationship method to the Cuti model
+    public function atasanPimpinan()
+    {
+        return $this->belongsTo(Pegawai::class, 'atasan_pimpinan_uuid', 'uuid');
+    }
+
+    // Update the fillable array to include the new fields
+    // Add these fields to your $fillable array
     protected $fillable = [
         'uuid',
         'pegawai_uuid',
@@ -22,16 +30,20 @@ class Cuti extends Model
         'alasan',
         'alamat_selama_cuti',
         'no_hp_selama_cuti',
+        'dokumen',
         'status',
-        'catatan_verifikator',
         'verifikator_uuid',
-        'tanggal_verifikasi',
         'status_verifikator',
-        'catatan_pimpinan',
+        'catatan_verifikator',
+        'tanggal_verifikasi',
         'pimpinan_uuid',
-        'tanggal_verifikasi_pimpinan',
         'status_pimpinan',
-        'dokumen'
+        'catatan_pimpinan',
+        'tanggal_verifikasi_pimpinan',
+        'atasan_pimpinan_uuid',
+        'status_atasan_pimpinan',
+        'catatan_atasan_pimpinan',
+        'tanggal_verifikasi_atasan_pimpinan',
     ];
 
     public function pegawai()

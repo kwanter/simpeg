@@ -185,4 +185,18 @@ class PegawaiController extends Controller
         $pegawai->foto = $filename;
         $pegawai->save();
     }
+
+    /**
+     * Search for pegawai by name
+     */
+    public function search(Request $request)
+    {
+        $search = $request->input('search');
+
+        $pegawai = Pegawai::where('nama', 'LIKE', "%{$search}%")
+                        ->orWhere('nip', 'LIKE', "%{$search}%")
+                        ->paginate(10);
+
+        return view('pegawai.index', compact('pegawai'));
+    }
 }

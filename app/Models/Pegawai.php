@@ -47,4 +47,9 @@ class Pegawai extends Model
         'status_perkawinan',
         'status_pegawai',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'nip', 'nip');
+    }
 }
