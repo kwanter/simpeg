@@ -20,13 +20,20 @@
                             Users
                         </x-nav-link>
                     @endif
-                    @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator'))
+                    @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('atasan-pimpinan') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator'))
                         <x-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.index')">
                             Pegawai
                         </x-nav-link>
                         <x-nav-link :href="route('cuti.index')" :active="request()->routeIs('cuti.index')">
                             Cuti
                         </x-nav-link>
+                        <!-- Add this menu item in the appropriate section of your navigation -->
+                        @can('view hari libur')
+                        <x-nav-link :href="route('hari-libur.index')" :active="request()->routeIs('hari-libur.*')">
+                            <i class="fas fa-calendar-alt mr-3"></i>
+                            {{ __('Hari Libur') }}
+                        </x-nav-link>
+                        @endcan
                     @endif
                 </div>
             </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cuti;
 use App\Models\Pegawai;
 use App\Models\CutiBalance;
+use App\Models\HariLibur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -197,72 +198,6 @@ class CutiController extends Controller
         return view('cuti.show', compact('cuti', 'balance'));
     }
 
-    // First verifikasi method (around line 166)
-    public function verifikasi($uuid)
-    {
-        $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
-
-        // Only allow verification if status is still Pending
-        if ($cuti->status !== 'Pending') {
-            return redirect()->route('cuti.index')->with('error', 'Permohonan cuti ini sudah diverifikasi');
-        }
-
-        // Get leave balance for annual leave
-        $balance = null;
-        if ($cuti->jenis_cuti == 'Cuti Tahunan') {
-            $currentYear = date('Y', strtotime($cuti->tanggal_mulai));
-            $balance = CutiBalance::where('pegawai_uuid', $cuti->pegawai_uuid)
-                ->where('year', $currentYear)
-                ->first();
-
-            if (!$balance) {
-                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
-            }
-        }
-
-        return view('cuti.verifikasi', compact('cuti', 'balance'));
-    }
-
-    // First verifikasiPimpinan method (around line 190)
-    public function verifikasiPimpinan($uuid)
-    {
-        // Check if user has pimpinan role
-        if (!auth()->user()->hasRole('pimpinan')) {
-            return redirect()->route('cuti.index')->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi pimpinan');
-        }
-
-        $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
-
-        // Get the current user's pegawai record
-        $user = Auth::user();
-        $currentPimpinan = Pegawai::where('nip', $user->nip)->first();
-
-        // Check if the current pimpinan is the assigned pimpinan for this request
-        if ($currentPimpinan->uuid !== $cuti->pimpinan_uuid) {
-            return redirect()->route('cuti.index')->with('error', 'Anda bukan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
-        }
-
-        // Only allow pimpinan verification if already approved by verifikator
-        if ($cuti->status !== 'Disetujui Verifikator') {
-            return redirect()->route('cuti.index')->with('error', 'Permohonan cuti harus disetujui oleh verifikator terlebih dahulu');
-        }
-
-        // Get leave balance for annual leave
-        $balance = null;
-        if ($cuti->jenis_cuti == 'Cuti Tahunan') {
-            $currentYear = date('Y', strtotime($cuti->tanggal_mulai));
-            $balance = CutiBalance::where('pegawai_uuid', $cuti->pegawai_uuid)
-                ->where('year', $currentYear)
-                ->first();
-
-            if (!$balance) {
-                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
-            }
-        }
-
-        return view('cuti.verifikasi-pimpinan', compact('cuti', 'balance'));
-    }
-
     public function edit($uuid)
     {
         $cuti = Cuti::with('pegawai')->where('uuid', $uuid)->firstOrFail();
@@ -378,6 +313,113 @@ class CutiController extends Controller
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil dihapus');
     }
 
+    //verifikasi method (around line 166)
+    public function verifikasi($uuid)
+    {
+        $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
+
+        // Only allow verification if status is still Pending
+        if ($cuti->status !== 'Pending') {
+            return redirect()->route('cuti.index')->with('error', 'Permohonan cuti ini sudah diverifikasi');
+        }
+
+        // Get leave balance for annual leave
+        $balance = null;
+        if ($cuti->jenis_cuti == 'Cuti Tahunan') {
+            $currentYear = date('Y', strtotime($cuti->tanggal_mulai));
+            $balance = CutiBalance::where('pegawai_uuid', $cuti->pegawai_uuid)
+                ->where('year', $currentYear)
+                ->first();
+
+            if (!$balance) {
+                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
+            }
+        }
+
+        return view('cuti.verifikasi', compact('cuti', 'balance'));
+    }
+
+    //verifikasiPimpinan method (around line 190)
+    public function verifikasiPimpinan($uuid)
+    {
+        // Check if user has pimpinan role
+        if (!auth()->user()->hasRole('pimpinan')) {
+            return redirect()->route('cuti.index')->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi pimpinan');
+        }
+
+        $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
+
+        // Get the current user's pegawai record
+        $user = Auth::user();
+        $currentPimpinan = Pegawai::where('nip', $user->nip)->first();
+
+        // Check if the current pimpinan is the assigned pimpinan for this request
+        if ($currentPimpinan->uuid !== $cuti->pimpinan_uuid) {
+            return redirect()->route('cuti.index')->with('error', 'Anda bukan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
+        }
+
+        // Only allow pimpinan verification if already approved by verifikator
+        if ($cuti->status !== 'Disetujui Verifikator') {
+            return redirect()->route('cuti.index')->with('error', 'Permohonan cuti harus disetujui oleh verifikator terlebih dahulu');
+        }
+
+        // Get leave balance for annual leave
+        $balance = null;
+        if ($cuti->jenis_cuti == 'Cuti Tahunan') {
+            $currentYear = date('Y', strtotime($cuti->tanggal_mulai));
+            $balance = CutiBalance::where('pegawai_uuid', $cuti->pegawai_uuid)
+                ->where('year', $currentYear)
+                ->first();
+
+            if (!$balance) {
+                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
+            }
+        }
+
+        return view('cuti.verifikasi-pimpinan', compact('cuti', 'balance'));
+    }
+
+    //Verifikasi atasan pimpinan method (around line 230)
+    public function verifikasiAtasanPimpinan($uuid)
+    {
+        // Check if user has atasan-pimpinan role
+        if (!auth()->user()->hasRole('atasan-pimpinan')) {
+            return redirect()->route('cuti.index')->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi atasan pimpinan');
+        }
+
+        $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
+
+        // Get the current user's pegawai record
+        $user = Auth::user();
+        $currentAtasanPimpinan = Pegawai::where('nip', $user->nip)->first();
+
+        // Check if the current atasan pimpinan is the assigned atasan pimpinan for this request
+        if ($currentAtasanPimpinan->uuid !== $cuti->atasan_pimpinan_uuid) {
+            return redirect()->route('cuti.index')->with('error', 'Anda bukan atasan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
+        }
+
+        // Only allow atasan pimpinan verification if already approved by pimpinan
+        if ($cuti->status !== 'Disetujui Pimpinan') {
+            return redirect()->route('cuti.index')->with('error', 'Permohonan cuti harus disetujui oleh pimpinan terlebih dahulu');
+        }
+
+        // Get leave balance for annual leave
+        $balance = null;
+        if ($cuti->jenis_cuti == 'Cuti Tahunan') {
+            $currentYear = date('Y', strtotime($cuti->tanggal_mulai));
+            $balance = CutiBalance::where('pegawai_uuid', $cuti->pegawai_uuid)
+                ->where('year', $currentYear)
+                ->first();
+
+            if (!$balance) {
+                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
+            }
+        }
+
+        return view('cuti.verifikasi-atasan-pimpinan', compact('cuti', 'balance'));
+    }
+
+    // Proses verifikasi method (around line 270)
     public function prosesVerifikasi(Request $request, $uuid)
     {
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
@@ -413,6 +455,7 @@ class CutiController extends Controller
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diverifikasi');
     }
 
+    // Proses verifikasi pimpinan method (around line 300)
     public function prosesVerifikasiPimpinan(Request $request, $uuid)
     {
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
@@ -486,45 +529,7 @@ class CutiController extends Controller
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diverifikasi oleh pimpinan');
     }
 
-    public function verifikasiAtasanPimpinan($uuid)
-    {
-        // Check if user has atasan-pimpinan role
-        if (!auth()->user()->hasRole('atasan-pimpinan')) {
-            return redirect()->route('cuti.index')->with('error', 'Anda tidak memiliki izin untuk melakukan verifikasi atasan pimpinan');
-        }
-
-        $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
-
-        // Get the current user's pegawai record
-        $user = Auth::user();
-        $currentAtasanPimpinan = Pegawai::where('nip', $user->nip)->first();
-
-        // Check if the current atasan pimpinan is the assigned atasan pimpinan for this request
-        if ($currentAtasanPimpinan->uuid !== $cuti->atasan_pimpinan_uuid) {
-            return redirect()->route('cuti.index')->with('error', 'Anda bukan atasan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
-        }
-
-        // Only allow atasan pimpinan verification if already approved by pimpinan
-        if ($cuti->status !== 'Disetujui Pimpinan') {
-            return redirect()->route('cuti.index')->with('error', 'Permohonan cuti harus disetujui oleh pimpinan terlebih dahulu');
-        }
-
-        // Get leave balance for annual leave
-        $balance = null;
-        if ($cuti->jenis_cuti == 'Cuti Tahunan') {
-            $currentYear = date('Y', strtotime($cuti->tanggal_mulai));
-            $balance = CutiBalance::where('pegawai_uuid', $cuti->pegawai_uuid)
-                ->where('year', $currentYear)
-                ->first();
-
-            if (!$balance) {
-                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
-            }
-        }
-
-        return view('cuti.verifikasi-atasan-pimpinan', compact('cuti', 'balance'));
-    }
-
+    // Proses verifikasi atasan pimpinan method (around line 340)
     public function prosesVerifikasiAtasanPimpinan(Request $request, $uuid)
     {
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
@@ -565,7 +570,6 @@ class CutiController extends Controller
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diverifikasi oleh atasan pimpinan');
     }
 
-
     // Add a method to display leave balance
     public function showBalance()
     {
@@ -582,25 +586,39 @@ class CutiController extends Controller
         return view('cuti.balance', compact('balance', 'pegawai'));
     }
 
-    // Add this helper method to your controller
+    //method untuk menghitung jumlah hari kerja
+    // Update the countWorkdays method to exclude holidays
     private function countWorkdays($startDate, $endDate)
     {
         $start = new \DateTime($startDate);
         $end = new \DateTime($endDate);
         $workdays = 0;
 
+        // Get all holidays and collective leave days between the start and end dates
+        $holidays = HariLibur::whereBetween('tanggal', [$startDate, $endDate])
+            ->pluck('tanggal')
+            ->map(function($date) {
+                return date('Y-m-d', strtotime($date));
+            })
+            ->toArray();
+
         $current = clone $start;
         while ($current <= $end) {
             $dayOfWeek = $current->format('N');
-            if ($dayOfWeek <= 5) { // Monday to Friday
+            $currentDateStr = $current->format('Y-m-d');
+
+            // Check if it's a workday (Monday to Friday) and not a holiday
+            if ($dayOfWeek <= 5 && !in_array($currentDateStr, $holidays)) {
                 $workdays++;
             }
+
             $current->modify('+1 day');
         }
 
         return $workdays;
     }
 
+    //Update jumlah cuti pegawai method (around line 400)
     public function updateBalance()
     {
         $user = auth()->user();
@@ -618,6 +636,7 @@ class CutiController extends Controller
         return redirect()->route('cuti.index')->with('success', 'Saldo cuti berhasil diperbarui');
     }
 
+    //Update semua jumlah cuti pegawai method (around line 410)
     public function updateAllBalances()
     {
         // Check if user has admin permissions

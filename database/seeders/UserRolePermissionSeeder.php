@@ -67,7 +67,7 @@ class UserRolePermissionSeeder extends Seeder
         }
 
         // Create Roles
-        $roles = ['super-admin', 'admin', 'pimpinan', 'verifikator', 'user'];
+        $roles = ['super-admin', 'admin', 'pimpinan', 'verifikator', 'user', 'atasan-pimpinan'];
 
         foreach ($roles as $roleName) {
             $role = Role::firstOrCreate([
@@ -149,8 +149,8 @@ class UserRolePermissionSeeder extends Seeder
         $adminRole->givePermissionTo(['create riwayat_jabatan', 'view riwayat_jabatan']);
         $adminRole->givePermissionTo(['verifikasi data']);
 
-        $atasanpimpinanRole = Role::where('name', 'pimpinan')->first();
-        $atasanpimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti','delete cuti', 'pimpinan cuti']);
+        $atasanpimpinanRole = Role::where('name', 'atasan-pimpinan')->first();
+        $atasanpimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti','delete cuti', 'pimpinan cuti','atasan_pimpinan cuti','proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti']);
         $atasanpimpinanRole->givePermissionTo(['create izin', 'view izin', 'update izin','delete izin']);
         $atasanpimpinanRole->givePermissionTo(['view pegawai','update pegawai']);
         $atasanpimpinanRole->givePermissionTo(['verifikasi cuti', 'verifikasi izin']);
@@ -277,7 +277,7 @@ class UserRolePermissionSeeder extends Seeder
         Log::info("- Role-Permission associations: {$roleHasPermissionsCount}");
         Log::info("- User-Role associations: {$modelHasRolesCount}");
 
-        if ($roleCount === 5 && $permissionCount === 36 && $userCount === 5) {
+        if ($roleCount === 6 && $permissionCount === 36 && $userCount === 5) {
             Log::info("Seeding successful!");
         } else {
             Log::warning("Seeding may be incomplete. Please check the logs for any errors.");

@@ -34,6 +34,11 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
         Route::post(uri: 'users/search', action: [App\Http\Controllers\UserController::class, 'search']);
     })->middleware(['auth', 'verified'])->name('users.');
 
+    // Add this to your existing routes
+    Route::group(['middleware' => ['role:super-admin|admin|pimpinan|verifikator']], function() {
+        Route::resource('hari-libur', App\Http\Controllers\HariLiburController::class);
+    })->middleware(['auth','verified'])->name('hari-libur.');
+
     // Inside the middleware group for super-admin|admin|pimpinan|verifikator
     Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator']], routes: function(): void {
         Route::get('pegawai/search', [App\Http\Controllers\PegawaiController::class, 'search'])->name('pegawai.search');
