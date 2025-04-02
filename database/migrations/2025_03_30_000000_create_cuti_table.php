@@ -16,6 +16,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignUuid('pegawai_uuid')->constrained('pegawai', 'uuid')->onDelete('cascade');
+            $table->string('no_surat_cuti');
             $table->string('jenis_cuti');
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');

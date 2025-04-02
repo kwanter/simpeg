@@ -9,7 +9,19 @@ use Illuminate\Support\Str;
 class CutiBalance extends Model
 {
     use HasFactory;
+    protected $table = 'cuti_balance';
+    protected $primaryKey = 'uuid';
+    public $incrementing = false;
+    protected $keyType = 'string';
+    protected $appends = ['remaining_days'];
 
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            $model->uuid = Str::uuid()->toString();
+        });
+    }
     protected $fillable = [
         'uuid',
         'pegawai_uuid',

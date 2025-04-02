@@ -11,11 +11,38 @@ class Cuti extends Model
     use HasFactory, UserTrackingTrait;
 
     protected $table = 'cuti';
+    protected $primaryKey = 'uuid';
+    protected $keyType = 'string';
+    public $incrementing = false;
+    protected $guarded = [];
 
-    // Add this relationship method to the Cuti model
-    public function atasanPimpinan()
+    protected $casts = [
+        'tanggal_mulai' => 'date',
+        'tanggal_selesai' => 'date',
+        'tanggal_verifikasi' => 'datetime',
+        'tanggal_verifikasi_pimpinan' => 'datetime',
+        'tanggal_verifikasi_atasan_pimpinan' => 'datetime', // Add this line
+    ];
+    protected static function boot()
     {
-        return $this->belongsTo(Pegawai::class, 'atasan_pimpinan_uuid', 'uuid');
+        parent::boot();
+        static::creating(function ($model) {
+            $model->uuid = (string) \Illuminate\Support\Str::uuid();
+        });
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'uuid';
+    }
+
+    public function scopeFilter($query, array $filters)
+    {
+        $query->when($filters['search'] ?? false, function ($query, $search) {
+            return $query->where('pegawai_uuid', 'like', '%' . $search . '%')
+                ->orWhere('jenis_cuti', 'like', '%' . $search . '%')
+                ->orWhere('status', 'like', '%'. $search. '%');
+        });
     }
 
     // Update the fillable array to include the new fields
@@ -59,5 +86,11 @@ class Cuti extends Model
     public function pimpinan()
     {
         return $this->belongsTo(Pegawai::class, 'pimpinan_uuid', 'uuid');
+    }
+
+    // Add this relationship method to the Cuti model
+    public function atasanPimpinan()
+    {
+        return $this->belongsTo(Pegawai::class, 'atasan_pimpinan_uuid', 'uuid');
     }
 }

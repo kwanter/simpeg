@@ -28,6 +28,12 @@
                             Cuti
                         </x-nav-link>
                         <!-- Add this menu item in the appropriate section of your navigation -->
+                        @can('view izin')
+                        <x-nav-link :href="route('izin.index')" :active="request()->routeIs('izin.*')">
+                            <i class="fas fa-clipboard-list mr-3"></i>
+                            {{ __('Pengajuan Izin') }}
+                        </x-nav-link>
+                        @endcan
                         @can('view hari libur')
                         <x-nav-link :href="route('hari-libur.index')" :active="request()->routeIs('hari-libur.*')">
                             <i class="fas fa-calendar-alt mr-3"></i>

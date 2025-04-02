@@ -138,3 +138,10 @@ Route::middleware('auth')->group(function () {
 
 // Remove the standalone cuti routes since they're now in the middleware group
 require __DIR__.'/auth.php';
+
+// Add these routes to your web.php file
+Route::resource('izin', App\Http\Controllers\IzinController::class);
+Route::get('izin/{uuid}/verifikasi-atasan', [App\Http\Controllers\IzinController::class, 'verifikasiAtasan'])->name('izin.verifikasi-atasan');
+Route::post('izin/{uuid}/proses-verifikasi-atasan', [App\Http\Controllers\IzinController::class, 'prosesVerifikasiAtasan'])->name('izin.proses-verifikasi-atasan');
+Route::get('izin/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'verifikasiPimpinan'])->name('izin.verifikasi-pimpinan');
+Route::post('izin/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'prosesVerifikasiPimpinan'])->name('izin.proses-verifikasi-pimpinan');
