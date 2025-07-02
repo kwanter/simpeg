@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Venturecraft\Revisionable\RevisionableTrait;
 
 class HariLibur extends Model
 {
-    use HasFactory;
+    use HasFactory, RevisionableTrait;
 
     protected $table = 'hari_libur';
     protected $primaryKey = 'uuid';

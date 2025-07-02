@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Spatie\Permission\Models\Permission as SpatiePermission;
+use Venturecraft\Revisionable\RevisionableTrait;
 
 class Permission extends SpatiePermission
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, RevisionableTrait;
 
     protected $primaryKey = 'uuid';
     public $incrementing = false;

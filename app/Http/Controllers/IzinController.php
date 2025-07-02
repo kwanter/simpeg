@@ -404,4 +404,28 @@ class IzinController extends Controller
 
         return $workdays;
     }
+    // Add this method to generate PDF
+    public function generatePdf($uuid)
+    {
+        $izin = Izin::with(['pegawai', 'atasan_pimpinan', 'pimpinan'])->where('uuid', $uuid)->firstOrFail();
+
+        // Check if izin has been approved
+        if ($izin->status !== 'Disetujui' && $izin->status !== 'Disetujui Atasan') {
+            return redirect()->route('izin.show', $izin->uuid)
+                ->with('error', 'Surat izin hanya dapat dicetak setelah disetujui');
+        }
+
+        // Check if no_surat_izin exists
+        if (empty($izin->no_surat_izin)) {
+            return redirect()->route('izin.show', $izin->uuid)
+                ->with('error', 'Nomor surat izin belum diisi. Silakan isi nomor surat terlebih dahulu.');
+        }
+
+        $pdf = \PDF::loadView('izin.pdf', ['izin' => $izin]);
+
+        // Generate filename
+        $filename = 'Surat_Izin_' . $izin->pegawai->nama . '_' . $izin->no_surat_izin . '.pdf';
+
+        return $pdf->download($filename);
+    }
 }

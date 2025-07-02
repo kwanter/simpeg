@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\UserTrackingTrait;
+use Venturecraft\Revisionable\RevisionableTrait;
 
 class Cuti extends Model
 {
-    use HasFactory, UserTrackingTrait;
+    use HasFactory, UserTrackingTrait, RevisionableTrait;
 
     protected $table = 'cuti';
     protected $primaryKey = 'uuid';
@@ -19,6 +20,7 @@ class Cuti extends Model
     protected $casts = [
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
+        //'lama_cuti' => 'integer',
         'tanggal_verifikasi' => 'datetime',
         'tanggal_verifikasi_pimpinan' => 'datetime',
         'tanggal_verifikasi_atasan_pimpinan' => 'datetime', // Add this line
@@ -50,6 +52,7 @@ class Cuti extends Model
     protected $fillable = [
         'uuid',
         'pegawai_uuid',
+        'no_surat_cuti',
         'jenis_cuti',
         'tanggal_mulai',
         'tanggal_selesai',
@@ -92,5 +95,48 @@ class Cuti extends Model
     public function atasanPimpinan()
     {
         return $this->belongsTo(Pegawai::class, 'atasan_pimpinan_uuid', 'uuid');
+    }
+
+    // Add this method to generate PDF
+    public function generatePdf()
+    {
+        $pdf = \PDF::loadView('cuti.pdf', ['cuti' => $this]);
+        return $pdf;
+    }
+
+    // Helper method to get formatted dates
+    public function getFormattedStartDate()
+    {
+        return $this->tanggal_mulai->format('d F Y');
+    }
+
+    public function getFormattedEndDate()
+    {
+        return $this->tanggal_selesai->format('d F Y');
+    }
+
+    // Helper method to get Indonesian date format
+    public function getIndonesianDate($date)
+    {
+        $months = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+
+        return $date->format('d') . ' ' . $months[$date->format('n') - 1] . ' ' . $date->format('Y');
+    }
+
+    // Get approval date in Indonesian format
+    public function getApprovalDate()
+    {
+        if ($this->tanggal_verifikasi_atasan_pimpinan) {
+            return $this->getIndonesianDate($this->tanggal_verifikasi_atasan_pimpinan);
+        } elseif ($this->tanggal_verifikasi_pimpinan) {
+            return $this->getIndonesianDate($this->tanggal_verifikasi_pimpinan);
+        } elseif ($this->tanggal_verifikasi) {
+            return $this->getIndonesianDate($this->tanggal_verifikasi);
+        }
+
+        return date('d F Y');
     }
 }

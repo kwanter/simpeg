@@ -41,10 +41,14 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Nama Pegawai</th>
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr class="text-center">
+                                    <th>No</th>
+                                    <th>No Surat Cuti</th>
+                                    @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('verifikator'))
+                                        <th>Nama Pegawai</th>
+                                    @endif
                                     <th>Jenis Cuti</th>
                                     <th>Tanggal Mulai</th>
                                     <th>Tanggal Selesai</th>
@@ -54,9 +58,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($cuti as $item)
+                                @forelse($cuti as $index => $item)
                                     <tr>
-                                        <td>{{ $item->pegawai->nama ?? 'N/A' }}</td>
+                                        <td>{{ $index + 1 }}</td>
+                                        <td>{{ $item->no_surat_cuti ?? '-' }}</td>
+                                        @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('verifikator'))
+                                            <td>{{ $item->pegawai->nama ?? 'N/A' }}</td>
+                                        @endif
                                         <td>{{ $item->jenis_cuti }}</td>
                                         <td>{{ \Carbon\Carbon::parse($item->tanggal_mulai)->format('d/m/Y') }}</td>
                                         <td>{{ \Carbon\Carbon::parse($item->tanggal_selesai)->format('d/m/Y') }}</td>
@@ -67,7 +75,9 @@
                                                 {{ $item->status == 'Disetujui Verifikator' ? 'bg-info' : '' }}
                                                 {{ $item->status == 'Ditolak Verifikator' ? 'bg-danger' : '' }}
                                                 {{ $item->status == 'Disetujui Pimpinan' ? 'bg-success' : '' }}
-                                                {{ $item->status == 'Ditolak Pimpinan' ? 'bg-danger' : '' }}">
+                                                {{ $item->status == 'Ditolak Pimpinan' ? 'bg-danger' : '' }}
+                                                {{ $item->status == 'Disetujui Atasan Pimpinan' ? 'bg-primary' : '' }}
+                                                {{ $item->status == 'Ditolak Atasan Pimpinan' ? 'bg-danger' : '' }}">
                                                 {{ $item->status }}
                                             </span>
                                         </td>
@@ -111,7 +121,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center">Tidak ada data cuti</td>
+                                        <td colspan="{{ auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('verifikator') ? '9' : '8' }}" class="text-center">Tidak ada data cuti</td>
                                     </tr>
                                 @endforelse
                             </tbody>

@@ -167,7 +167,7 @@
                                     <p>{{ $cuti->pimpinan->nama ?? 'N/A' }}</p>
 
                                     <h6 class="fw-bold mb-2 mt-3">Tanggal Persetujuan:</h6>
-                                    <p>{{ $cuti->tanggal_persetujuan_pimpinan ? \Carbon\Carbon::parse($cuti->tanggal_persetujuan_pimpinan)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                    <p>{{ $cuti->tanggal_verifikasi_pimpinan ? \Carbon\Carbon::parse($cuti->tanggal_verifikasi_pimpinan)->format('d/m/Y H:i') : 'N/A' }}</p>
                                 </div>
 
                                 <div class="col-md-6">

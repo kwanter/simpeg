@@ -42,7 +42,7 @@ class UserRolePermissionSeeder extends Seeder
             'view pangkat', 'create pangkat', 'update pangkat', 'delete pangkat',
             'view jabatan', 'create jabatan', 'update jabatan', 'delete jabatan',
             'view riwayat_jabatan', 'create riwayat_jabatan', 'update riwayat_jabatan', 'delete riwayat_jabatan',
-            'view cuti', 'create cuti', 'update cuti', 'verifikasi cuti', 'delete cuti', 'pimpinan cuti','atasan_pimpinan cuti','proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti',
+            'view cuti', 'create cuti', 'update cuti', 'verifikasi cuti', 'delete cuti', 'pimpinan cuti','atasan pimpinan cuti','proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti',
             'view izin', 'create izin', 'update izin','verifikasi izin', 'delete izin',
             'verifikasi data',
             'view izin', 'create izin', 'update izin', 'verifikasi izin', 'delete izin',
@@ -150,7 +150,7 @@ class UserRolePermissionSeeder extends Seeder
         $adminRole->givePermissionTo(['verifikasi data']);
 
         $atasanpimpinanRole = Role::where('name', 'atasan-pimpinan')->first();
-        $atasanpimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti','delete cuti', 'pimpinan cuti','atasan_pimpinan cuti','proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti']);
+        $atasanpimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti','delete cuti', 'pimpinan cuti','atasan pimpinan cuti','proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti']);
         $atasanpimpinanRole->givePermissionTo(['create izin', 'view izin', 'update izin','delete izin']);
         $atasanpimpinanRole->givePermissionTo(['view pegawai','update pegawai']);
         $atasanpimpinanRole->givePermissionTo(['verifikasi cuti', 'verifikasi izin']);

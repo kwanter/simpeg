@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Venturecraft\Revisionable\RevisionableTrait;
 
 class CutiBalance extends Model
 {
-    use HasFactory;
+    use HasFactory, RevisionableTrait;
     protected $table = 'cuti_balance';
     protected $primaryKey = 'uuid';
     public $incrementing = false;

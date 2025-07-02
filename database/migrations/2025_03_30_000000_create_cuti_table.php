@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignUuid('pegawai_uuid')->constrained('pegawai', 'uuid')->onDelete('cascade');
-            $table->string('no_surat_cuti');
+            $table->string('no_surat_cuti')->nullable();
             $table->string('jenis_cuti');
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');
@@ -29,13 +29,13 @@ return new class extends Migration
             // Verifikator fields
             $table->text('catatan_verifikator')->nullable();
             $table->foreignUuid('verifikator_uuid')->nullable()->constrained('pegawai', 'uuid')->nullOnDelete();
-            $table->date('tanggal_verifikasi')->nullable();
+            $table->timestamp('tanggal_verifikasi')->nullable();
             $table->string('status_verifikator')->nullable(); // Disetujui, Ditolak
 
             // Pimpinan fields
             $table->text('catatan_pimpinan')->nullable();
             $table->foreignUuid('pimpinan_uuid')->nullable()->constrained('pegawai', 'uuid')->nullOnDelete();
-            $table->date('tanggal_verifikasi_pimpinan')->nullable();
+            $table->timestamp('tanggal_verifikasi_pimpinan')->nullable();
             $table->string('status_pimpinan')->nullable(); // Disetujui, Ditolak
 
             // Atasan Pimpinan fields - removed after clauses

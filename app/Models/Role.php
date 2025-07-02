@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Venturecraft\Revisionable\RevisionableTrait;
 
 class Role extends SpatieRole
 {
-    use HasFactory,HasUuids, SoftDeletes;
+    use HasFactory,HasUuids, SoftDeletes, RevisionableTrait;
 
     protected $primaryKey = 'uuid';
     public $incrementing = false;

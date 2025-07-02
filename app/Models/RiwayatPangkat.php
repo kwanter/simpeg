@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use App\Traits\UserTrackingTrait;
+use Venturecraft\Revisionable\RevisionableTrait;
 
 class RiwayatPangkat extends Model
 {
-    use HasFactory, SoftDeletes, HasUuids, UserTrackingTrait;
+    use HasFactory, SoftDeletes, HasUuids, UserTrackingTrait, RevisionableTrait;
+
+    protected $guarded = [];
 
     protected $table = 'riwayat_pangkat';
     protected $primaryKey = 'uuid';

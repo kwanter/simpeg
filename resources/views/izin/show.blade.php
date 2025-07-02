@@ -131,6 +131,12 @@
                                     </tr>
                                     @endif
                                 </table>
+                                <!-- Add this button in the appropriate location in your show.blade.php -->
+                                @if(($izin->status == 'Disetujui' || $izin->status == 'Disetujui Atasan') && !empty($izin->no_surat_izin))
+                                <a href="{{ route('izin.pdf', $izin->uuid) }}" class="btn btn-primary">
+                                    <i class="fas fa-file-pdf me-1"></i> Cetak Surat Izin
+                                </a>
+                                @endif
                             </div>
                         </div>
 

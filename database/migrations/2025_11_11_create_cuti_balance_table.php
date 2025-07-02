@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('cuti_balances', function (Blueprint $table) {
+        Schema::create('cuti_balance', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('pegawai_uuid');
@@ -26,6 +26,6 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('cuti_balances');
+        Schema::dropIfExists('cuti_balance');
     }
 };

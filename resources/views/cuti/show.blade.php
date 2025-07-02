@@ -127,9 +127,22 @@
                                                     {{ $cuti->status == 'Disetujui Verifikator' ? 'bg-info' : '' }}
                                                     {{ $cuti->status == 'Ditolak Verifikator' ? 'bg-danger' : '' }}
                                                     {{ $cuti->status == 'Disetujui Pimpinan' ? 'bg-success' : '' }}
-                                                    {{ $cuti->status == 'Ditolak Pimpinan' ? 'bg-danger' : '' }}">
+                                                    {{ $cuti->status == 'Ditolak Pimpinan' ? 'bg-danger' : '' }}
+                                                    {{ $cuti->status == 'Disetujui Atasan Pimpinan' ? 'bg-primary' : '' }}
+                                                    {{ $cuti->status == 'Ditolak Atasan Pimpinan' ? 'bg-danger' : '' }}">
                                                     {{ $cuti->status }}
                                                 </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>No Surat Cuti</td>
+                                            <td>:
+                                                {{ $cuti->no_surat_cuti ?? 'Belum ada' }}
+                                                @if(($cuti->status == 'Disetujui Verifikator' || $cuti->status == 'Disetujui Pimpinan' || $cuti->status == 'Disetujui Atasan Pimpinan') && (auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin')))
+                                                    <a href="{{ route('cuti.edit', $cuti->uuid) }}" class="btn btn-sm btn-warning ms-2">
+                                                        <i class="fas fa-edit"></i> Edit No Surat
+                                                    </a>
+                                                @endif
                                             </td>
                                         </tr>
                                     </table>
@@ -215,7 +228,7 @@
                                                 <p>{{ $cuti->pimpinan->nama ?? 'N/A' }}</p>
 
                                                 <h6 class="fw-bold mb-2 mt-3">Tanggal Persetujuan:</h6>
-                                                <p>{{ $cuti->tanggal_persetujuan_pimpinan ? \Carbon\Carbon::parse($cuti->tanggal_persetujuan_pimpinan)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                                <p>{{ $cuti->tanggal_verifikasi_pimpinan ? \Carbon\Carbon::parse($cuti->tanggal_verifikasi_pimpinan)->format('d/m/Y H:i') : 'N/A' }}</p>
                                             </div>
 
                                             <div class="col-md-6">
@@ -246,7 +259,7 @@
                                                 <p>{{ $cuti->atasanPimpinan->nama ?? 'N/A' }}</p>
 
                                                 <h6 class="fw-bold mb-2 mt-3">Tanggal Persetujuan:</h6>
-                                                <p>{{ $cuti->tanggal_persetujuan_atasan ? \Carbon\Carbon::parse($cuti->tanggal_persetujuan_atasan)->format('d/m/Y H:i') : 'N/A' }}</p>
+                                                <p>{{ $cuti->tanggal_verifikasi_atasan_pimpinan ? \Carbon\Carbon::parse($cuti->tanggal_verifikasi_atasan_pimpinan)->format('d/m/Y H:i') : 'N/A' }}</p>
                                             </div>
 
                                             <div class="col-md-6">
@@ -257,6 +270,12 @@
                                                 <p class="bg-light p-3 rounded">{{ $cuti->catatan_atasan_pimpinan ?: 'Tidak ada catatan' }}</p>
                                             </div>
                                         </div>
+                                         <!-- Add this button in the appropriate location in your show.blade.php -->
+                                         @if(($cuti->status == 'Disetujui Pimpinan' || $cuti->status == 'Disetujui Atasan Pimpinan') && !empty($cuti->no_surat_cuti))
+                                         <a href="{{ route('cuti.pdf', $cuti->uuid) }}" class="btn btn-primary">
+                                             <i class="fas fa-file-pdf me-1"></i> Cetak Surat Cuti
+                                         </a>
+                                         @endif
                                     </div>
                                 </div>
                             </div>
@@ -266,4 +285,5 @@
             </div>
         </div>
     </div>
+
 </x-app-layout>

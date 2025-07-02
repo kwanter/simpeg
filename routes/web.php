@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator|user']], routes: function(): void {
+Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], routes: function(): void {
     Route::group(attributes: ['middleware' => ['role:super-admin']], routes: function(): void {
         Route::resource(name: 'permissions', controller: App\Http\Controllers\PermissionController::class);
         Route::get(uri: 'permissions/{permissionId}/delete', action: [App\Http\Controllers\PermissionController::class, 'destroy']);
@@ -35,12 +35,12 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
     })->middleware(['auth', 'verified'])->name('users.');
 
     // Add this to your existing routes
-    Route::group(['middleware' => ['role:super-admin|admin|pimpinan|verifikator']], function() {
+    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator']], function() {
         Route::resource('hari-libur', App\Http\Controllers\HariLiburController::class);
     })->middleware(['auth','verified'])->name('hari-libur.');
 
     // Inside the middleware group for super-admin|admin|pimpinan|verifikator
-    Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator']], routes: function(): void {
+    Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator']], routes: function(): void {
         Route::get('pegawai/search', [App\Http\Controllers\PegawaiController::class, 'search'])->name('pegawai.search');
         // Add this line for jabatan search
         Route::post('jabatan/search', [App\Http\Controllers\JabatanController::class, 'search'])->name('jabatan.search');
@@ -95,7 +95,7 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
     })->middleware(['auth', 'verified'])->name('pegawai.');
 
    // Cuti routes - Allow super-admin access
-    Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|verifikator|user']], routes: function(): void {
+    Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], routes: function(): void {
         // Inside your cuti routes group, make sure these routes are defined correctly
         Route::prefix('cuti')->name('cuti.')->group(function () {
             // First define routes with specific paths
@@ -118,6 +118,7 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|pimpinan|veri
             // Add these routes for atasan pimpinan verification
             Route::get('/{uuid}/verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiAtasanPimpinan'])->name('verifikasi-atasan-pimpinan');
             Route::post('/{uuid}/proses-verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiAtasanPimpinan'])->name('proses-verifikasi-atasan-pimpinan');
+            Route::get('/{uuid}/pdf', [App\Http\Controllers\CutiController::class, 'generatePdf'])->name('pdf');
         });
     });
 });
@@ -145,3 +146,5 @@ Route::get('izin/{uuid}/verifikasi-atasan', [App\Http\Controllers\IzinController
 Route::post('izin/{uuid}/proses-verifikasi-atasan', [App\Http\Controllers\IzinController::class, 'prosesVerifikasiAtasan'])->name('izin.proses-verifikasi-atasan');
 Route::get('izin/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'verifikasiPimpinan'])->name('izin.verifikasi-pimpinan');
 Route::post('izin/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'prosesVerifikasiPimpinan'])->name('izin.proses-verifikasi-pimpinan');
+// Add this route for izin PDF generation
+Route::get('izin/{uuid}/pdf', [App\Http\Controllers\IzinController::class, 'generatePdf'])->name('izin.pdf');
