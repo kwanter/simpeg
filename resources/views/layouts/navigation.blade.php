@@ -15,12 +15,12 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         Dashboard
                     </x-nav-link>
-                    @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin'))
+                    @if (Auth::check() && (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin')))
                         <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.index')">
                             Users
                         </x-nav-link>
                     @endif
-                    @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('atasan-pimpinan') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator'))
+                    @if (Auth::check() && (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('atasan-pimpinan') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator')))
                         <x-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.index')">
                             Pegawai
                         </x-nav-link>
@@ -45,6 +45,7 @@
             </div>
 
             <!-- Settings Dropdown -->
+            @auth
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <div class="ml-3 relative">
                     <x-dropdown align="right" width="48">
@@ -89,6 +90,7 @@
                     </x-dropdown>
                 </div>
             </div>
+            @endauth
 
             <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
@@ -108,12 +110,12 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 Dashboard
             </x-responsive-nav-link>
-            @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin'))
+            @if (Auth::check() && (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin')))
                 <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.index')">
                     Users
                 </x-responsive-nav-link>
             @endif
-            @if (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator'))
+            @if (Auth::check() && (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator')))
                 <x-responsive-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.index')">
                     Pegawai
                 </x-responsive-nav-link>
@@ -124,6 +126,7 @@
         </div>
 
         <!-- Responsive Settings Options -->
+        @auth
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">
                 <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
@@ -146,5 +149,15 @@
                 </form>
             </div>
         </div>
+        @else
+        <div class="pt-4 pb-1 border-t border-gray-200">
+            <div class="px-4">
+                <a href="{{ route('login') }}" class="text-base font-medium text-gray-600 hover:text-gray-800">Log in</a>
+                @if (Route::has('register'))
+                    <a href="{{ route('register') }}" class="ml-4 text-base font-medium text-gray-600 hover:text-gray-800">Register</a>
+                @endif
+            </div>
+        </div>
+        @endauth
     </div>
 </nav>

@@ -13,18 +13,18 @@ return new class extends Migration
     public function up(): void
     {
         try {
-            // Disable foreign key checks
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            // PostgreSQL doesn't need to disable foreign key checks like MySQL
+            // We'll handle constraints properly with proper SQL
 
             // Drop the foreign key constraint
             if (Schema::hasTable('riwayat_pangkat')) {
                 $foreignKeys = DB::select("
-                    SELECT CONSTRAINT_NAME
-                    FROM information_schema.TABLE_CONSTRAINTS
-                    WHERE CONSTRAINT_TYPE = 'FOREIGN KEY'
-                    AND TABLE_NAME = 'riwayat_pangkat'
-                    AND CONSTRAINT_NAME = 'riwayat_pangkat_pegawai_uuid_foreign'
-                    AND TABLE_SCHEMA = DATABASE()
+                    SELECT constraint_name
+                    FROM information_schema.table_constraints
+                    WHERE constraint_type = 'FOREIGN KEY'
+                    AND table_name = 'riwayat_pangkat'
+                    AND constraint_name = 'riwayat_pangkat_pegawai_uuid_foreign'
+                    AND table_schema = current_schema()
                 ");
 
                 if (!empty($foreignKeys)) {
@@ -102,8 +102,7 @@ return new class extends Migration
             }
 
         } finally {
-            // Re-enable foreign key checks
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            // No need to re-enable foreign key checks in PostgreSQL
         }
     }
 
