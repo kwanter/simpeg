@@ -1,0 +1,2 @@
+- Deleted unused RegisterController.php (Finding Q-03)
+- Verified no references to RegisterController in routes and project-wide.

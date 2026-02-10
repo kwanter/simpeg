@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Izin;
 use App\Models\Pegawai;
-use App\Models\HariLibur;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Services\WorkdayService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class IzinController extends Controller
 {
@@ -67,7 +67,7 @@ class IzinController extends Controller
         $user = Auth::user();
         $pegawai = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
         }
 
@@ -79,7 +79,7 @@ class IzinController extends Controller
             'Izin Setengah Hari',
             'Izin Terlambat',
             'Izin Pulang Cepat',
-            'Izin Lainnya'
+            'Izin Lainnya',
         ];
 
         // Get list of pimpinan and atasan for dropdown
@@ -102,9 +102,9 @@ class IzinController extends Controller
         $izin = Izin::with('pegawai')->where('uuid', $uuid)->firstOrFail();
 
         // Only allow editing if the izin belongs to the user or if user is admin
-        if (!$user->hasRole('super-admin') && !$user->hasRole('admin')) {
+        if (! $user->hasRole('super-admin') && ! $user->hasRole('admin')) {
             $pegawai = Pegawai::where('nip', $user->nip)->first();
-            if (!$pegawai || $pegawai->uuid !== $izin->pegawai_uuid) {
+            if (! $pegawai || $pegawai->uuid !== $izin->pegawai_uuid) {
                 return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk mengedit pengajuan izin ini');
             }
         }
@@ -114,7 +114,7 @@ class IzinController extends Controller
                      ($izin->verifikasi_atasan == 'Disetujui' && empty($izin->no_surat_izin)) ||
                      ($izin->verifikasi_atasan == 'Belum Diverifikasi' && $izin->verifikasi_pimpinan == 'Belum Diverifikasi');
 
-        if (!$allowEdit) {
+        if (! $allowEdit) {
             return redirect()->route('izin.index')->with('error', 'Pengajuan izin yang sudah diverifikasi tidak dapat diedit');
         }
 
@@ -126,7 +126,7 @@ class IzinController extends Controller
             'Izin Setengah Hari',
             'Izin Terlambat',
             'Izin Pulang Cepat',
-            'Izin Lainnya'
+            'Izin Lainnya',
         ];
 
         // Get list of pimpinan and atasan for dropdown
@@ -166,13 +166,13 @@ class IzinController extends Controller
         $validated['verifikasi_pimpinan'] = 'Belum Diverifikasi';
 
         // Calculate jumlah_hari
-        $jumlahHari = $this->countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
+        $jumlahHari = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
         $validated['jumlah_hari'] = $jumlahHari;
 
         // Handle file upload
         if ($request->hasFile('dokumen')) {
             $file = $request->file('dokumen');
-            $fileName = time(). '_'. $file->getClientOriginalName();
+            $fileName = \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension();
             $file->storeAs('public/dokumen/izin', $fileName);
             $validated['dokumen'] = $fileName;
         }
@@ -185,6 +185,7 @@ class IzinController extends Controller
     public function show($uuid)
     {
         $izin = Izin::with('pegawai')->where('uuid', $uuid)->firstOrFail();
+
         return view('izin.show', compact('izin'));
     }
 
@@ -199,9 +200,9 @@ class IzinController extends Controller
                        count($request->all()) <= 3; // csrf, method, and no_surat_izin
 
         // Don't allow full updating if already verified by pimpinan or atasan
-        if (!$isNoSuratUpdate &&
+        if (! $isNoSuratUpdate &&
             ($izin->verifikasi_pimpinan !== 'Belum Diverifikasi' ||
-             ($izin->verifikasi_atasan !== 'Belum Diverifikasi' && !$user->hasRole('super-admin') && !$user->hasRole('admin')))) {
+             ($izin->verifikasi_atasan !== 'Belum Diverifikasi' && ! $user->hasRole('super-admin') && ! $user->hasRole('admin')))) {
             return redirect()->route('izin.index')->with('error', 'Pengajuan izin yang sudah diverifikasi tidak dapat diubah');
         }
 
@@ -212,6 +213,7 @@ class IzinController extends Controller
             ]);
 
             $izin->update(['no_surat_izin' => $validated['no_surat_izin']]);
+
             return redirect()->route('izin.index')->with('success', 'Nomor surat izin berhasil diperbarui');
         }
 
@@ -234,11 +236,11 @@ class IzinController extends Controller
         if ($request->hasFile('dokumen')) {
             // Delete old file if exists
             if ($izin->dokumen) {
-                Storage::delete('public/dokumen/izin/' . $izin->dokumen);
+                Storage::delete('public/dokumen/izin/'.$izin->dokumen);
             }
 
             $file = $request->file('dokumen');
-            $fileName = time() . '_' . $file->getClientOriginalName();
+            $fileName = \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension();
             $file->storeAs('public/dokumen/izin', $fileName);
             $validated['dokumen'] = $fileName;
         }
@@ -259,7 +261,7 @@ class IzinController extends Controller
 
         // Delete file if exists
         if ($izin->dokumen) {
-            Storage::delete('public/dokumen/izin/' . $izin->dokumen);
+            Storage::delete('public/dokumen/izin/'.$izin->dokumen);
         }
 
         $izin->delete();
@@ -272,15 +274,15 @@ class IzinController extends Controller
         $user = Auth::user();
         $pegawai = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
         }
 
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
 
         // Check if the current user is the assigned atasan or has admin role
-        if (!$user->hasRole('super-admin') && !$user->hasRole('admin') &&
-            (!$user->hasRole('atasan-pimpinan') || $pegawai->uuid !== $izin->atasan_pimpinan_uuid)) {
+        if (! $user->hasRole('super-admin') && ! $user->hasRole('admin') &&
+            (! $user->hasRole('atasan-pimpinan') || $pegawai->uuid !== $izin->atasan_pimpinan_uuid)) {
             return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
         }
 
@@ -292,7 +294,7 @@ class IzinController extends Controller
         $user = Auth::user();
         $pegawai = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
         }
 
@@ -303,8 +305,8 @@ class IzinController extends Controller
         }
 
         // Check if the current user is the assigned pimpinan or has admin role
-        if (!$user->hasRole('super-admin') && !$user->hasRole('admin') &&
-            (!$user->hasRole('pimpinan') || $pegawai->uuid !== $izin->pimpinan_uuid)) {
+        if (! $user->hasRole('super-admin') && ! $user->hasRole('admin') &&
+            (! $user->hasRole('pimpinan') || $pegawai->uuid !== $izin->pimpinan_uuid)) {
             return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
         }
 
@@ -315,7 +317,7 @@ class IzinController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('atasan-pimpinan') && !$user->hasRole('super-admin') && !$user->hasRole('admin')) {
+        if (! $user->hasRole('atasan-pimpinan') && ! $user->hasRole('super-admin') && ! $user->hasRole('admin')) {
             return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
         }
 
@@ -345,7 +347,7 @@ class IzinController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('pimpinan') && !$user->hasRole('super-admin') && !$user->hasRole('admin')) {
+        if (! $user->hasRole('pimpinan') && ! $user->hasRole('super-admin') && ! $user->hasRole('admin')) {
             return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
         }
 
@@ -375,35 +377,6 @@ class IzinController extends Controller
         return redirect()->route('izin.index')->with('success', 'Verifikasi pimpinan berhasil dilakukan');
     }
 
-    private function countWorkdays($startDate, $endDate)
-    {
-        $start = new \DateTime($startDate);
-        $end = new \DateTime($endDate);
-        $workdays = 0;
-
-        // Get all holidays and collective leave days between the start and end dates
-        $holidays = HariLibur::whereBetween('tanggal', [$startDate, $endDate])
-            ->pluck('tanggal')
-            ->map(function($date) {
-                return date('Y-m-d', strtotime($date));
-            })
-            ->toArray();
-
-        $current = clone $start;
-        while ($current <= $end) {
-            $dayOfWeek = $current->format('N');
-            $currentDateStr = $current->format('Y-m-d');
-
-            // Check if it's a workday (Monday to Friday) and not a holiday
-            if ($dayOfWeek <= 5 && !in_array($currentDateStr, $holidays)) {
-                $workdays++;
-            }
-
-            $current->modify('+1 day');
-        }
-
-        return $workdays;
-    }
     // Add this method to generate PDF
     public function generatePdf($uuid)
     {
@@ -424,7 +397,7 @@ class IzinController extends Controller
         $pdf = \PDF::loadView('izin.pdf', ['izin' => $izin]);
 
         // Generate filename
-        $filename = 'Surat_Izin_' . $izin->pegawai->nama . '_' . $izin->no_surat_izin . '.pdf';
+        $filename = 'Surat_Izin_'.$izin->pegawai->nama.'_'.$izin->no_surat_izin.'.pdf';
 
         return $pdf->download($filename);
     }

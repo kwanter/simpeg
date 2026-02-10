@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-//use Spatie\Permission\Models\Permission;
 use App\Models\Permission;
+// use Spatie\Permission\Models\Permission;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class PermissionController extends Controller
@@ -13,14 +13,15 @@ class PermissionController extends Controller
     {
         $this->middleware('auth');
         $this->middleware('permission:view permission', ['only' => ['index']]);
-        $this->middleware('permission:create permission', ['only' => ['create','store']]);
-        $this->middleware('permission:update permission', ['only' => ['update','edit']]);
+        $this->middleware('permission:create permission', ['only' => ['create', 'store']]);
+        $this->middleware('permission:update permission', ['only' => ['update', 'edit']]);
         $this->middleware('permission:delete permission', ['only' => ['destroy']]);
     }
 
     public function index()
     {
         $permissions = Permission::get();
+
         return view('role-permission.permission.index', ['permissions' => $permissions]);
     }
 
@@ -35,16 +36,16 @@ class PermissionController extends Controller
             'name' => [
                 'required',
                 'string',
-                'unique:permissions,name'
-            ]
+                'unique:permissions,name',
+            ],
         ]);
 
         Permission::create([
             'uuid' => Str::uuid(),
-            'name' => $request->name
+            'name' => $request->name,
         ]);
 
-        return redirect('permissions')->with('status','Permission Created Successfully');
+        return redirect('permissions')->with('status', 'Permission Created Successfully');
     }
 
     public function edit(Permission $permission)
@@ -58,28 +59,30 @@ class PermissionController extends Controller
             'name' => [
                 'required',
                 'string',
-                'unique:permissions,name,'.$permission->uuid
-            ]
+                'unique:permissions,name,'.$permission->uuid,
+            ],
         ]);
 
         $permission->update([
-            'name' => $request->name
+            'name' => $request->name,
         ]);
 
-        return redirect('permissions')->with('status','Permission Updated Successfully');
+        return redirect('permissions')->with('status', 'Permission Updated Successfully');
     }
 
     public function destroy($permissionId)
     {
-        $permission = Permission::find("uuid",$permissionId);
+        $permission = Permission::where('uuid', $permissionId)->firstOrFail();
         $permission->delete();
-        return redirect('permissions')->with('status','Permission Deleted Successfully');
+
+        return redirect('permissions')->with('status', 'Permission Deleted Successfully');
     }
 
     public function search(Request $request)
     {
         $search = $request->search;
         $permissions = Permission::where('name', 'like', '%'.$search.'%')->get();
+
         return view('role-permission.permission.index', ['permissions' => $permissions]);
     }
 }

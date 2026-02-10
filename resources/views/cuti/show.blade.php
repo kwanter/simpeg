@@ -18,15 +18,15 @@
                             <table class="table table-borderless">
                                 <tr>
                                     <th width="30%">Nama</th>
-                                    <td width="70%">: {{ $cuti->pegawai->nama }}</td>
+                                    <td width="70%">: {{ $cuti->pegawai?->nama }}</td>
                                 </tr>
                                 <tr>
                                     <th>NIP</th>
-                                    <td>: {{ $cuti->pegawai->nip }}</td>
+                                    <td>: {{ $cuti->pegawai?->nip }}</td>
                                 </tr>
                                 <tr>
                                     <th>Jabatan</th>
-                                    <td>: {{ $cuti->pegawai->jabatan->nama_jabatan ?? 'Belum ada jabatan' }}</td>
+                                    <td>: {{ $cuti->pegawai?->jabatan?->nama_jabatan ?? 'Belum ada jabatan' }}</td>
                                 </tr>
                             </table>
                         </div>
@@ -34,15 +34,15 @@
                             <table class="table table-borderless">
                                 <tr>
                                     <th width="30%">Unit Kerja</th>
-                                    <td width="70%">: {{ $cuti->pegawai->unit_kerja ?? '-' }}</td>
+                                    <td width="70%">: {{ $cuti->pegawai?->unit_kerja ?? '-' }}</td>
                                 </tr>
                                 <tr>
                                     <th>Pangkat/Gol.</th>
-                                    <td>: {{ $cuti->pegawai->pangkat ?? '-' }}</td>
+                                    <td>: {{ $cuti->pegawai?->pangkat ?? '-' }}</td>
                                 </tr>
                                 <tr>
                                     <th>Status</th>
-                                    <td>: {{ $cuti->pegawai->status_pegawai ?? '-' }}</td>
+                                    <td>: {{ $cuti->pegawai?->status_pegawai ?? '-' }}</td>
                                 </tr>
                             </table>
                         </div>
@@ -138,11 +138,11 @@
                                             <td>No Surat Cuti</td>
                                             <td>:
                                                 {{ $cuti->no_surat_cuti ?? 'Belum ada' }}
-                                                @if(($cuti->status == 'Disetujui Verifikator' || $cuti->status == 'Disetujui Pimpinan' || $cuti->status == 'Disetujui Atasan Pimpinan') && (auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin')))
+                                                @can('editNoSurat', $cuti)
                                                     <a href="{{ route('cuti.edit', $cuti->uuid) }}" class="btn btn-sm btn-warning ms-2">
                                                         <i class="fas fa-edit"></i> Edit No Surat
                                                     </a>
-                                                @endif
+                                                @endcan
                                             </td>
                                         </tr>
                                     </table>
@@ -194,7 +194,7 @@
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <h6 class="fw-bold mb-2">Verifikator:</h6>
-                                                <p>{{ $cuti->verifikator->nama ?? 'N/A' }}</p>
+                                                <p>{{ $cuti->verifikator?->nama ?? 'N/A' }}</p>
 
                                                 <h6 class="fw-bold mb-2 mt-3">Tanggal Verifikasi:</h6>
                                                 <p>{{ $cuti->tanggal_verifikasi ? \Carbon\Carbon::parse($cuti->tanggal_verifikasi)->format('d/m/Y H:i') : 'N/A' }}</p>
@@ -225,7 +225,7 @@
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <h6 class="fw-bold mb-2">Pimpinan:</h6>
-                                                <p>{{ $cuti->pimpinan->nama ?? 'N/A' }}</p>
+                                                <p>{{ $cuti->pimpinan?->nama ?? 'N/A' }}</p>
 
                                                 <h6 class="fw-bold mb-2 mt-3">Tanggal Persetujuan:</h6>
                                                 <p>{{ $cuti->tanggal_verifikasi_pimpinan ? \Carbon\Carbon::parse($cuti->tanggal_verifikasi_pimpinan)->format('d/m/Y H:i') : 'N/A' }}</p>
@@ -256,7 +256,7 @@
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <h6 class="fw-bold mb-2">Atasan Pimpinan:</h6>
-                                                <p>{{ $cuti->atasanPimpinan->nama ?? 'N/A' }}</p>
+                                                <p>{{ $cuti->atasanPimpinan?->nama ?? 'N/A' }}</p>
 
                                                 <h6 class="fw-bold mb-2 mt-3">Tanggal Persetujuan:</h6>
                                                 <p>{{ $cuti->tanggal_verifikasi_atasan_pimpinan ? \Carbon\Carbon::parse($cuti->tanggal_verifikasi_atasan_pimpinan)->format('d/m/Y H:i') : 'N/A' }}</p>
@@ -269,14 +269,14 @@
                                                 <h6 class="fw-bold mb-2 mt-3">Catatan Atasan Pimpinan:</h6>
                                                 <p class="bg-light p-3 rounded">{{ $cuti->catatan_atasan_pimpinan ?: 'Tidak ada catatan' }}</p>
                                             </div>
-                                        </div>
-                                         <!-- Add this button in the appropriate location in your show.blade.php -->
-                                         @if(($cuti->status == 'Disetujui Pimpinan' || $cuti->status == 'Disetujui Atasan Pimpinan') && !empty($cuti->no_surat_cuti))
-                                         <a href="{{ route('cuti.pdf', $cuti->uuid) }}" class="btn btn-primary">
-                                             <i class="fas fa-file-pdf me-1"></i> Cetak Surat Cuti
-                                         </a>
-                                         @endif
-                                    </div>
+                                         </div>
+                                          <!-- Add this button in the appropriate location in your show.blade.php -->
+                                          @can('cetak', $cuti)
+                                          <a href="{{ route('cuti.pdf', $cuti->uuid) }}" class="btn btn-primary">
+                                              <i class="fas fa-file-pdf me-1"></i> Cetak Surat Cuti
+                                          </a>
+                                          @endcan
+                                     </div>
                                 </div>
                             </div>
                         </div>

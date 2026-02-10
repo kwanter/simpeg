@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-//use Spatie\Permission\Models\Role;
-//use Spatie\Permission\Models\Permission;
-use App\Models\Role;
 use App\Models\Permission;
+// use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+use App\Models\Role;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -16,14 +16,15 @@ class RoleController extends Controller
     {
         $this->middleware('auth');
         $this->middleware('permission:view role', ['only' => ['index']]);
-        $this->middleware('permission:create role', ['only' => ['create','store','addPermissionToRole','givePermissionToRole']]);
-        $this->middleware('permission:update role', ['only' => ['update','edit']]);
+        $this->middleware('permission:create role', ['only' => ['create', 'store', 'addPermissionToRole', 'givePermissionToRole']]);
+        $this->middleware('permission:update role', ['only' => ['update', 'edit']]);
         $this->middleware('permission:delete role', ['only' => ['destroy']]);
     }
 
     public function index()
     {
-        $roles = Role::get();
+        $roles = Role::paginate(15);
+
         return view('role-permission.role.index', ['roles' => $roles]);
     }
 
@@ -38,22 +39,22 @@ class RoleController extends Controller
             'name' => [
                 'required',
                 'string',
-                'unique:roles,name'
-            ]
+                'unique:roles,name',
+            ],
         ]);
 
         Role::create([
             'uuid' => Str::uuid(),
-            'name' => $request->name
+            'name' => $request->name,
         ]);
 
-        return redirect('roles')->with('status','Role Created Successfully');
+        return redirect('roles')->with('status', 'Role Created Successfully');
     }
 
     public function edit(Role $role)
     {
-        return view('role-permission.role.edit',[
-            'role' => $role
+        return view('role-permission.role.edit', [
+            'role' => $role,
         ]);
     }
 
@@ -63,22 +64,23 @@ class RoleController extends Controller
             'name' => [
                 'required',
                 'string',
-                'unique:roles,name,'.$role->uuid
-            ]
+                'unique:roles,name,'.$role->uuid,
+            ],
         ]);
 
         $role->update([
-            'name' => $request->name
+            'name' => $request->name,
         ]);
 
-        return redirect('roles')->with('status','Role Updated Successfully');
+        return redirect('roles')->with('status', 'Role Updated Successfully');
     }
 
     public function destroy($roleId)
     {
         $role = Role::find($roleId);
         $role->delete();
-        return redirect('roles')->with('status','Role Deleted Successfully');
+
+        return redirect('roles')->with('status', 'Role Deleted Successfully');
     }
 
     public function addPermissionToRole($roleId)
@@ -86,33 +88,34 @@ class RoleController extends Controller
         $permissions = Permission::get();
         $role = Role::findOrFail($roleId);
         $rolePermissions = DB::table('role_has_permissions')
-                                ->where('role_has_permissions.role_uuid', $role->uuid)
-                                ->pluck('role_has_permissions.permission_uuid','role_has_permissions.permission_uuid')
-                                ->all();
+            ->where('role_has_permissions.role_uuid', $role->uuid)
+            ->pluck('role_has_permissions.permission_uuid', 'role_has_permissions.permission_uuid')
+            ->all();
 
         return view('role-permission.role.add-permissions', [
             'role' => $role,
             'permissions' => $permissions,
-            'rolePermissions' => $rolePermissions
+            'rolePermissions' => $rolePermissions,
         ]);
     }
 
     public function givePermissionToRole(Request $request, $roleId)
     {
         $request->validate([
-            'permission' => 'required'
+            'permission' => 'required',
         ]);
 
         $role = Role::findOrFail($roleId);
         $role->syncPermissions($request->permission);
 
-        return redirect()->back()->with('status','Permissions added to role');
+        return redirect()->back()->with('status', 'Permissions added to role');
     }
 
     public function search(Request $request)
     {
         $search = $request->search;
         $roles = Role::where('name', 'like', '%'.$search.'%')->get();
+
         return view('role-permission.role.index', ['roles' => $roles]);
-    }   
+    }
 }

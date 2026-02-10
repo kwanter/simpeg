@@ -13,9 +13,9 @@
                 <div class="card">
                     <div class="card-header">
                         <h4>Data Pengajuan Izin
-                            @if(!auth()->user()->hasRole('pimpinan') && !auth()->user()->hasRole('atasan-pimpinan'))
+                            @can('create', App\Models\Izin::class)
                                 <a href="{{ route('izin.create') }}" class="btn btn-primary float-end">Ajukan Izin</a>
-                            @endif
+                            @endcan
                         </h4>
                     </div>
                     <div class="card-body">
@@ -25,9 +25,9 @@
                                     <tr class="text-center">
                                         <th>No</th>
                                         <th>No Surat Izin</th>
-                                        @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('atasan-pimpinan'))
+                                        @can('viewNamaPegawai', App\Models\Izin::class)
                                             <th>Nama Pegawai</th>
-                                        @endif
+                                        @endcan
                                         <th>Jenis Izin</th>
                                         <th>Tanggal</th>
                                         <th>Jumlah Hari</th>
@@ -40,9 +40,9 @@
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td>{{ $izin->no_surat_izin }}</td>
-                                        @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('atasan-pimpinan'))
-                                            <td>{{ $izin->pegawai->nama }}</td>
-                                        @endif
+                                        @can('viewNamaPegawai', App\Models\Izin::class)
+                                            <td>{{ $izin->pegawai?->nama }}</td>
+                                        @endcan
                                         <td>{{ $izin->jenis_izin }}</td>
                                         <td>{{ $izin->tanggal_mulai->format('d-m-Y') }} s/d {{ $izin->tanggal_selesai->format('d-m-Y') }}</td>
                                         <td class="text-center">{{ $izin->jumlah_hari }}</td>
@@ -61,20 +61,20 @@
                                         </td>
                                         <td class="text-center">
                                             <a href="{{ route('izin.show', $izin->uuid) }}" class="btn btn-info btn-sm">Detail</a>
-                                            @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || (auth()->user()->id == $izin->pegawai->user_id && $izin->verifikasi_atasan == 'Belum Diverifikasi' && $izin->verifikasi_pimpinan == 'Belum Diverifikasi'))
+                                            @can('update', $izin)
                                                 <a href="{{ route('izin.edit', $izin->uuid) }}" class="btn btn-primary btn-sm">Edit</a>
                                                 <form action="{{ route('izin.destroy', $izin->uuid) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus data ini?')">Hapus</button>
                                                 </form>
-                                            @endif
-                                            @if((auth()->user()->hasRole('atasan-pimpinan') || auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin')) && $izin->verifikasi_atasan == 'Belum Diverifikasi')
+                                            @endcan
+                                            @can('verifyAtasan', $izin)
                                                 <a href="{{ route('izin.verifikasi-atasan', $izin->uuid) }}" class="btn btn-warning btn-sm">Verifikasi Atasan</a>
-                                            @endif
-                                            @if((auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin')) && $izin->verifikasi_atasan == 'Disetujui' && $izin->verifikasi_pimpinan == 'Belum Diverifikasi')
+                                            @endcan
+                                            @can('verifyPimpinan', $izin)
                                                 <a href="{{ route('izin.verifikasi-pimpinan', $izin->uuid) }}" class="btn btn-warning btn-sm">Verifikasi Pimpinan</a>
-                                            @endif
+                                            @endcan
                                         </td>
                                     </tr>
                                     @empty

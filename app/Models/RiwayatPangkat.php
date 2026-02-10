@@ -2,22 +2,23 @@
 
 namespace App\Models;
 
+use App\Traits\UserTrackingTrait;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use App\Traits\UserTrackingTrait;
 use Venturecraft\Revisionable\RevisionableTrait;
 
 class RiwayatPangkat extends Model
 {
-    use HasFactory, SoftDeletes, HasUuids, UserTrackingTrait, RevisionableTrait;
-
-    protected $guarded = [];
+    use HasFactory, HasUuids, RevisionableTrait, SoftDeletes, UserTrackingTrait;
 
     protected $table = 'riwayat_pangkat';
+
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -27,7 +28,7 @@ class RiwayatPangkat extends Model
         'tmt',
         'nomor_sk',
         'tanggal_sk',
-        'keterangan'
+        'keterangan',
     ];
 
     protected $casts = [

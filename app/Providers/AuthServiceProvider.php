@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Gate;
+use App\Models\Cuti;
+use App\Models\Izin;
+use App\Policies\CutiPolicy;
+use App\Policies\IzinPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -13,7 +17,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        //
+        Izin::class => IzinPolicy::class,
+        Cuti::class => CutiPolicy::class,
     ];
 
     /**

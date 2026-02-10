@@ -2,18 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\UserTrackingTrait;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use App\Traits\UserTrackingTrait;
 use Venturecraft\Revisionable\RevisionableTrait;
 
 class Pegawai extends Model
 {
-    use HasFactory, SoftDeletes, HasUuids, UserTrackingTrait, RevisionableTrait;
-
-    protected $guarded = [];
+    use HasFactory, HasUuids, RevisionableTrait, SoftDeletes, UserTrackingTrait;
 
     /**
      * The primary key for the model.

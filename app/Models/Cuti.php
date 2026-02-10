@@ -2,29 +2,32 @@
 
 namespace App\Models;
 
+use App\Traits\UserTrackingTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\UserTrackingTrait;
 use Venturecraft\Revisionable\RevisionableTrait;
 
 class Cuti extends Model
 {
-    use HasFactory, UserTrackingTrait, RevisionableTrait;
+    use HasFactory, RevisionableTrait, UserTrackingTrait;
 
     protected $table = 'cuti';
+
     protected $primaryKey = 'uuid';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    protected $guarded = [];
 
     protected $casts = [
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
-        //'lama_cuti' => 'integer',
+        // 'lama_cuti' => 'integer',
         'tanggal_verifikasi' => 'datetime',
         'tanggal_verifikasi_pimpinan' => 'datetime',
         'tanggal_verifikasi_atasan_pimpinan' => 'datetime', // Add this line
     ];
+
     protected static function boot()
     {
         parent::boot();
@@ -41,9 +44,9 @@ class Cuti extends Model
     public function scopeFilter($query, array $filters)
     {
         $query->when($filters['search'] ?? false, function ($query, $search) {
-            return $query->where('pegawai_uuid', 'like', '%' . $search . '%')
-                ->orWhere('jenis_cuti', 'like', '%' . $search . '%')
-                ->orWhere('status', 'like', '%'. $search. '%');
+            return $query->where('pegawai_uuid', 'like', '%'.$search.'%')
+                ->orWhere('jenis_cuti', 'like', '%'.$search.'%')
+                ->orWhere('status', 'like', '%'.$search.'%');
         });
     }
 
@@ -101,6 +104,7 @@ class Cuti extends Model
     public function generatePdf()
     {
         $pdf = \PDF::loadView('cuti.pdf', ['cuti' => $this]);
+
         return $pdf;
     }
 
@@ -120,10 +124,10 @@ class Cuti extends Model
     {
         $months = [
             'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
         ];
 
-        return $date->format('d') . ' ' . $months[$date->format('n') - 1] . ' ' . $date->format('Y');
+        return $date->format('d').' '.$months[$date->format('n') - 1].' '.$date->format('Y');
     }
 
     // Get approval date in Indonesian format

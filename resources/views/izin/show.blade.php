@@ -18,11 +18,11 @@
                                     </tr>
                                     <tr>
                                         <th width="200px">Nama Pegawai</th>
-                                        <td>{{ $izin->pegawai->nama }}</td>
+                                        <td>{{ $izin->pegawai?->nama }}</td>
                                     </tr>
                                     <tr>
                                         <th>NIP</th>
-                                        <td>{{ $izin->pegawai->nip }}</td>
+                                        <td>{{ $izin->pegawai?->nip }}</td>
                                     </tr>
                                     <tr>
                                         <th>Jenis Izin</th>
@@ -46,11 +46,11 @@
                                     </tr>
                                     <tr>
                                         <th>Atasan Pimpinan</th>
-                                        <td>{{ $izin->atasan_pimpinan->nama ?? 'Tidak ada' }}</td>
+                                        <td>{{ $izin->atasan_pimpinan?->nama ?? 'Tidak ada' }}</td>
                                     </tr>
                                     <tr>
                                         <th>Pimpinan</th>
-                                        <td>{{ $izin->pimpinan->nama ?? 'Tidak ada' }}</td>
+                                        <td>{{ $izin->pimpinan?->nama ?? 'Tidak ada' }}</td>
                                     </tr>
                                     <tr>
                                         <th>Dokumen Pendukung</th>
@@ -132,16 +132,16 @@
                                     @endif
                                 </table>
                                 <!-- Add this button in the appropriate location in your show.blade.php -->
-                                @if(($izin->status == 'Disetujui' || $izin->status == 'Disetujui Atasan') && !empty($izin->no_surat_izin))
+                                @can('cetak', $izin)
                                 <a href="{{ route('izin.pdf', $izin->uuid) }}" class="btn btn-primary">
                                     <i class="fas fa-file-pdf me-1"></i> Cetak Surat Izin
                                 </a>
-                                @endif
+                                @endcan
                             </div>
                         </div>
 
                         <div class="mt-3">
-                            @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || (auth()->user()->id == $izin->pegawai->user_id && $izin->verifikasi_atasan == 'Belum Diverifikasi' && $izin->verifikasi_pimpinan == 'Belum Diverifikasi'))
+                            @can('update', $izin)
                                 <a href="{{ route('izin.edit', $izin->uuid) }}" class="btn btn-primary">Edit</a>
 
                                 <form action="{{ route('izin.destroy', $izin->uuid) }}" method="POST" class="d-inline">
@@ -149,15 +149,15 @@
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger" onclick="return confirm('Apakah Anda yakin ingin menghapus data ini?')">Hapus</button>
                                 </form>
-                            @endif
+                            @endcan
 
-                            @if((auth()->user()->hasRole('atasan-pimpinan') || auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin')) && $izin->verifikasi_atasan == 'Belum Diverifikasi')
+                            @can('verifyAtasan', $izin)
                                 <a href="{{ route('izin.verifikasi-atasan', $izin->uuid) }}" class="btn btn-warning">Verifikasi Atasan</a>
-                            @endif
+                            @endcan
 
-                            @if((auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin')) && $izin->verifikasi_atasan == 'Disetujui' && $izin->verifikasi_pimpinan == 'Belum Diverifikasi')
+                            @can('verifyPimpinan', $izin)
                                 <a href="{{ route('izin.verifikasi-pimpinan', $izin->uuid) }}" class="btn btn-warning">Verifikasi Pimpinan</a>
-                            @endif
+                            @endcan
                         </div>
                     </div>
                 </div>

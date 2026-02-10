@@ -10,8 +10,6 @@ class Izin extends Model
 {
     use HasFactory, RevisionableTrait;
 
-    protected $guarded = [];
-
     protected $table = 'izin';
 
     protected $fillable = [
@@ -35,7 +33,7 @@ class Izin extends Model
         'tanggal_verifikasi_atasan',
         'tanggal_verifikasi_pimpinan',
         'catatan_atasan',
-        'catatan_pimpinan'
+        'catatan_pimpinan',
     ];
 
     protected $casts = [

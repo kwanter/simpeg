@@ -11,16 +11,20 @@ class HariLibur extends Model
     use HasFactory, RevisionableTrait;
 
     protected $table = 'hari_libur';
+
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
-    protected $guarded = [];
+
     public function scopeFilter($query, array $filters)
     {
         $query->when($filters['search'] ?? false, function ($query, $search) {
-            return $query->where('nama', 'like', '%' . $search . '%');
+            return $query->where('nama', 'like', '%'.$search.'%');
         });
     }
+
     public static function getHariLibur($tanggal)
     {
         $hariLibur = HariLibur::where('tanggal', $tanggal)->first();
@@ -30,6 +34,7 @@ class HariLibur extends Model
             return null;
         }
     }
+
     public static function getHariLiburByDateRange($startDate, $endDate)
     {
         $startDate = new \DateTime($startDate);
@@ -37,18 +42,25 @@ class HariLibur extends Model
         $endDate->modify('+1 day');
         $interval = \DateInterval::createFromDateString('1 day');
         $period = new \DatePeriod($startDate, $interval, $endDate);
+
+        // Batch-fetch all holidays in range (fixes N+1 query)
+        $dbHolidays = HariLibur::whereBetween('tanggal', [
+            $startDate->format('Y-m-d'),
+            (clone $endDate)->modify('-1 day')->format('Y-m-d'),
+        ])->pluck('tanggal')->map(fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : date('Y-m-d', strtotime($d)))->flip()->all();
+
         $holidays = [];
         foreach ($period as $date) {
             $day = $date->format('N');
+            $dateStr = $date->format('Y-m-d');
             if ($day == 6 || $day == 7) {
-                $holidays[] = $date->format('Y-m-d');
-            } else {
-                $holiday = HariLibur::where('tanggal', $date->format('Y-m-d'))->first();
-                if ($holiday) {
-                    $holidays[] = $date->format('Y-m-d');
-                }
+                $holidays[] = $dateStr;
+            } elseif (isset($dbHolidays[$dateStr])) {
+                $holidays[] = $dateStr;
             }
         }
+
+        return $holidays;
     }
 
     protected $fillable = [
@@ -56,7 +68,7 @@ class HariLibur extends Model
         'tanggal',
         'nama',
         'jenis', // 'Libur Nasional' or 'Cuti Bersama'
-        'keterangan'
+        'keterangan',
     ];
 
     protected $casts = [

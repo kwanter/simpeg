@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Pegawai;
 use App\Models\CutiBalance;
+use App\Models\Pegawai;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class UpdateCutiBalances extends Command
@@ -31,20 +31,22 @@ class UpdateCutiBalances extends Command
         $year = $this->argument('year') ?? date('Y');
         $this->info("Updating cuti balances for year: $year");
 
-        $pegawai = Pegawai::all();
+        $total = Pegawai::count();
         $count = 0;
-        $this->output->progressStart(count($pegawai));
+        $this->output->progressStart($total);
 
-        foreach ($pegawai as $p) {
+        Pegawai::chunk(100, function ($pegawaiChunk) use ($year, &$count) {
             try {
-                CutiBalance::checkAndUpdateBalance($p->uuid, $year);
-                $count++;
-                $this->output->progressAdvance();
+                $uuids = $pegawaiChunk->pluck('uuid')->toArray();
+                CutiBalance::bulkCheckAndUpdateBalance($uuids, $year);
+
+                $count += count($uuids);
+                $this->output->progressAdvance(count($uuids));
             } catch (\Exception $e) {
-                Log::error("Error updating cuti balance for pegawai {$p->nama} ({$p->nip}): " . $e->getMessage());
-                $this->error("Error updating balance for {$p->nama}: " . $e->getMessage());
+                Log::error('Error updating cuti balances for chunk: '.$e->getMessage());
+                $this->error('Error updating balances for chunk: '.$e->getMessage());
             }
-        }
+        });
 
         $this->output->progressFinish();
         $this->info("Successfully updated $count cuti balances for year $year");

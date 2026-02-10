@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Jabatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+
 class JabatanController extends Controller
 {
     public function __construct()
@@ -18,13 +19,15 @@ class JabatanController extends Controller
 
     public function index()
     {
-        $jabatans = Jabatan::all();
+        $jabatans = Jabatan::paginate(15);
+
         return view('jabatan.index', compact('jabatans'));
     }
 
     public function create()
     {
         $jabatans = Jabatan::all();
+
         return view('jabatan.create', compact('jabatans'));
     }
 
@@ -49,6 +52,7 @@ class JabatanController extends Controller
     public function edit(Jabatan $jabatan)
     {
         $jabatans = Jabatan::all();
+
         return view('jabatan.edit', compact('jabatan', 'jabatans'));
     }
 
@@ -80,7 +84,7 @@ class JabatanController extends Controller
         $search = $request->input('search');
 
         $jabatans = Jabatan::where('nama', 'LIKE', "%{$search}%")
-                         ->paginate(10);
+            ->paginate(10);
 
         return view('jabatan.index', compact('jabatans'));
     }

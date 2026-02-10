@@ -2,15 +2,15 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Factory as ValidationFactory;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
@@ -48,12 +48,18 @@ class LoginRequest extends FormRequest
             if ($this->isEmail($this->input('email'))) {
                 $user = User::where('email', $this->input('email'))->first();
                 if ($user && Hash::check($this->input('password'), $user->password) && $user->status == 1) {
-                    Auth::login($user);
+                    Auth::login($user, $this->boolean('remember'));
+                    RateLimiter::clear($this->throttleKey());
+
+                    return;
                 }
-            }else{
+            } else {
                 $user = User::where('nip', $this->input('email'))->first();
                 if ($user && Hash::check($this->input('password'), $user->password) && $user->status == 1) {
-                    Auth::login($user);
+                    Auth::login($user, $this->boolean('remember'));
+                    RateLimiter::clear($this->throttleKey());
+
+                    return;
                 }
             }
 
@@ -101,8 +107,8 @@ class LoginRequest extends FormRequest
     /**
      * Validate if provided parameter is valid email.
      *
-     * @param $param
      * @return bool
+     *
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     private function isEmail($param)

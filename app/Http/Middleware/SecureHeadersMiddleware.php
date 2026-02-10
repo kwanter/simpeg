@@ -10,8 +10,6 @@ class SecureHeadersMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
      * @return mixed
      */
     public function handle(Request $request, Closure $next)
@@ -24,6 +22,7 @@ class SecureHeadersMiddleware
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=()');
         $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'");
 
         return $response;
     }

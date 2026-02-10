@@ -11,7 +11,17 @@ class Pangkat extends Model
     use HasFactory, RevisionableTrait;
 
     protected $table = 'pangkat';
+
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
+
+    protected $fillable = [
+        'uuid',
+        'nama',
+        'golongan',
+        'keterangan',
+    ];
 }

@@ -26,7 +26,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h3 class="card-title">Daftar Permohonan Cuti</h3>
                         <div>
-                            @can('update cuti')
+                            @can('updateAllBalances', App\Models\Cuti::class)
                             <a href="{{ route('cuti.update-all-balances') }}" class="btn btn-warning me-2"
                                onclick="return confirm('Apakah Anda yakin ingin memperbarui saldo cuti untuk semua pegawai?')">
                                 <i class="fas fa-sync-alt me-1"></i> Perbarui Saldo Semua Pegawai
@@ -46,9 +46,9 @@
                                 <tr class="text-center">
                                     <th>No</th>
                                     <th>No Surat Cuti</th>
-                                    @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('verifikator'))
+                                    @can('viewNamaPegawai', App\Models\Cuti::class)
                                         <th>Nama Pegawai</th>
-                                    @endif
+                                    @endcan
                                     <th>Jenis Cuti</th>
                                     <th>Tanggal Mulai</th>
                                     <th>Tanggal Selesai</th>
@@ -62,9 +62,9 @@
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $item->no_surat_cuti ?? '-' }}</td>
-                                        @if(auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('pimpinan') || auth()->user()->hasRole('verifikator'))
-                                            <td>{{ $item->pegawai->nama ?? 'N/A' }}</td>
-                                        @endif
+                                        @can('viewNamaPegawai', App\Models\Cuti::class)
+                                            <td>{{ $item->pegawai?->nama ?? 'N/A' }}</td>
+                                        @endcan
                                         <td>{{ $item->jenis_cuti }}</td>
                                         <td>{{ \Carbon\Carbon::parse($item->tanggal_mulai)->format('d/m/Y') }}</td>
                                         <td>{{ \Carbon\Carbon::parse($item->tanggal_selesai)->format('d/m/Y') }}</td>
@@ -85,37 +85,31 @@
                                             <div class="btn-group" role="group">
                                                 <a href="{{ route('cuti.show', $item->uuid) }}" class="btn btn-sm btn-info">Detail</a>
 
-                                                @if($item->status == 'Pending')
-                                                    @can('update cuti')
-                                                        <a href="{{ route('cuti.edit', $item->uuid) }}" class="btn btn-sm btn-warning">Edit</a>
-                                                    @endcan
+                                                @can('update', $item)
+                                                    <a href="{{ route('cuti.edit', $item->uuid) }}" class="btn btn-sm btn-warning">Edit</a>
+                                                @endcan
 
-                                                    @can('delete cuti')
-                                                        <form action="{{ route('cuti.destroy', $item->uuid) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini?');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                                                        </form>
-                                                    @endcan
+                                                @can('delete', $item)
+                                                    <form action="{{ route('cuti.destroy', $item->uuid) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                                                    </form>
+                                                @endcan
 
-                                                    @can('verifikasi cuti')
-                                                        <a href="{{ route('cuti.verifikasi', $item->uuid) }}" class="btn btn-sm btn-success">Verifikasi</a>
-                                                    @endcan
-                                                @endif
+                                                @can('verify', $item)
+                                                    <a href="{{ route('cuti.verifikasi', $item->uuid) }}" class="btn btn-sm btn-success">Verifikasi</a>
+                                                @endcan
 
-                                                @if($item->status == 'Disetujui Verifikator')
-                                                    @can('pimpinan cuti')
-                                                        <a href="{{ route('cuti.verifikasi-pimpinan', $item->uuid) }}" class="btn btn-sm btn-primary">Verifikasi Pimpinan</a>
-                                                    @endcan
-                                                @endif
+                                                @can('verifyPimpinan', $item)
+                                                    <a href="{{ route('cuti.verifikasi-pimpinan', $item->uuid) }}" class="btn btn-sm btn-primary">Verifikasi Pimpinan</a>
+                                                @endcan
 
-                                                @if($item->status == 'Disetujui Pimpinan')
-                                                    @can('atasan pimpinan cuti')
-                                                        <a href="{{ route('cuti.verifikasi-atasan-pimpinan', $item->uuid) }}" class="btn btn-sm btn-primary">
-                                                            <i class="fas fa-check-circle me-1"></i> Verifikasi Atasan
-                                                        </a>
-                                                    @endcan
-                                                @endif
+                                                @can('verifyAtasanPimpinan', $item)
+                                                    <a href="{{ route('cuti.verifikasi-atasan-pimpinan', $item->uuid) }}" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-check-circle me-1"></i> Verifikasi Atasan
+                                                    </a>
+                                                @endcan
                                             </div>
                                         </td>
                                     </tr>
