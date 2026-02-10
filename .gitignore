@@ -26,6 +26,9 @@ projectBrief.md
 memory-bank/
 .vscode
 
+# Docker
+/docker/mysql-data/
+
 # Playwright
 /test-results/
 /playwright-report/

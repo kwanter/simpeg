@@ -1,0 +1,36 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker data
+docker/mysql-data
+
+# Node / Frontend (not needed in PHP container)
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Testing
+test-results
+playwright-report
+blob-report
+playwright/.cache
+playwright/.auth
+.phpunit.result.cache
+
+# Misc
+memory-bank
+projectBrief.md
+README.md
+LICENSE

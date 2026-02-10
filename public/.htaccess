@@ -3,6 +3,8 @@
         Options -MultiViews -Indexes
     </IfModule>
 
+    AddType application/manifest+json .webmanifest
+
     RewriteEngine On
 
     # Handle Authorization Header

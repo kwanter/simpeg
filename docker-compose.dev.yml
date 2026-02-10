@@ -1,0 +1,67 @@
+###############################################################################
+# docker-compose.dev.yml — Laravel dev stack (Apache + PHP 8.2 + MySQL 8 + Redis)
+###############################################################################
+
+services:
+  # ─── App (PHP 8.2 + Apache) ───────────────────────────────────────────────
+  app:
+    build:
+      context: ./docker/apache
+      dockerfile: Dockerfile
+    container_name: simpeg-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html # Bind-mount the entire repo
+      - ./docker/apache/php.ini:/usr/local/etc/php/conf.d/99-custom.ini # optional hot-reload
+    environment:
+      APACHE_DOCUMENT_ROOT: /var/www/html/public
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - simpeg-net
+
+  # ─── MySQL 8 ──────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: simpeg-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-secret}"
+      MYSQL_DATABASE: "${DB_DATABASE:-simpeg}"
+      MYSQL_USER: "${DB_USERNAME:-simpeg}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-secret}"
+    volumes:
+      - ./docker/mysql-data:/var/lib/mysql # ← Host-mounted bind mount
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-secret}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - simpeg-net
+
+  # ─── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: simpeg-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - simpeg-net
+
+# ─── Network ─────────────────────────────────────────────────────────────────
+networks:
+  simpeg-net:
+    driver: bridge
