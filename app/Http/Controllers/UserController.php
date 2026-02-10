@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -24,11 +26,13 @@ class UserController extends Controller
     {
         if (auth()->user()->hasRole('super-admin')) {
             $users = User::paginate(15);
-        } elseif (auth()->user()->hasRole('admin')) {
+        }
+        elseif (auth()->user()->hasRole('admin')) {
             $users = User::whereHas('roles', function ($query) {
                 $query->where('name', '!=', 'super-admin');
             })->paginate(15);
-        } else {
+        }
+        else {
             // Handle case for users without super-admin or admin roles
             $users = collect(); // or redirect, or show an error
         }
@@ -41,9 +45,11 @@ class UserController extends Controller
     {
         if (auth()->user()->hasRole('super-admin')) {
             $roles = Role::pluck('name', 'name')->all();
-        } elseif (auth()->user()->hasRole('admin')) {
+        }
+        elseif (auth()->user()->hasRole('admin')) {
             $roles = Role::where('name', '!=', 'super-admin')->pluck('name', 'name')->all();
-        } else {
+        }
+        else {
             $roles = collect();
         }
         $pegawai = Pegawai::get();
@@ -53,11 +59,16 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $allowedRoles = auth()->user()->hasRole('super-admin')
+            ?Role::pluck('name')->toArray()
+            : Role::where('name', '!=', 'super-admin')->pluck('name')->toArray();
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|max:20',
-            'roles' => 'required',
+            'password' => ['required', Password::min(12)->mixedCase()->numbers()->symbols()],
+            'roles' => ['required', 'array'],
+            'roles.*' => [Rule::in($allowedRoles)],
         ]);
 
         $user = User::create([
@@ -77,9 +88,11 @@ class UserController extends Controller
     {
         if (auth()->user()->hasRole('super-admin')) {
             $roles = Role::pluck('name', 'name')->all();
-        } elseif (auth()->user()->hasRole('admin')) {
+        }
+        elseif (auth()->user()->hasRole('admin')) {
             $roles = Role::where('name', '!=', 'super-admin')->pluck('name', 'name')->all();
-        } else {
+        }
+        else {
             // Handle case for users without super-admin or admin roles
             $roles = collect(); // or redirect, or show an error
         }
@@ -96,10 +109,15 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $allowedRoles = auth()->user()->hasRole('super-admin')
+            ?Role::pluck('name')->toArray()
+            : Role::where('name', '!=', 'super-admin')->pluck('name')->toArray();
+
         $request->validate([
             'name' => 'required|string|max:255',
-            'password' => 'nullable|string|min:8|max:20',
-            'roles' => 'required',
+            'password' => ['nullable', Password::min(12)->mixedCase()->numbers()->symbols()],
+            'roles' => ['required', 'array'],
+            'roles.*' => [Rule::in($allowedRoles)],
             'status' => 'required',
         ]);
 
@@ -110,7 +128,7 @@ class UserController extends Controller
             'nip' => $request->nip,
         ];
 
-        if (! empty($request->password)) {
+        if (!empty($request->password)) {
             $data += [
                 'password' => Hash::make($request->password),
             ];
@@ -133,9 +151,9 @@ class UserController extends Controller
     public function search(Request $request)
     {
         $search = $request->search;
-        $users = User::where('name', 'like', '%'.$search.'%')
-            ->orWhere('email', 'like', '%'.$search.'%')
-            ->orWhere('nip', 'like', '%'.$search.'%')
+        $users = User::where('name', 'like', '%' . $search . '%')
+            ->orWhere('email', 'like', '%' . $search . '%')
+            ->orWhere('nip', 'like', '%' . $search . '%')
             ->get();
 
         return view('role-permission.user.index', ['users' => $users]);

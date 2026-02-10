@@ -9,7 +9,7 @@ use Intervention\Image\Facades\Image;
 use App\Models\User;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;  // Add this line
+use Illuminate\Support\Str; // Add this line
 
 class PegawaiController extends Controller
 {
@@ -19,8 +19,8 @@ class PegawaiController extends Controller
         $this->middleware('auth');
         // Remove the csrf middleware since it's already included in 'web' middleware group
         $this->middleware('permission:view pegawai', ['only' => ['index']]);
-        $this->middleware('permission:create pegawai', ['only' => ['create','store']]);
-        $this->middleware('permission:update pegawai', ['only' => ['update','edit']]);
+        $this->middleware('permission:create pegawai', ['only' => ['create', 'store']]);
+        $this->middleware('permission:update pegawai', ['only' => ['update', 'edit']]);
         $this->middleware('permission:delete pegawai', ['only' => ['destroy']]);
         $this->middleware('permission:detail pegawai', ['only' => ['detail']]);
     }
@@ -41,8 +41,8 @@ class PegawaiController extends Controller
             'status_pegawai',
             'foto'
         ])
-        ->orderBy('nama', 'asc')  // Optional: sort by name
-        ->paginate(15);
+            ->orderBy('nama', 'asc') // Optional: sort by name
+            ->paginate(15);
 
         // Map status pegawai to more readable format if needed
         $pegawai->through(function ($item) {
@@ -82,18 +82,19 @@ class PegawaiController extends Controller
                 'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
             ]);
 
-            $request->merge($validatedData);
-            $pegawai = Pegawai::create($request->except('foto'));
+            $pegawai = Pegawai::create($validatedData);
             if ($request->hasFile('foto')) {
                 $this->handleFotoUpload($request, $pegawai);
             }
             if ($pegawai) {
                 return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil ditambahkan');
-            } else {
+            }
+            else {
                 return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal ditambahkan');
             }
             Log::info('Pegawai created successfully', ['id' => $pegawai->id]);
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             Log::error('Error creating pegawai', ['error' => $e->getMessage()]);
             return redirect()->back()->with('error', 'Failed to create pegawai');
         }
@@ -109,7 +110,7 @@ class PegawaiController extends Controller
     {
         $pegawai = Pegawai::where('uuid', $uuid)->firstOrFail();
         $validatedData = $request->validate([
-            'nip' => 'required|string|max:255|unique:pegawai,nip,'.$pegawai->uuid.',uuid',  // Changed from id to uuid
+            'nip' => 'required|string|max:255|unique:pegawai,nip,' . $pegawai->uuid . ',uuid', // Changed from id to uuid
             'nama' => 'required|string|max:255',
             'tempat_lahir' => 'required|string|max:255',
             'tanggal_lahir' => 'required|date',
@@ -121,14 +122,14 @@ class PegawaiController extends Controller
             'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
         ]);
 
-        $request->merge($validatedData);
-        $pegawai->update($request->except('foto'));
+        $pegawai->update($validatedData);
         if ($request->hasFile('foto')) {
             $this->handleFotoUpload($request, $pegawai);
         }
         if ($pegawai) {
             return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil diubah');
-        } else {
+        }
+        else {
             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal diubah');
         }
     }
@@ -194,8 +195,8 @@ class PegawaiController extends Controller
         $search = $request->input('search');
 
         $pegawai = Pegawai::where('nama', 'LIKE', "%{$search}%")
-                        ->orWhere('nip', 'LIKE', "%{$search}%")
-                        ->paginate(10);
+            ->orWhere('nip', 'LIKE', "%{$search}%")
+            ->paginate(10);
 
         return view('pegawai.index', compact('pegawai'));
     }

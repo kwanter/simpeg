@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -13,8 +13,10 @@ return new class extends Migration
     public function up(): void
     {
         try {
-            // Disable foreign key checks for MySQL
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            // Disable foreign key checks for MySQL only (skip for SQLite)
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            }
 
             // Drop the foreign key constraint
             if (Schema::hasTable('riwayat_pangkat')) {
@@ -27,50 +29,50 @@ return new class extends Migration
                     AND table_schema = DATABASE()
                 ");
 
-                if (!empty($foreignKeys)) {
-                    DB::statement("ALTER TABLE riwayat_pangkat DROP FOREIGN KEY riwayat_pangkat_pegawai_uuid_foreign");
+                if (! empty($foreignKeys)) {
+                    DB::statement('ALTER TABLE riwayat_pangkat DROP FOREIGN KEY riwayat_pangkat_pegawai_uuid_foreign');
                 }
             }
 
             // Recreate the foreign key constraint
             if (Schema::hasTable('riwayat_pangkat') && Schema::hasTable('pegawai')) {
-                DB::statement("ALTER TABLE riwayat_pangkat ADD CONSTRAINT riwayat_pangkat_pegawai_uuid_foreign FOREIGN KEY (pegawai_uuid) REFERENCES pegawai(uuid) ON DELETE CASCADE");
+                DB::statement('ALTER TABLE riwayat_pangkat ADD CONSTRAINT riwayat_pangkat_pegawai_uuid_foreign FOREIGN KEY (pegawai_uuid) REFERENCES pegawai(uuid) ON DELETE CASCADE');
             }
 
             // Check if riwayat_jabatan table exists before adding columns
             if (Schema::hasTable('riwayat_jabatan')) {
                 // Add columns individually with checks
-                if (!Schema::hasColumn('riwayat_jabatan', 'created_by')) {
+                if (! Schema::hasColumn('riwayat_jabatan', 'created_by')) {
                     Schema::table('riwayat_jabatan', function (Blueprint $table) {
                         $table->uuid('created_by')->nullable()->after('uuid');
                     });
                 }
 
-                if (!Schema::hasColumn('riwayat_jabatan', 'updated_by')) {
+                if (! Schema::hasColumn('riwayat_jabatan', 'updated_by')) {
                     Schema::table('riwayat_jabatan', function (Blueprint $table) {
                         $table->uuid('updated_by')->nullable()->after('updated_at');
                     });
                 }
 
-                if (!Schema::hasColumn('riwayat_jabatan', 'deleted_by')) {
+                if (! Schema::hasColumn('riwayat_jabatan', 'deleted_by')) {
                     Schema::table('riwayat_jabatan', function (Blueprint $table) {
                         $table->uuid('deleted_by')->nullable()->after('deleted_at');
                     });
                 }
 
-                if (!Schema::hasColumn('riwayat_jabatan', 'created_by_username')) {
+                if (! Schema::hasColumn('riwayat_jabatan', 'created_by_username')) {
                     Schema::table('riwayat_jabatan', function (Blueprint $table) {
                         $table->string('created_by_username')->nullable()->after('created_by');
                     });
                 }
 
-                if (!Schema::hasColumn('riwayat_jabatan', 'updated_by_username')) {
+                if (! Schema::hasColumn('riwayat_jabatan', 'updated_by_username')) {
                     Schema::table('riwayat_jabatan', function (Blueprint $table) {
                         $table->string('updated_by_username')->nullable()->after('updated_by');
                     });
                 }
 
-                if (!Schema::hasColumn('riwayat_jabatan', 'deleted_by_username')) {
+                if (! Schema::hasColumn('riwayat_jabatan', 'deleted_by_username')) {
                     Schema::table('riwayat_jabatan', function (Blueprint $table) {
                         $table->string('deleted_by_username')->nullable()->after('deleted_by');
                     });
@@ -102,8 +104,10 @@ return new class extends Migration
             }
 
         } finally {
-            // Re-enable foreign key checks for MySQL
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            // Re-enable foreign key checks for MySQL only
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            }
         }
     }
 
@@ -117,7 +121,7 @@ return new class extends Migration
             Schema::table('riwayat_jabatan', function (Blueprint $table) {
                 $columns = [
                     'created_by', 'updated_by', 'deleted_by',
-                    'created_by_username', 'updated_by_username', 'deleted_by_username'
+                    'created_by_username', 'updated_by_username', 'deleted_by_username',
                 ];
 
                 foreach ($columns as $column) {

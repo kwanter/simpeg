@@ -8,9 +8,13 @@ use Venturecraft\Revisionable\RevisionableTrait;
 
 class Izin extends Model
 {
-    use HasFactory, RevisionableTrait;
+    use HasFactory, RevisionableTrait, \Illuminate\Database\Eloquent\Concerns\HasUuids;
 
     protected $table = 'izin';
+
+    protected $primaryKey = 'uuid';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'uuid',
@@ -45,16 +49,16 @@ class Izin extends Model
 
     public function pegawai()
     {
-        return $this->belongsTo(Pegawai::class, 'pegawai_uuid', 'uuid');
+        return $this->belongsTo(Pegawai::class , 'pegawai_uuid', 'uuid');
     }
 
     public function atasan_pimpinan()
     {
-        return $this->belongsTo(Pegawai::class, 'atasan_pimpinan_uuid', 'uuid');
+        return $this->belongsTo(Pegawai::class , 'atasan_pimpinan_uuid', 'uuid');
     }
 
     public function pimpinan()
     {
-        return $this->belongsTo(Pegawai::class, 'pimpinan_uuid', 'uuid');
+        return $this->belongsTo(Pegawai::class , 'pimpinan_uuid', 'uuid');
     }
 }

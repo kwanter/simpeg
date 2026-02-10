@@ -20,6 +20,7 @@ class IzinController extends Controller
 
     public function index()
     {
+        $this->authorize('viewAny', Izin::class);
         // Check if the user has any of these roles
         if (auth()->user()->hasRole(['super-admin', 'admin'])) {
             // Admin can see all izin
@@ -64,6 +65,7 @@ class IzinController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Izin::class);
         $user = Auth::user();
         $pegawai = Pegawai::where('nip', $user->nip)->first();
 
@@ -100,14 +102,7 @@ class IzinController extends Controller
     {
         $user = Auth::user();
         $izin = Izin::with('pegawai')->where('uuid', $uuid)->firstOrFail();
-
-        // Only allow editing if the izin belongs to the user or if user is admin
-        if (! $user->hasRole('super-admin') && ! $user->hasRole('admin')) {
-            $pegawai = Pegawai::where('nip', $user->nip)->first();
-            if (! $pegawai || $pegawai->uuid !== $izin->pegawai_uuid) {
-                return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk mengedit pengajuan izin ini');
-            }
-        }
+        $this->authorize('update', $izin);
 
         // Allow editing if it's an admin or if the izin is approved by atasan but needs no_surat_izin
         $allowEdit = $user->hasRole('super-admin') || $user->hasRole('admin') ||
@@ -146,6 +141,7 @@ class IzinController extends Controller
     // In the store method, remove no_surat_izin from validation and don't set it initially
     public function store(Request $request)
     {
+        $this->authorize('create', Izin::class);
         $validated = $request->validate([
             'pegawai_uuid' => 'required|exists:pegawai,uuid',
             'jenis_izin' => 'required|string',
@@ -154,7 +150,7 @@ class IzinController extends Controller
             'jam_mulai' => 'nullable|date_format:H:i',
             'jam_selesai' => 'nullable|date_format:H:i',
             'alasan' => 'required|string',
-            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
             'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
             'pimpinan_uuid' => 'required|exists:pegawai,uuid',
         ]);
@@ -185,6 +181,7 @@ class IzinController extends Controller
     public function show($uuid)
     {
         $izin = Izin::with('pegawai')->where('uuid', $uuid)->firstOrFail();
+        $this->authorize('view', $izin);
 
         return view('izin.show', compact('izin'));
     }
@@ -192,6 +189,7 @@ class IzinController extends Controller
     public function update(Request $request, $uuid)
     {
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
+        $this->authorize('update', $izin);
         $user = Auth::user();
 
         // Check if this is just a no_surat_izin update for an approved izin
@@ -225,7 +223,7 @@ class IzinController extends Controller
             'jam_mulai' => 'nullable|date_format:H:i',
             'jam_selesai' => 'nullable|date_format:H:i',
             'alasan' => 'required|string',
-            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
             'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
             'pimpinan_uuid' => 'required|exists:pegawai,uuid',
         ];
@@ -253,11 +251,7 @@ class IzinController extends Controller
     public function destroy($uuid)
     {
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
-
-        // Don't allow deletion if already verified
-        if ($izin->verifikasi_atasan !== 'Belum Diverifikasi' || $izin->verifikasi_pimpinan !== 'Belum Diverifikasi') {
-            return redirect()->route('izin.index')->with('error', 'Pengajuan izin yang sudah diverifikasi tidak dapat dihapus');
-        }
+        $this->authorize('delete', $izin);
 
         // Delete file if exists
         if ($izin->dokumen) {
@@ -272,19 +266,9 @@ class IzinController extends Controller
     public function verifikasiAtasan($uuid)
     {
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
-
-        if (! $pegawai) {
-            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
-        }
 
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
-
-        // Check if the current user is the assigned atasan or has admin role
-        if (! $user->hasRole('super-admin') && ! $user->hasRole('admin') &&
-            (! $user->hasRole('atasan-pimpinan') || $pegawai->uuid !== $izin->atasan_pimpinan_uuid)) {
-            return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
-        }
+        $this->authorize('verifyAtasan', $izin);
 
         return view('izin.verifikasi-atasan', compact('izin'));
     }
@@ -292,23 +276,9 @@ class IzinController extends Controller
     public function verifikasiPimpinan($uuid)
     {
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
-
-        if (! $pegawai) {
-            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
-        }
 
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
-
-        if ($izin->verifikasi_atasan !== 'Disetujui') {
-            return redirect()->route('izin.index')->with('error', 'Pengajuan izin harus disetujui oleh atasan terlebih dahulu');
-        }
-
-        // Check if the current user is the assigned pimpinan or has admin role
-        if (! $user->hasRole('super-admin') && ! $user->hasRole('admin') &&
-            (! $user->hasRole('pimpinan') || $pegawai->uuid !== $izin->pimpinan_uuid)) {
-            return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
-        }
+        $this->authorize('verifyPimpinan', $izin);
 
         return view('izin.verifikasi-pimpinan', compact('izin'));
     }
@@ -317,11 +287,8 @@ class IzinController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user->hasRole('atasan-pimpinan') && ! $user->hasRole('super-admin') && ! $user->hasRole('admin')) {
-            return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
-        }
-
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
+        $this->authorize('verifyAtasan', $izin);
 
         $validated = $request->validate([
             'verifikasi_atasan' => 'required|in:Disetujui,Ditolak',
@@ -347,15 +314,8 @@ class IzinController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user->hasRole('pimpinan') && ! $user->hasRole('super-admin') && ! $user->hasRole('admin')) {
-            return redirect()->route('izin.index')->with('error', 'Anda tidak memiliki akses untuk melakukan verifikasi');
-        }
-
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
-
-        if ($izin->verifikasi_atasan !== 'Disetujui') {
-            return redirect()->route('izin.index')->with('error', 'Pengajuan izin harus disetujui oleh atasan terlebih dahulu');
-        }
+        $this->authorize('verifyPimpinan', $izin);
 
         $validated = $request->validate([
             'verifikasi_pimpinan' => 'required|in:Disetujui,Ditolak',
@@ -381,18 +341,7 @@ class IzinController extends Controller
     public function generatePdf($uuid)
     {
         $izin = Izin::with(['pegawai', 'atasan_pimpinan', 'pimpinan'])->where('uuid', $uuid)->firstOrFail();
-
-        // Check if izin has been approved
-        if ($izin->status !== 'Disetujui' && $izin->status !== 'Disetujui Atasan') {
-            return redirect()->route('izin.show', $izin->uuid)
-                ->with('error', 'Surat izin hanya dapat dicetak setelah disetujui');
-        }
-
-        // Check if no_surat_izin exists
-        if (empty($izin->no_surat_izin)) {
-            return redirect()->route('izin.show', $izin->uuid)
-                ->with('error', 'Nomor surat izin belum diisi. Silakan isi nomor surat terlebih dahulu.');
-        }
+        $this->authorize('cetak', $izin);
 
         $pdf = \PDF::loadView('izin.pdf', ['izin' => $izin]);
 
