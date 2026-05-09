@@ -10,12 +10,53 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class IzinController extends Controller
 {
     public function __construct()
     {
         $this->middleware('auth');
+    }
+
+    /**
+     * Validasi khusus untuk Izin Keluar Kantor dan Izin Pulang Cepat.
+     * Pasal 5 PERMA No. 7 Tahun 2016 — Lampiran II
+     */
+    private function validateIzinKeluarKantor(Request $request): array
+    {
+        $rules = [
+            'tanggal_mulai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
+            'tanggal_selesai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
+            'jam_mulai' => ['required', 'date_format:H:i'],
+            'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
+            'alasan' => ['required', 'string', 'max:500'],
+        ];
+        $messages = [
+            'tanggal_mulai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
+            'tanggal_selesai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
+            'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
+        ];
+
+        return [$rules, $messages];
+    }
+
+    /**
+     * Validasi khusus untuk Izin Tidak Masuk Kerja.
+     * Pasal 8 PERMA No. 7 Tahun 2016 — Lampiran III — Maks 2 hari kerja
+     */
+    private function validateIzinTidakMasukKerja(Request $request): array
+    {
+        $rules = [
+            'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
+            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
+            'alasan' => ['required', 'string', 'max:500'],
+        ];
+        $messages = [
+            'tanggal_selesai.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai.',
+        ];
+
+        return [$rules, $messages];
     }
 
     public function index()
@@ -81,6 +122,8 @@ class IzinController extends Controller
             'Izin Setengah Hari',
             'Izin Terlambat',
             'Izin Pulang Cepat',
+            'Izin Keluar Kantor',
+            'Izin Tidak Masuk Kerja',
             'Izin Lainnya',
         ];
 
@@ -121,6 +164,8 @@ class IzinController extends Controller
             'Izin Setengah Hari',
             'Izin Terlambat',
             'Izin Pulang Cepat',
+            'Izin Keluar Kantor',
+            'Izin Tidak Masuk Kerja',
             'Izin Lainnya',
         ];
 
@@ -168,6 +213,29 @@ class IzinController extends Controller
         // Calculate jumlah_hari
         $jumlahHari = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
         $validated['jumlah_hari'] = $jumlahHari;
+
+        // Jenis-specific validation for new izin types
+        if (in_array($validated['jenis_izin'], ['Izin Keluar Kantor', 'Izin Pulang Cepat'])) {
+            [$rules, $messages] = $this->validateIzinKeluarKantor($request);
+            $request->validate($rules, $messages);
+            // Override: same-day time-range, jumlah_hari = 0
+            $validated['jumlah_hari'] = 0;
+            $validated['tanggal_mulai'] = now()->toDateString();
+            $validated['tanggal_selesai'] = now()->toDateString();
+            // For single-level jenis, pimpinan_uuid is not required — make nullable
+            unset($validated['pimpinan_uuid']); // Will be set to same as atasan_pimpinan_uuid later
+            // Actually, keep it but it won't be used in verification flow
+        } elseif ($validated['jenis_izin'] === 'Izin Tidak Masuk Kerja') {
+            [$rules, $messages] = $this->validateIzinTidakMasukKerja($request);
+            $request->validate($rules, $messages);
+            // Maks 2 hari kerja (Pasal 8 ayat 4 PERMA No. 7 Tahun 2016)
+            $workDays = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
+            if ($workDays > 2) {
+                throw ValidationException::withMessages([
+                    'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],
+                ]);
+            }
+        }
 
         // Handle file upload
         if ($request->hasFile('dokumen')) {
@@ -308,7 +376,13 @@ class IzinController extends Controller
         $izin->tanggal_verifikasi_atasan = now();
 
         if ($validated['verifikasi_atasan'] === 'Disetujui') {
-            $izin->status = 'Disetujui Atasan';
+            // Single-level approval for Izin Keluar Kantor and Izin Pulang Cepat
+            // Pasal 5 PERMA No. 7 Tahun 2016 — atasan langsung only
+            if (in_array($izin->jenis_izin, ['Izin Keluar Kantor', 'Izin Pulang Cepat'])) {
+                $izin->status = 'Disetujui';
+            } else {
+                $izin->status = 'Disetujui Atasan';
+            }
         } else {
             $izin->status = 'Ditolak Atasan';
         }

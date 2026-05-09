@@ -96,6 +96,10 @@ class IzinPolicy
      */
     public function verifyPimpinan(User $user, Izin $izin): bool
     {
+        if (in_array($izin->jenis_izin, ['Izin Keluar Kantor', 'Izin Pulang Cepat'])) {
+            return false; // Single-level approval — no pimpinan step
+        }
+
         return ($user->hasAnyRole(['super-admin', 'admin']) || $this->isAssignedPimpinan($user, $izin)) &&
             $izin->verifikasi_atasan == 'Disetujui' &&
             $izin->verifikasi_pimpinan == 'Belum Diverifikasi';
