@@ -33,6 +33,18 @@
                             <i class="fas fa-clipboard-list mr-3"></i>
                             {{ __('Pengajuan Izin') }}
                         </x-nav-link>
+                        <div class="border-t border-gray-200 my-2"></div>
+                        <p class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            {{ __('Izin PERMA No. 7/2016') }}
+                        </p>
+                        <x-nav-link :href="route('izin.index-keluar-kantor')" :active="request()->routeIs('izin.index-keluar-kantor')" class="pl-4">
+                            <i class="fas fa-sign-out-alt mr-2"></i>
+                            {{ __('Izin Keluar Kantor') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('izin.index-tidak-masuk')" :active="request()->routeIs('izin.index-tidak-masuk')" class="pl-4">
+                            <i class="fas fa-calendar-times mr-2"></i>
+                            {{ __('Izin Tidak Masuk') }}
+                        </x-nav-link>
                         @endcan
                         @can('view hari libur')
                         <x-nav-link :href="route('hari-libur.index')" :active="request()->routeIs('hari-libur.*')">
@@ -125,6 +137,18 @@
                 @can('view izin')
                     <x-responsive-nav-link :href="route('izin.index')" :active="request()->routeIs('izin.*')">
                         {{ __('Pengajuan Izin') }}
+                    </x-responsive-nav-link>
+                    <div class="border-t border-gray-200 my-1"></div>
+                    <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        {{ __('Izin PERMA No. 7/2016') }}
+                    </div>
+                    <x-responsive-nav-link :href="route('izin.index-keluar-kantor')" :active="request()->routeIs('izin.index-keluar-kantor')" class="pl-4">
+                        <i class="fas fa-sign-out-alt mr-2"></i>
+                        {{ __('Izin Keluar Kantor') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('izin.index-tidak-masuk')" :active="request()->routeIs('izin.index-tidak-masuk')" class="pl-4">
+                        <i class="fas fa-calendar-times mr-2"></i>
+                        {{ __('Izin Tidak Masuk') }}
                     </x-responsive-nav-link>
                 @endcan
                 @can('view hari libur')
