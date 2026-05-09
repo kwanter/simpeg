@@ -138,4 +138,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('izin/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'verifikasiPimpinan'])->name('izin.verifikasi-pimpinan');
     Route::post('izin/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'prosesVerifikasiPimpinan'])->name('izin.proses-verifikasi-pimpinan');
     Route::get('izin/{uuid}/pdf', [App\Http\Controllers\IzinController::class, 'generatePdf'])->name('izin.pdf');
+    Route::get('izin/keluar-kantor/create', [App\Http\Controllers\IzinController::class, 'createKeluarKantor'])->name('izin.create-keluar-kantor');
+    Route::get('izin/tidak-masuk/create', [App\Http\Controllers\IzinController::class, 'createTidakMasuk'])->name('izin.create-tidak-masuk');
+    Route::get('izin/keluar-kantor', [App\Http\Controllers\IzinController::class, 'indexKeluarKantor'])->name('izin.index-keluar-kantor');
+    Route::get('izin/tidak-masuk', [App\Http\Controllers\IzinController::class, 'indexTidakMasuk'])->name('izin.index-tidak-masuk');
 });
