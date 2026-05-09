@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
-        if (!Schema::hasTable('riwayat_jabatan')) {
+        if (! Schema::hasTable('riwayat_jabatan')) {
             Schema::create('riwayat_jabatan', function (Blueprint $table) {
                 $table->uuid('uuid')->primary();
                 $table->uuid('pegawai_uuid');

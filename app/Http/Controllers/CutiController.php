@@ -35,11 +35,10 @@ class CutiController extends Controller
         // If user has permission to verify or is pimpinan, show all leave requests
         if (auth()->user()->can('verifikasi cuti') || auth()->user()->can('pimpinan cuti')) {
             $cuti = Cuti::with(['pegawai', 'verifikator', 'pimpinan'])->latest()->paginate(10);
-        }
-        else {
+        } else {
             // Otherwise, show only the user's leave requests
             $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if (!$pegawai) {
+            if (! $pegawai) {
                 return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
             }
             $cuti = Cuti::with(['pegawai', 'verifikator', 'pimpinan'])
@@ -57,7 +56,7 @@ class CutiController extends Controller
         $user = Auth::user();
         $pegawai = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
         }
 
@@ -69,7 +68,7 @@ class CutiController extends Controller
             ->where('year', $currentYear)
             ->first();
 
-        if (!$balance) {
+        if (! $balance) {
             $balance = CutiBalance::checkAndUpdateBalance($pegawai->uuid, $currentYear);
         }
 
@@ -99,7 +98,7 @@ class CutiController extends Controller
             ->where('year', $year)
             ->first();
 
-        if (!$balance) {
+        if (! $balance) {
             // Create new balance for current year
             $carriedOver = 0;
 
@@ -143,6 +142,8 @@ class CutiController extends Controller
             'alamat_selama_cuti' => 'required|string',
             'no_hp_selama_cuti' => 'required|string',
             'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
+            'pimpinan_uuid' => 'required|exists:pegawai,uuid',
+            'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
         ]);
 
         $validated['pegawai_uuid'] = $pegawai->uuid;
@@ -178,7 +179,7 @@ class CutiController extends Controller
         // --- Start Cuti Besar Validation ---
         elseif ($validated['jenis_cuti'] === 'Cuti Besar') {
             // Check masa kerja (work period) - assuming 'tanggal_masuk' exists on Pegawai model
-            if (!$pegawai->tanggal_masuk) {
+            if (! $pegawai->tanggal_masuk) {
                 return redirect()->back()
                     ->withInput()
                     ->with('error', 'Tanggal masuk kerja pegawai tidak ditemukan untuk validasi Cuti Besar.');
@@ -195,7 +196,7 @@ class CutiController extends Controller
             if ($lamaCuti > 90) {
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', 'Cuti Besar maksimal 3 bulan (sekitar 90 hari kerja). Permintaan Anda: ' . $lamaCuti . ' hari.');
+                    ->with('error', 'Cuti Besar maksimal 3 bulan (sekitar 90 hari kerja). Permintaan Anda: '.$lamaCuti.' hari.');
             }
 
             // Check if there's already a Cuti Tahunan in the same year
@@ -234,7 +235,7 @@ class CutiController extends Controller
         // Handle document upload
         if ($request->hasFile('dokumen')) {
             $file = $request->file('dokumen');
-            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
             $file->storeAs('public/dokumen/cuti', $filename);
             $validated['dokumen'] = $filename;
         }
@@ -257,7 +258,7 @@ class CutiController extends Controller
                 ->where('year', $currentYear)
                 ->first();
 
-            if (!$balance) {
+            if (! $balance) {
                 $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
@@ -271,8 +272,7 @@ class CutiController extends Controller
         if (($cuti->status == 'Disetujui Verifikator' || $cuti->status == 'Disetujui Pimpinan' || $cuti->status == 'Disetujui Atasan Pimpinan') &&
         (auth()->user()->hasRole('super-admin') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('verifikator'))) {
             $this->authorize('editNoSurat', $cuti);
-        }
-        else {
+        } else {
             $this->authorize('update', $cuti);
         }
 
@@ -298,7 +298,7 @@ class CutiController extends Controller
                 ->where('year', $currentYear)
                 ->first();
 
-            if (!$balance) {
+            if (! $balance) {
                 $balance = CutiBalance::checkAndUpdateBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
@@ -343,6 +343,8 @@ class CutiController extends Controller
             'alamat_selama_cuti' => 'required|string',
             'no_hp_selama_cuti' => 'required|string',
             'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
+            'pimpinan_uuid' => 'sometimes|required|exists:pegawai,uuid',
+            'atasan_pimpinan_uuid' => 'sometimes|required|exists:pegawai,uuid',
         ]);
 
         // Calculate leave duration - count only workdays
@@ -381,7 +383,7 @@ class CutiController extends Controller
         // --- Start Cuti Besar Validation ---
         elseif ($validated['jenis_cuti'] === 'Cuti Besar') {
             // Check masa kerja (work period)
-            if (!$pegawai->tanggal_masuk) {
+            if (! $pegawai->tanggal_masuk) {
                 return redirect()->back()
                     ->withInput()
                     ->with('error', 'Tanggal masuk kerja pegawai tidak ditemukan untuk validasi Cuti Besar.');
@@ -397,7 +399,7 @@ class CutiController extends Controller
             if ($lamaCuti > 90) {
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', 'Cuti Besar maksimal 3 bulan (sekitar 90 hari kerja). Permintaan Anda: ' . $lamaCuti . ' hari.');
+                    ->with('error', 'Cuti Besar maksimal 3 bulan (sekitar 90 hari kerja). Permintaan Anda: '.$lamaCuti.' hari.');
             }
 
             // Check if there's already a Cuti Tahunan in the same year
@@ -437,11 +439,11 @@ class CutiController extends Controller
         if ($request->hasFile('dokumen')) {
             // Delete old file if exists
             if ($cuti->dokumen) {
-                Storage::delete('public/dokumen/cuti/' . $cuti->dokumen);
+                Storage::delete('public/dokumen/cuti/'.$cuti->dokumen);
             }
 
             $file = $request->file('dokumen');
-            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
             $file->storeAs('public/dokumen/cuti', $filename);
             $validated['dokumen'] = $filename;
         }
@@ -463,7 +465,7 @@ class CutiController extends Controller
 
         // Delete document if exists
         if ($cuti->dokumen) {
-            Storage::delete('public/dokumen/cuti/' . $cuti->dokumen);
+            Storage::delete('public/dokumen/cuti/'.$cuti->dokumen);
         }
 
         $cuti->delete();
@@ -490,7 +492,7 @@ class CutiController extends Controller
                 ->where('year', $currentYear)
                 ->first();
 
-            if (!$balance) {
+            if (! $balance) {
                 $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
@@ -526,7 +528,7 @@ class CutiController extends Controller
                 ->where('year', $currentYear)
                 ->first();
 
-            if (!$balance) {
+            if (! $balance) {
                 $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
@@ -562,7 +564,7 @@ class CutiController extends Controller
                 ->where('year', $currentYear)
                 ->first();
 
-            if (!$balance) {
+            if (! $balance) {
                 $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
@@ -583,7 +585,7 @@ class CutiController extends Controller
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verify', $cuti);
 
-        if (!$verifikator) {
+        if (! $verifikator) {
             return redirect()->route('cuti.index')->with('error', 'Data verifikator tidak ditemukan');
         }
 
@@ -620,7 +622,7 @@ class CutiController extends Controller
         $user = Auth::user();
         $pimpinan = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$pimpinan) {
+        if (! $pimpinan) {
             return redirect()->route('cuti.index')->with('error', 'Data pimpinan tidak ditemukan');
         }
 
@@ -647,26 +649,7 @@ class CutiController extends Controller
             $year = date('Y', strtotime($cuti->tanggal_mulai));
             $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $year);
 
-            // Count only workdays (excluding weekends)
-            $startDate = new \DateTime($cuti->tanggal_mulai);
-            $endDate = new \DateTime($cuti->tanggal_selesai);
-            $workdays = 0;
-
-            // Clone the start date to avoid modifying it
-            $currentDate = clone $startDate;
-
-            // Loop through each day and count only workdays
-            while ($currentDate <= $endDate) {
-                $dayOfWeek = $currentDate->format('N'); // 1 (Monday) to 7 (Sunday)
-
-                // Check if it's a workday (Monday to Friday)
-                if ($dayOfWeek <= 5) {
-                    $workdays++;
-                }
-
-                // Move to the next day
-                $currentDate->modify('+1 day');
-            }
+            $workdays = WorkdayService::countWorkdays($cuti->tanggal_mulai, $cuti->tanggal_selesai);
 
             // Update the balance with only workdays
             $balance->used_days += $workdays;
@@ -680,6 +663,7 @@ class CutiController extends Controller
     public function prosesVerifikasiAtasanPimpinan(Request $request, $uuid)
     {
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
+        $this->authorize('verifyAtasanPimpinan', $cuti);
 
         // Only allow atasan pimpinan verification if status is appropriate
         if ($cuti->status !== 'Disetujui Pimpinan') {
@@ -694,7 +678,7 @@ class CutiController extends Controller
         $user = Auth::user();
         $atasanPimpinan = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$atasanPimpinan) {
+        if (! $atasanPimpinan) {
             return redirect()->route('cuti.index')->with('error', 'Data atasan pimpinan tidak ditemukan');
         }
 
@@ -714,6 +698,14 @@ class CutiController extends Controller
             'tanggal_verifikasi_atasan_pimpinan' => now(),
         ]);
 
+        if ($newStatus === 'Ditolak Atasan Pimpinan' && $cuti->jenis_cuti === 'Cuti Tahunan') {
+            $year = date('Y', strtotime($cuti->tanggal_mulai));
+            $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $year);
+            $workdays = WorkdayService::countWorkdays($cuti->tanggal_mulai, $cuti->tanggal_selesai);
+            $balance->used_days = max(0, $balance->used_days - $workdays);
+            $balance->save();
+        }
+
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diverifikasi oleh atasan pimpinan');
     }
 
@@ -723,7 +715,7 @@ class CutiController extends Controller
         $user = Auth::user();
         $pegawai = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('cuti')->with('error', 'Data pegawai tidak ditemukan');
         }
 
@@ -739,7 +731,7 @@ class CutiController extends Controller
         $user = auth()->user();
         $pegawai = Pegawai::where('nip', $user->nip)->first();
 
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
         }
 
@@ -755,7 +747,7 @@ class CutiController extends Controller
     public function updateAllBalances()
     {
         // Check if user has admin permissions
-        if (!auth()->user()->can('update cuti')) {
+        if (! auth()->user()->can('update cuti')) {
             return redirect()->route('dashboard')->with('error', 'Anda tidak memiliki izin untuk melakukan tindakan ini');
         }
 
@@ -773,6 +765,7 @@ class CutiController extends Controller
     public function generatePdf($uuid)
     {
         $cuti = Cuti::with(['pegawai', 'verifikator', 'pimpinan', 'atasanPimpinan'])->where('uuid', $uuid)->firstOrFail();
+        $this->authorize('cetak', $cuti);
 
         // Check if cuti has been approved
         if ($cuti->status !== 'Disetujui Pimpinan' && $cuti->status !== 'Disetujui Atasan Pimpinan') {
@@ -789,7 +782,7 @@ class CutiController extends Controller
         $pdf = $cuti->generatePdf();
 
         // Generate filename
-        $filename = 'Surat_Cuti_' . $cuti->pegawai->nama . '_' . $cuti->no_surat_cuti . '.pdf';
+        $filename = 'Surat_Cuti_'.$cuti->pegawai->nama.'_'.$cuti->no_surat_cuti.'.pdf';
 
         return $pdf->download($filename);
     }

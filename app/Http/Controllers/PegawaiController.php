@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pegawai;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Facades\Image;
 use App\Models\User;
-use Illuminate\Cache\RateLimiter;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str; // Add this line
 
 class PegawaiController extends Controller
@@ -39,7 +37,7 @@ class PegawaiController extends Controller
             'alamat',
             'no_hp',
             'status_pegawai',
-            'foto'
+            'foto',
         ])
             ->orderBy('nama', 'asc') // Optional: sort by name
             ->paginate(15);
@@ -51,10 +49,11 @@ class PegawaiController extends Controller
                 'CPNS' => 'CPNS',
                 'PPPK' => 'PPPK',
                 'PPNPN' => 'PPNPN',
-                'Hakim' => 'Hakim'
+                'Hakim' => 'Hakim',
             ];
 
             $item->status_display = $statusMap[$item->status_pegawai] ?? $item->status_pegawai;
+
             return $item;
         });
 
@@ -88,14 +87,13 @@ class PegawaiController extends Controller
             }
             if ($pegawai) {
                 return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil ditambahkan');
-            }
-            else {
+            } else {
                 return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal ditambahkan');
             }
             Log::info('Pegawai created successfully', ['id' => $pegawai->id]);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Error creating pegawai', ['error' => $e->getMessage()]);
+
             return redirect()->back()->with('error', 'Failed to create pegawai');
         }
     }
@@ -103,6 +101,7 @@ class PegawaiController extends Controller
     public function edit($uuid)
     {
         $pegawai = Pegawai::where('uuid', $uuid)->first();
+
         return view('pegawai.edit', ['pegawai' => $pegawai]);
     }
 
@@ -110,7 +109,7 @@ class PegawaiController extends Controller
     {
         $pegawai = Pegawai::where('uuid', $uuid)->firstOrFail();
         $validatedData = $request->validate([
-            'nip' => 'required|string|max:255|unique:pegawai,nip,' . $pegawai->uuid . ',uuid', // Changed from id to uuid
+            'nip' => 'required|string|max:255|unique:pegawai,nip,'.$pegawai->uuid.',uuid', // Changed from id to uuid
             'nama' => 'required|string|max:255',
             'tempat_lahir' => 'required|string|max:255',
             'tanggal_lahir' => 'required|date',
@@ -128,8 +127,7 @@ class PegawaiController extends Controller
         }
         if ($pegawai) {
             return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil diubah');
-        }
-        else {
+        } else {
             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal diubah');
         }
     }
@@ -137,25 +135,27 @@ class PegawaiController extends Controller
     public function destroy($uuid)
     {
         $pegawai = Pegawai::where('uuid', $uuid)->first();
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai tidak ditemukan');
         }
         if ($pegawai->delete()) {
             return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil dihapus');
         }
+
         return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal dihapus');
     }
 
     public function detail($uuid)
     {
         $pegawai = Pegawai::where('uuid', $uuid)->first();
-        if (!$pegawai) {
+        if (! $pegawai) {
             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai tidak ditemukan');
         }
         $user = User::where('nip', $pegawai->nip)->first();
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai Belum Dihubungkan Dengan Akun');
         }
+
         return view('pegawai.detail', ['pegawai' => $pegawai, 'user' => $user->email]);
     }
 
@@ -172,14 +172,14 @@ class PegawaiController extends Controller
         ]);
 
         // Generate unique filename
-        $filename = Str::uuid() . '.' . $request->file('foto')->getClientOriginalExtension();
+        $filename = Str::uuid().'.'.$request->file('foto')->getClientOriginalExtension();
 
         // Store using Storage facade
         $path = $request->file('foto')->storeAs('public/pic/pegawai', $filename);
 
         // Delete old file if exists
         if ($pegawai->foto) {
-            Storage::delete('public/pic/pegawai/' . $pegawai->foto);
+            Storage::delete('public/pic/pegawai/'.$pegawai->foto);
         }
 
         // Update pegawai record

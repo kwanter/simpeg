@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 
 class HariLiburPermissionSeeder extends Seeder
 {
@@ -26,7 +26,7 @@ class HariLiburPermissionSeeder extends Seeder
                 ['name' => $permission],
                 [
                     'uuid' => Str::uuid()->toString(),
-                    'guard_name' => 'web'
+                    'guard_name' => 'web',
                 ]
             );
         }

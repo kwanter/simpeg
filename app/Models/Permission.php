@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Venturecraft\Revisionable\RevisionableTrait;
 
@@ -13,7 +12,9 @@ class Permission extends SpatiePermission
     use HasFactory, HasUuids, RevisionableTrait;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     // Add this method to ensure UUID is set before saving
@@ -22,14 +23,14 @@ class Permission extends SpatiePermission
         parent::boot();
 
         static::creating(function ($model) {
-            if (!$model->uuid) {
+            if (! $model->uuid) {
                 $model->uuid = (string) \Illuminate\Support\Str::uuid();
             }
         });
     }
 
     public function getRouteKeyName()
-{
+    {
         return 'uuid';
     }
 
@@ -41,6 +42,7 @@ class Permission extends SpatiePermission
     public function toArray()
     {
         $array = parent::toArray();
+
         // Remove any circular references here if needed
         // For example:
         // unset($array['roles']);

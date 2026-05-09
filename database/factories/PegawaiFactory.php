@@ -26,6 +26,7 @@ class PegawaiFactory extends Factory
     {
         return [
             'nip' => fake()->unique()->numerify('##################'),
+            'email' => fake()->unique()->safeEmail(),
             'nama' => fake()->name(),
             'tempat_lahir' => fake()->city(),
             'tanggal_lahir' => fake()->date(),
@@ -34,8 +35,8 @@ class PegawaiFactory extends Factory
             'foto' => null,
             'agama' => fake()->randomElement(['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu']),
             'jenis_kelamin' => fake()->randomElement(['Laki-laki', 'Perempuan']),
-            'status_perkawinan' => fake()->randomElement(['Belum Menikah', 'Menikah', 'Cerai Hidup', 'Cerai Mati']),
-            'status_pegawai' => fake()->randomElement(['PNS', 'PPPK', 'Honorer']),
+            'status_perkawinan' => fake()->randomElement(['Kawin', 'Belum Kawin', 'Duda', 'Janda']),
+            'status_pegawai' => fake()->randomElement(['CPNS', 'Hakim', 'PNS', 'PPPK', 'PPNPN']),
         ];
     }
 }

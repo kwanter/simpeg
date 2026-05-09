@@ -115,13 +115,23 @@
                     Users
                 </x-responsive-nav-link>
             @endif
-            @if (Auth::check() && (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator')))
+            @if (Auth::check() && (Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('atasan-pimpinan') || Auth::user()->hasRole('pimpinan') || Auth::user()->hasRole('verifikator')))
                 <x-responsive-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.index')">
                     Pegawai
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('cuti.index')" :active="request()->routeIs('cuti.index')">
                     Cuti
                 </x-responsive-nav-link>
+                @can('view izin')
+                    <x-responsive-nav-link :href="route('izin.index')" :active="request()->routeIs('izin.*')">
+                        {{ __('Pengajuan Izin') }}
+                    </x-responsive-nav-link>
+                @endcan
+                @can('view hari libur')
+                    <x-responsive-nav-link :href="route('hari-libur.index')" :active="request()->routeIs('hari-libur.*')">
+                        {{ __('Hari Libur') }}
+                    </x-responsive-nav-link>
+                @endcan
             @endif
         </div>
 

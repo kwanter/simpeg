@@ -1,0 +1,119 @@
+## BASELINE
+Sat May  9 12:08:09 WITA 2026
+## PWD
+/Users/macbook/Developer/php/simpeg
+## GIT ROOT
+/Users/macbook/Developer/php/simpeg
+## STATUS
+## main...origin/main
+D  .DS_Store
+ M .github/workflows/playwright.yml
+ M .gitignore
+ M README.md
+D  app/.DS_Store
+D  app/Http/.DS_Store
+D  app/View/.DS_Store
+D  bootstrap/.DS_Store
+D  database/.DS_Store
+ M database/factories/IzinFactory.php
+ M database/factories/PegawaiFactory.php
+ M database/factories/UserFactory.php
+ M database/migrations/2013_04_09_062329_create_revisions_table.php
+ M e2e/example.spec.js
+ M playwright.config.js
+D  public/.DS_Store
+D  public/assets/.DS_Store
+D  public/build/.DS_Store
+ D public/build/assets/app-BhOUt4Pv.css
+ M public/build/manifest.json
+D  resources/.DS_Store
+ M resources/views/layouts/navigation.blade.php
+D  storage/.DS_Store
+D  storage/framework/.DS_Store
+D  tests/.DS_Store
+ M tests/Feature/Auth/AuthenticationTest.php
+ M tests/Feature/Auth/EmailVerificationTest.php
+ M tests/Feature/Auth/RegistrationTest.php
+ M tests/Feature/ExampleTest.php
+ M tests/Feature/ProfileTest.php
+ M tests/SimpegTestCase.php
+ M tests/Unit/Middleware/SecureHeadersMiddlewareTest.php
+ M tests/Unit/Policies/IzinPolicyTest.php
+?? .github/workflows/php-tests.yml
+?? .hermes/
+?? public/build/assets/app-xXTEDPpe.css
+## RECENT COMMITS
+434d9a8 feat: introduce Docker development environment with Apache setup and enhanced security headers.
+eef6245 feat: Introduce extensive testing with new unit tests, factories, Playwright E2E setup, and database migrations.
+afa8d55 feat: Implement authorization policies for Izin and Cuti, enhance security headers, and refactor user registration.
+d20fce0 fix: mysql config
+7bc8c5a fix: fix application logo not showed during development
+2d9fa0f feat: add RevisionableTrait to all models
+a27c74c add module izin
+709b7e5 update module hari libur
+a6be3fa update cuti module
+402b5cc fix several bugs
+## DIFF STAT
+ .github/workflows/playwright.yml                   |  63 ++-
+ .gitignore                                         |   8 +
+ README.md                                          | 452 +++++++++++++++++++--
+ database/factories/IzinFactory.php                 |   8 +-
+ database/factories/PegawaiFactory.php              |   5 +-
+ database/factories/UserFactory.php                 |   2 +-
+ .../2013_04_09_062329_create_revisions_table.php   |   9 +
+ e2e/example.spec.js                                |  20 +-
+ playwright.config.js                               |  62 +--
+ public/build/assets/app-BhOUt4Pv.css               |   1 -
+ public/build/manifest.json                         |   2 +-
+ resources/views/layouts/navigation.blade.php       |  12 +-
+ tests/Feature/Auth/AuthenticationTest.php          |   8 +-
+ tests/Feature/Auth/EmailVerificationTest.php       |   5 +-
+ tests/Feature/Auth/RegistrationTest.php            |  15 +-
+ tests/Feature/ExampleTest.php                      |   7 +-
+ tests/Feature/ProfileTest.php                      |  14 +-
+ tests/SimpegTestCase.php                           |  80 +---
+ .../Middleware/SecureHeadersMiddlewareTest.php     |  60 +--
+ tests/Unit/Policies/IzinPolicyTest.php             |   2 +-
+ 20 files changed, 575 insertions(+), 260 deletions(-)
+## NAME STATUS
+D  .DS_Store
+ M .github/workflows/playwright.yml
+ M .gitignore
+ M README.md
+D  app/.DS_Store
+D  app/Http/.DS_Store
+D  app/View/.DS_Store
+D  bootstrap/.DS_Store
+D  database/.DS_Store
+ M database/factories/IzinFactory.php
+ M database/factories/PegawaiFactory.php
+ M database/factories/UserFactory.php
+ M database/migrations/2013_04_09_062329_create_revisions_table.php
+ M e2e/example.spec.js
+ M playwright.config.js
+D  public/.DS_Store
+D  public/assets/.DS_Store
+D  public/build/.DS_Store
+ D public/build/assets/app-BhOUt4Pv.css
+ M public/build/manifest.json
+D  resources/.DS_Store
+ M resources/views/layouts/navigation.blade.php
+D  storage/.DS_Store
+D  storage/framework/.DS_Store
+D  tests/.DS_Store
+ M tests/Feature/Auth/AuthenticationTest.php
+ M tests/Feature/Auth/EmailVerificationTest.php
+ M tests/Feature/Auth/RegistrationTest.php
+ M tests/Feature/ExampleTest.php
+ M tests/Feature/ProfileTest.php
+ M tests/SimpegTestCase.php
+ M tests/Unit/Middleware/SecureHeadersMiddlewareTest.php
+ M tests/Unit/Policies/IzinPolicyTest.php
+?? .github/workflows/php-tests.yml
+?? .hermes/
+?? public/build/assets/app-xXTEDPpe.css
+## PHP/NODE/COMPOSER/NPM
+PHP 8.3.30 (cli) (built: Jan 13 2026 22:36:55) (NTS)
+Composer version 2.9.7 2026-04-14 13:31:52
+v22.22.2
+11.13.0

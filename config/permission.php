@@ -13,7 +13,7 @@ return [
          * `Spatie\Permission\Contracts\Permission` contract.
          */
 
-        //'permission' => Spatie\Permission\Models\Permission::class,
+        // 'permission' => Spatie\Permission\Models\Permission::class,
         'permission' => App\Models\Permission::class,
 
         /*
@@ -25,7 +25,7 @@ return [
          * `Spatie\Permission\Contracts\Role` contract.
          */
 
-        //'role' => Spatie\Permission\Models\Role::class,
+        // 'role' => Spatie\Permission\Models\Role::class,
         'role' => App\Models\Role::class,
 
     ],
@@ -55,7 +55,7 @@ return [
          */
 
         'model_has_permissions' => 'model_has_permissions',
-        //'model_has_permissions' => 'user_has_permissions',
+        // 'model_has_permissions' => 'user_has_permissions',
 
         /*
          * When using the "HasRoles" trait from this package, we need to know which
@@ -64,7 +64,7 @@ return [
          */
 
         'model_has_roles' => 'model_has_roles',
-        //'model_has_roles' => 'user_has_roles',
+        // 'model_has_roles' => 'user_has_roles',
         /*
          * When using the "HasRoles" trait from this package, we need to know which
          * table should be used to retrieve your roles permissions. We have chosen a
@@ -78,8 +78,8 @@ return [
         /*
          * Change this if you want to name the related pivots other than defaults
          */
-        //'role_pivot_key' => null, //default 'role_id',
-        //'permission_pivot_key' => null, //default 'permission_id',
+        // 'role_pivot_key' => null, //default 'role_id',
+        // 'permission_pivot_key' => null, //default 'permission_id',
 
         'role_pivot_key' => 'role_uuid',
         'permission_pivot_key' => 'permission_uuid',
@@ -92,7 +92,7 @@ return [
          * that case, name this `model_uuid`.
          */
 
-        //'model_morph_key' => 'model_id',
+        // 'model_morph_key' => 'model_id',
         'model_morph_key' => 'uuid',
 
         /*
@@ -203,4 +203,3 @@ return [
     'uuid_fields' => ['role' => 'uuid', 'permission' => 'uuid'],
 
 ];
-

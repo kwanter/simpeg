@@ -29,6 +29,14 @@ memory-bank/
 # Docker
 /docker/mysql-data/
 
+# macOS
+.DS_Store
+
+# Hermes/AI local tooling
+.atlas/
+.serena/
+.hermes/tmp/
+
 # Playwright
 /test-results/
 /playwright-report/

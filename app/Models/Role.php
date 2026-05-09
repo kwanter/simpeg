@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Spatie\Permission\Models\Role as SpatieRole;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Venturecraft\Revisionable\RevisionableTrait;
 
 class Role extends SpatieRole
 {
-    use HasFactory,HasUuids, SoftDeletes, RevisionableTrait;
+    use HasFactory,HasUuids, RevisionableTrait, SoftDeletes;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected static function boot()

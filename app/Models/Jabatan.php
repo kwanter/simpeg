@@ -11,11 +11,15 @@ class Jabatan extends Model
     use HasFactory, RevisionableTrait;
 
     protected $primaryKey = 'uuid';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = ['uuid', 'nama', 'deskripsi', 'parent_uuid'];
+
     protected $table = 'jabatan';
+
     public function parent()
     {
         return $this->belongsTo(Jabatan::class, 'parent_uuid', 'uuid');

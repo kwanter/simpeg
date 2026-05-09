@@ -3,10 +3,31 @@
 namespace App\Policies;
 
 use App\Models\Cuti;
+use App\Models\Pegawai;
 use App\Models\User;
 
 class CutiPolicy
 {
+    private function pegawaiUuidFor(User $user): ?string
+    {
+        return Pegawai::where('nip', $user->nip)->value('uuid');
+    }
+
+    private function isOwner(User $user, Cuti $cuti): bool
+    {
+        return $user->nip === $cuti->pegawai?->nip;
+    }
+
+    private function isAssignedPimpinan(User $user, Cuti $cuti): bool
+    {
+        return $user->hasRole('pimpinan') && $this->pegawaiUuidFor($user) === $cuti->pimpinan_uuid;
+    }
+
+    private function isAssignedAtasanPimpinan(User $user, Cuti $cuti): bool
+    {
+        return $user->hasRole('atasan-pimpinan') && $this->pegawaiUuidFor($user) === $cuti->atasan_pimpinan_uuid;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
@@ -20,7 +41,10 @@ class CutiPolicy
      */
     public function view(User $user, Cuti $cuti): bool
     {
-        return $user->hasAnyRole(['super-admin', 'admin', 'pimpinan', 'verifikator', 'atasan-pimpinan']) || $user->nip === $cuti->pegawai?->nip;
+        return $user->hasAnyRole(['super-admin', 'admin', 'verifikator']) ||
+            $this->isOwner($user, $cuti) ||
+            $this->isAssignedPimpinan($user, $cuti) ||
+            $this->isAssignedAtasanPimpinan($user, $cuti);
     }
 
     /**
@@ -68,7 +92,9 @@ class CutiPolicy
      */
     public function verifyPimpinan(User $user, Cuti $cuti): bool
     {
-        return $user->can('pimpinan cuti') && $cuti->status == 'Disetujui Verifikator';
+        return ($user->hasAnyRole(['super-admin', 'admin']) || $this->isAssignedPimpinan($user, $cuti)) &&
+            $user->can('pimpinan cuti') &&
+            $cuti->status == 'Disetujui Verifikator';
     }
 
     /**
@@ -76,7 +102,9 @@ class CutiPolicy
      */
     public function verifyAtasanPimpinan(User $user, Cuti $cuti): bool
     {
-        return $user->can('atasan pimpinan cuti') && $cuti->status == 'Disetujui Pimpinan';
+        return ($user->hasAnyRole(['super-admin', 'admin']) || $this->isAssignedAtasanPimpinan($user, $cuti)) &&
+            $user->can('atasan pimpinan cuti') &&
+            $cuti->status == 'Disetujui Pimpinan';
     }
 
     /**
@@ -93,7 +121,9 @@ class CutiPolicy
      */
     public function cetak(User $user, Cuti $cuti): bool
     {
-        return in_array($cuti->status, ['Disetujui Pimpinan', 'Disetujui Atasan Pimpinan']) && ! empty($cuti->no_surat_cuti);
+        return in_array($cuti->status, ['Disetujui Pimpinan', 'Disetujui Atasan Pimpinan']) &&
+            ! empty($cuti->no_surat_cuti) &&
+            $this->view($user, $cuti);
     }
 
     /**

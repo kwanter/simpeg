@@ -15,11 +15,11 @@ class CheckSecurityHeaders
             'X-Content-Type-Options',
             'X-Frame-Options',
             'X-XSS-Protection',
-            'Strict-Transport-Security'
+            'Strict-Transport-Security',
         ];
 
         foreach ($requiredHeaders as $header) {
-            if (!$response->headers->has($header)) {
+            if (! $response->headers->has($header)) {
                 Log::critical("Missing security header: $header");
             }
         }

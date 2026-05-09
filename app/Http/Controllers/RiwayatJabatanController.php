@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RiwayatJabatan;
-use App\Models\Pegawai;
 use App\Models\Jabatan;
+use App\Models\Pegawai;
+use App\Models\RiwayatJabatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -17,8 +17,8 @@ class RiwayatJabatanController extends Controller
     {
         $this->middleware('auth');
         $this->middleware('permission:view riwayat jabatan', ['only' => ['index']]);
-        $this->middleware('permission:create riwayat jabatan', ['only' => ['create','store']]);
-        $this->middleware('permission:update riwayat jabatan', ['only' => ['update','edit']]);
+        $this->middleware('permission:create riwayat jabatan', ['only' => ['create', 'store']]);
+        $this->middleware('permission:update riwayat jabatan', ['only' => ['update', 'edit']]);
         $this->middleware('permission:delete riwayat jabatan', ['only' => ['destroy']]);
     }
 
@@ -40,9 +40,11 @@ class RiwayatJabatanController extends Controller
     {
         $pegawai = Pegawai::where('uuid', $uuid)->first();
         $jabatans = Jabatan::all()->sortBy('parent_uuid');  // Changed $jabatan to $jabatans
+
         return view('riwayat_jabatan.create', compact('pegawai', 'jabatans'));  // Changed 'jabatan' to 'jabatans'
     }
-     /**
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit($riwayatJabatanId)
@@ -50,6 +52,7 @@ class RiwayatJabatanController extends Controller
         $riwayatJabatan = RiwayatJabatan::where('uuid', $riwayatJabatanId)->firstOrFail();
         $pegawai = Pegawai::where('uuid', $riwayatJabatan->pegawai_uuid)->first();
         $jabatans = Jabatan::all()->sortBy('parent_uuid');
+
         return view('riwayat_jabatan.edit', compact('riwayatJabatan', 'pegawai', 'jabatans'));
     }
 

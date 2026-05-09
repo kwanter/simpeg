@@ -14,9 +14,9 @@ class Kernel extends ConsoleKernel
     {
         // Run at midnight on January 1st of each year
         $schedule->command('cuti:update-balances')
-                ->yearly()
-                ->at('00:01')
-                ->appendOutputTo(storage_path('logs/cuti-balance-updates.log'));
+            ->yearly()
+            ->at('00:01')
+            ->appendOutputTo(storage_path('logs/cuti-balance-updates.log'));
     }
 
     /**

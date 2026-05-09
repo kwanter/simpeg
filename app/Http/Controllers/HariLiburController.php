@@ -17,12 +17,14 @@ class HariLiburController extends Controller
     public function index()
     {
         $hariLibur = HariLibur::orderBy('tanggal')->paginate(10);
+
         return view('hari-libur.index', compact('hariLibur'));
     }
 
     public function create()
     {
         $jenisLibur = ['Libur Nasional', 'Cuti Bersama'];
+
         return view('hari-libur.create', compact('jenisLibur'));
     }
 
@@ -54,6 +56,7 @@ class HariLiburController extends Controller
     public function show($uuid)
     {
         $hariLibur = HariLibur::where('uuid', $uuid)->firstOrFail();
+
         return view('hari-libur.show', compact('hariLibur'));
     }
 
@@ -61,6 +64,7 @@ class HariLiburController extends Controller
     {
         $hariLibur = HariLibur::where('uuid', $uuid)->firstOrFail();
         $jenisLibur = ['Libur Nasional', 'Cuti Bersama'];
+
         return view('hari-libur.edit', compact('hariLibur', 'jenisLibur'));
     }
 

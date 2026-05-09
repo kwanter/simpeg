@@ -41,13 +41,23 @@ class CutiPolicyTest extends SimpegTestCase
         $this->assertTrue($policy->view($admin, $cuti));
     }
 
-    public function test_view_allows_pimpinan(): void
+    public function test_view_allows_assigned_pimpinan(): void
+    {
+        $policy = new CutiPolicy;
+        $pegawai = $this->createUserWithRole('pegawai');
+        $pimpinan = $this->createUserWithRole('pimpinan');
+        $pimpinanPegawai = Pegawai::where('nip', $pimpinan->nip)->first();
+        $cuti = $this->createCutiForUser($pegawai, ['pimpinan_uuid' => $pimpinanPegawai->uuid]);
+        $this->assertTrue($policy->view($pimpinan, $cuti));
+    }
+
+    public function test_view_denies_unassigned_pimpinan(): void
     {
         $policy = new CutiPolicy;
         $pegawai = $this->createUserWithRole('pegawai');
         $cuti = $this->createCutiForUser($pegawai);
         $pimpinan = $this->createUserWithRole('pimpinan');
-        $this->assertTrue($policy->view($pimpinan, $cuti));
+        $this->assertFalse($policy->view($pimpinan, $cuti));
     }
 
     public function test_view_allows_verifikator(): void
@@ -59,13 +69,23 @@ class CutiPolicyTest extends SimpegTestCase
         $this->assertTrue($policy->view($verifikator, $cuti));
     }
 
-    public function test_view_allows_atasan(): void
+    public function test_view_allows_assigned_atasan(): void
+    {
+        $policy = new CutiPolicy;
+        $pegawai = $this->createUserWithRole('pegawai');
+        $atasan = $this->createUserWithRole('atasan-pimpinan');
+        $atasanPegawai = Pegawai::where('nip', $atasan->nip)->first();
+        $cuti = $this->createCutiForUser($pegawai, ['atasan_pimpinan_uuid' => $atasanPegawai->uuid]);
+        $this->assertTrue($policy->view($atasan, $cuti));
+    }
+
+    public function test_view_denies_unassigned_atasan(): void
     {
         $policy = new CutiPolicy;
         $pegawai = $this->createUserWithRole('pegawai');
         $cuti = $this->createCutiForUser($pegawai);
         $atasan = $this->createUserWithRole('atasan-pimpinan');
-        $this->assertTrue($policy->view($atasan, $cuti));
+        $this->assertFalse($policy->view($atasan, $cuti));
     }
 
     public function test_view_nama_pegawai_allows_admin(): void
@@ -274,27 +294,43 @@ class CutiPolicyTest extends SimpegTestCase
     public function test_verify_pimpinan_checks_permission_and_status(): void
     {
         $policy = new CutiPolicy;
-        $user = $this->createUserWithRole('pegawai');
-        $user->givePermissionTo('pimpinan cuti');
+        $pegawai = $this->createUserWithRole('pegawai');
+        $pimpinan = $this->createUserWithRole('pimpinan');
+        $pimpinan->givePermissionTo('pimpinan cuti');
+        $pimpinanPegawai = Pegawai::where('nip', $pimpinan->nip)->first();
 
-        $cutiVerifikator = $this->createCutiForUser($user, ['status' => 'Disetujui Verifikator']);
-        $cutiPending = $this->createCutiForUser($user, ['status' => 'Pending']);
+        $cutiVerifikator = $this->createCutiForUser($pegawai, [
+            'status' => 'Disetujui Verifikator',
+            'pimpinan_uuid' => $pimpinanPegawai->uuid,
+        ]);
+        $cutiPending = $this->createCutiForUser($pegawai, [
+            'status' => 'Pending',
+            'pimpinan_uuid' => $pimpinanPegawai->uuid,
+        ]);
 
-        $this->assertTrue($policy->verifyPimpinan($user, $cutiVerifikator));
-        $this->assertFalse($policy->verifyPimpinan($user, $cutiPending));
+        $this->assertTrue($policy->verifyPimpinan($pimpinan, $cutiVerifikator));
+        $this->assertFalse($policy->verifyPimpinan($pimpinan, $cutiPending));
     }
 
     public function test_verify_atasan_pimpinan_checks_permission_and_status(): void
     {
         $policy = new CutiPolicy;
-        $user = $this->createUserWithRole('pegawai');
-        $user->givePermissionTo('atasan pimpinan cuti');
+        $pegawai = $this->createUserWithRole('pegawai');
+        $atasan = $this->createUserWithRole('atasan-pimpinan');
+        $atasan->givePermissionTo('atasan pimpinan cuti');
+        $atasanPegawai = Pegawai::where('nip', $atasan->nip)->first();
 
-        $cutiPimpinan = $this->createCutiForUser($user, ['status' => 'Disetujui Pimpinan']);
-        $cutiVerifikator = $this->createCutiForUser($user, ['status' => 'Disetujui Verifikator']);
+        $cutiPimpinan = $this->createCutiForUser($pegawai, [
+            'status' => 'Disetujui Pimpinan',
+            'atasan_pimpinan_uuid' => $atasanPegawai->uuid,
+        ]);
+        $cutiVerifikator = $this->createCutiForUser($pegawai, [
+            'status' => 'Disetujui Verifikator',
+            'atasan_pimpinan_uuid' => $atasanPegawai->uuid,
+        ]);
 
-        $this->assertTrue($policy->verifyAtasanPimpinan($user, $cutiPimpinan));
-        $this->assertFalse($policy->verifyAtasanPimpinan($user, $cutiVerifikator));
+        $this->assertTrue($policy->verifyAtasanPimpinan($atasan, $cutiPimpinan));
+        $this->assertFalse($policy->verifyAtasanPimpinan($atasan, $cutiVerifikator));
     }
 
     public function test_edit_no_surat_checks_role_and_status(): void

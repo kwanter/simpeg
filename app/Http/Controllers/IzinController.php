@@ -143,7 +143,7 @@ class IzinController extends Controller
     {
         $this->authorize('create', Izin::class);
         $validated = $request->validate([
-            'pegawai_uuid' => 'required|exists:pegawai,uuid',
+            'pegawai_uuid' => 'nullable|exists:pegawai,uuid',
             'jenis_izin' => 'required|string',
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
@@ -154,6 +154,10 @@ class IzinController extends Controller
             'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
             'pimpinan_uuid' => 'required|exists:pegawai,uuid',
         ]);
+
+        if (! Auth::user()->hasAnyRole(['super-admin', 'admin']) || empty($validated['pegawai_uuid'])) {
+            $validated['pegawai_uuid'] = Pegawai::where('nip', Auth::user()->nip)->firstOrFail()->uuid;
+        }
 
         // Generate UUID for the new record
         $validated['uuid'] = Str::uuid();
@@ -229,6 +233,10 @@ class IzinController extends Controller
         ];
 
         $validated = $request->validate($validationRules);
+        $validated['jumlah_hari'] = WorkdayService::countWorkdays(
+            $validated['tanggal_mulai'],
+            $validated['tanggal_selesai']
+        );
 
         // Handle file upload
         if ($request->hasFile('dokumen')) {

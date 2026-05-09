@@ -64,7 +64,7 @@ class RoleController extends Controller
             'name' => [
                 'required',
                 'string',
-                'unique:roles,name,' . $role->uuid,
+                'unique:roles,name,'.$role->uuid,
             ],
         ]);
 
@@ -114,7 +114,7 @@ class RoleController extends Controller
     public function search(Request $request)
     {
         $search = $request->search;
-        $roles = Role::where('name', 'like', '%' . $search . '%')->get();
+        $roles = Role::where('name', 'like', '%'.$search.'%')->get();
 
         return view('role-permission.role.index', ['roles' => $roles]);
     }

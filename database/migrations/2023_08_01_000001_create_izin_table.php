@@ -26,7 +26,7 @@ return new class extends Migration
                 'Izin Setengah Hari',
                 'Izin Terlambat',
                 'Izin Pulang Cepat',
-                'Izin Lainnya'
+                'Izin Lainnya',
             ]);
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');

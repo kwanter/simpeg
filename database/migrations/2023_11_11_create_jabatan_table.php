@@ -16,9 +16,9 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('parent_uuid')
-                  ->references('uuid')
-                  ->on('jabatan')
-                  ->onDelete('set null');
+                ->references('uuid')
+                ->on('jabatan')
+                ->onDelete('set null');
         });
     }
 

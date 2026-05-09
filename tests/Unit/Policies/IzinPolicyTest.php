@@ -37,22 +37,46 @@ class IzinPolicyTest extends SimpegTestCase
         $this->assertTrue($policy->view($admin, $izin));
     }
 
-    public function test_view_allows_pimpinan(): void
+    public function test_view_allows_assigned_pimpinan(): void
+    {
+        $policy = new IzinPolicy;
+        $user = $this->createUserWithRole('pegawai');
+        $pimpinan = $this->createUserWithRole('pimpinan');
+        $pimpinanPegawai = Pegawai::where('nip', $pimpinan->nip)->first();
+        $izin = $this->createIzinForUser($user, ['pimpinan_uuid' => $pimpinanPegawai->uuid]);
+
+        $this->assertTrue($policy->view($pimpinan, $izin));
+    }
+
+    public function test_view_denies_unassigned_pimpinan(): void
     {
         $policy = new IzinPolicy;
         $user = $this->createUserWithRole('pegawai');
         $izin = $this->createIzinForUser($user);
         $pimpinan = $this->createUserWithRole('pimpinan');
-        $this->assertTrue($policy->view($pimpinan, $izin));
+
+        $this->assertFalse($policy->view($pimpinan, $izin));
     }
 
-    public function test_view_allows_atasan(): void
+    public function test_view_allows_assigned_atasan(): void
+    {
+        $policy = new IzinPolicy;
+        $user = $this->createUserWithRole('pegawai');
+        $atasan = $this->createUserWithRole('atasan-pimpinan');
+        $atasanPegawai = Pegawai::where('nip', $atasan->nip)->first();
+        $izin = $this->createIzinForUser($user, ['atasan_pimpinan_uuid' => $atasanPegawai->uuid]);
+
+        $this->assertTrue($policy->view($atasan, $izin));
+    }
+
+    public function test_view_denies_unassigned_atasan(): void
     {
         $policy = new IzinPolicy;
         $user = $this->createUserWithRole('pegawai');
         $izin = $this->createIzinForUser($user);
         $atasan = $this->createUserWithRole('atasan-pimpinan');
-        $this->assertTrue($policy->view($atasan, $izin));
+
+        $this->assertFalse($policy->view($atasan, $izin));
     }
 
     public function test_view_nama_pegawai_allows_admin(): void
@@ -234,13 +258,17 @@ class IzinPolicyTest extends SimpegTestCase
         $this->assertEquals($policy->update($user, $izin), $policy->delete($user, $izin));
     }
 
-    public function test_verify_atasan_allows_atasan_and_admin_if_unverified(): void
+    public function test_verify_atasan_allows_assigned_atasan_and_admin_if_unverified(): void
     {
         $policy = new IzinPolicy;
         $atasan = $this->createUserWithRole('atasan-pimpinan');
+        $atasanPegawai = Pegawai::where('nip', $atasan->nip)->first();
         $admin = $this->createUserWithRole('admin');
         $user = $this->createUserWithRole('pegawai');
-        $izin = $this->createIzinForUser($user, ['verifikasi_atasan' => 'Belum Diverifikasi']);
+        $izin = $this->createIzinForUser($user, [
+            'atasan_pimpinan_uuid' => $atasanPegawai->uuid,
+            'verifikasi_atasan' => 'Belum Diverifikasi',
+        ]);
 
         $this->assertTrue($policy->verifyAtasan($atasan, $izin));
         $this->assertTrue($policy->verifyAtasan($admin, $izin));
@@ -268,13 +296,15 @@ class IzinPolicyTest extends SimpegTestCase
         $this->assertFalse($policy->verifyAtasan($pegawai, $izin));
     }
 
-    public function test_verify_pimpinan_allows_pimpinan_and_admin_if_conditions_met(): void
+    public function test_verify_pimpinan_allows_assigned_pimpinan_and_admin_if_conditions_met(): void
     {
         $policy = new IzinPolicy;
         $pimpinan = $this->createUserWithRole('pimpinan');
+        $pimpinanPegawai = Pegawai::where('nip', $pimpinan->nip)->first();
         $admin = $this->createUserWithRole('admin');
         $user = $this->createUserWithRole('pegawai');
         $izin = $this->createIzinForUser($user, [
+            'pimpinan_uuid' => $pimpinanPegawai->uuid,
             'verifikasi_atasan' => 'Disetujui',
             'verifikasi_pimpinan' => 'Belum Diverifikasi',
         ]);
@@ -325,7 +355,7 @@ class IzinPolicyTest extends SimpegTestCase
     {
         $policy = new IzinPolicy;
         $user = $this->createUserWithRole('pegawai');
-        $izin = $this->createIzinForUser($user, ['status' => 'Pending', 'no_surat_izin' => '123']);
+        $izin = $this->createIzinForUser($user, ['status' => 'Diajukan', 'no_surat_izin' => '123']);
 
         $this->assertFalse($policy->cetak($user, $izin));
     }

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -10,14 +9,18 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered(): void
+    /**
+     * Registration is disabled for this internal application.
+     * New users are created by admin via user management panel.
+     */
+    public function test_registration_route_is_disabled(): void
     {
         $response = $this->get('/register');
 
-        $response->assertStatus(200);
+        $response->assertStatus(404);
     }
 
-    public function test_new_users_can_register(): void
+    public function test_registration_post_is_disabled(): void
     {
         $response = $this->post('/register', [
             'name' => 'Test User',
@@ -26,7 +29,7 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(RouteServiceProvider::HOME);
+        $response->assertStatus(404);
+        $this->assertGuest();
     }
 }

@@ -3,10 +3,10 @@
 namespace Tests;
 
 use App\Models\Pegawai;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 abstract class SimpegTestCase extends TestCase
@@ -17,25 +17,18 @@ abstract class SimpegTestCase extends TestCase
     {
         parent::setUp();
 
-        $permissionRegistrar = $this->app->make(PermissionRegistrar::class);
-        $permissionRegistrar->forgetCachedPermissions();
-        $permissionRegistrar->flushCache();
-    }
-        $this->app->make(PermissionRegistrar::class)->flushCache();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->seedCutiPermissions();
     }
 
-    public function createUserWithRole(string $role, array $userAttributes = [], array $pegawaiAttributes = []): User
+    protected function createUserWithRole(string $role, array $userAttributes = [], array $pegawaiAttributes = []): User
     {
+        $nip = $userAttributes['nip'] ?? fake()->unique()->numerify('##################');
+
         $roleModel = Role::firstOrCreate(
             ['name' => $role, 'guard_name' => 'web'],
             ['uuid' => (string) \Illuminate\Support\Str::uuid()]
         );
-        $roleModel->load('name', 'guard_name', 'uuid');
-        $user = User::factory()->create(array_merge([
-            'nip' => $nip,
-            'status' => 'aktif',
-        ], $userAttributes));
-        $nip = fake()->unique()->numerify('##################');
 
         $user = User::factory()->create(array_merge([
             'nip' => $nip,
@@ -45,7 +38,7 @@ abstract class SimpegTestCase extends TestCase
         $user->assignRole($roleModel);
 
         Pegawai::factory()->create(array_merge([
-            'nip' => $nip,
+            'nip' => $user->nip,
         ], $pegawaiAttributes));
 
         return $user;
@@ -53,61 +46,22 @@ abstract class SimpegTestCase extends TestCase
 
     public function seedCutiPermissions(): void
     {
-        $permissions = [
+        foreach ([
             'create cuti',
             'update cuti',
             'delete cuti',
             'verifikasi cuti',
             'pimpinan cuti',
             'atasan pimpinan cuti',
-        ];
-
-        foreach ($permissions as $permission) {
+            'view izin',
+            'create izin',
+            'update izin',
+            'delete izin',
+            'verifikasi izin',
+            'view hari libur',
+        ] as $permissionName) {
             Permission::firstOrCreate(
-                ['name' => $permission, 'guard_name' => 'web'],
-                ['uuid' => (string) \Illuminate\Support\Str::uuid()]
-            );
-        }
-    }
-
-    protected function createUserWithRole(string $role, array $userAttributes = [], array $pegawaiAttributes = []): User
-    {
-        $roleModel = Role::firstOrCreate(
-            ['name' => $role, 'guard_name' => 'web'],
-            ['uuid' => (string) \Illuminate\Support\Str::uuid()]
-        );
-        $roleModel->load('name', 'guard_name', 'uuid');
-        $user = User::factory()->create(array_merge([
-            'nip' => $nip,
-            'status' => 'aktif',
-        ], $userAttributes));
-        
-        $nip = fake()->unique()->numerify('##################');
-        
-        $user = User::factory()->create(array_merge([
-            'nip' => $nip,
-            'status' => 'aktif',
-        ], $userAttributes));
-        
-        $user->assignRole($roleModel);
-        
-        Pegawai::factory()->create(array_merge([
-            'nip' => $nip,
-        ], $pegawaiAttributes));
-        
-        return $user;
-    }
-            'create cuti',
-            'update cuti',
-            'delete cuti',
-            'verifikasi cuti',
-            'pimpinan cuti',
-            'atasan pimpinan cuti',
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate(
-                ['name' => $permission, 'guard_name' => 'web'],
+                ['name' => $permissionName, 'guard_name' => 'web'],
                 ['uuid' => (string) \Illuminate\Support\Str::uuid()]
             );
         }

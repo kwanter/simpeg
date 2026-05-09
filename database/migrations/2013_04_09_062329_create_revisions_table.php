@@ -2,8 +2,9 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class CreateRevisionsTable extends Migration
 {
@@ -14,6 +15,14 @@ class CreateRevisionsTable extends Migration
      */
     public function up()
     {
+        // Register UUID() function for SQLite so DEFAULT (UUID()) works
+        // in tests. MySQL has UUID() built-in.
+        if (DB::getDriverName() === 'sqlite') {
+            DB::getPdo()->sqliteCreateFunction('UUID', function () {
+                return Str::orderedUuid()->toString();
+            });
+        }
+
         Schema::create('revisions', function (Blueprint $table) {
             $table->uuid('uuid')->primary()->default(DB::raw('(UUID())'));
             $table->string('revisionable_type');
@@ -24,7 +33,7 @@ class CreateRevisionsTable extends Migration
             $table->text('new_value')->nullable();
             $table->timestamps();
 
-            $table->index(array('revisionable_id', 'revisionable_type'));
+            $table->index(['revisionable_id', 'revisionable_type']);
         });
     }
 

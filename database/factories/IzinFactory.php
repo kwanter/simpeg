@@ -26,6 +26,9 @@ class IzinFactory extends Factory
      */
     public function definition(): array
     {
+        $tanggalMulai = fake()->dateTimeBetween('-1 month', '+1 month')->format('Y-m-d');
+        $tanggalSelesai = fake()->dateTimeBetween($tanggalMulai, '+2 months')->format('Y-m-d');
+
         return [
             'uuid' => (string) Str::uuid(),
             'pegawai_uuid' => Pegawai::factory(),
@@ -39,8 +42,9 @@ class IzinFactory extends Factory
                 'Izin Pulang Cepat',
                 'Izin Lainnya',
             ]),
-            'tanggal_mulai' => fake()->date(),
-            'tanggal_selesai' => fake()->date(),
+            'tanggal_mulai' => $tanggalMulai,
+            'tanggal_selesai' => $tanggalSelesai,
+            'jumlah_hari' => 1,
             'alasan' => fake()->sentence(),
             'status' => 'Diajukan',
             'verifikasi_atasan' => 'Belum Diverifikasi',

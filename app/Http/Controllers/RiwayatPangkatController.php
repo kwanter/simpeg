@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RiwayatPangkat;
 use App\Models\Pegawai;
+use App\Models\RiwayatPangkat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -13,8 +13,8 @@ class RiwayatPangkatController extends Controller
     {
         $this->middleware('auth');
         $this->middleware('permission:view riwayat pangkat', ['only' => ['index']]);
-        $this->middleware('permission:create riwayat pangkat', ['only' => ['create','store']]);
-        $this->middleware('permission:update riwayat pangkat', ['only' => ['update','edit']]);
+        $this->middleware('permission:create riwayat pangkat', ['only' => ['create', 'store']]);
+        $this->middleware('permission:update riwayat pangkat', ['only' => ['update', 'edit']]);
         $this->middleware('permission:delete riwayat pangkat', ['only' => ['destroy']]);
     }
 
@@ -44,7 +44,7 @@ class RiwayatPangkatController extends Controller
                         'IV/b' => 'Pembina Tingkat I',
                         'IV/c' => 'Pembina Utama Muda',
                         'IV/d' => 'Pembina Utama Madya',
-                        'IV/e' => 'Pembina Utama'
+                        'IV/e' => 'Pembina Utama',
                     ];
                     $item->pangkat_display = $pangkatNames[$item->pangkat_golongan] ?? '';
                     $item->golongan_display = $item->pangkat_golongan;
@@ -53,14 +53,15 @@ class RiwayatPangkatController extends Controller
                         '1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V',
                         '6' => 'VI', '7' => 'VII', '8' => 'VIII', '9' => 'IX', '10' => 'X',
                         '11' => 'XI', '12' => 'XII', '13' => 'XIII', '14' => 'XIV', '15' => 'XV',
-                        '16' => 'XVI', '17' => 'XVII'
+                        '16' => 'XVI', '17' => 'XVII',
                     ];
                     $item->pangkat_display = 'PPPK';
-                    $item->golongan_display = 'Golongan ' . ($romanNumerals[$item->pangkat_golongan] ?? $item->pangkat_golongan);
+                    $item->golongan_display = 'Golongan '.($romanNumerals[$item->pangkat_golongan] ?? $item->pangkat_golongan);
                 } else {
                     $item->pangkat_display = 'PPNPN';
                     $item->golongan_display = '-';
                 }
+
                 return $item;
             });
 
@@ -70,6 +71,7 @@ class RiwayatPangkatController extends Controller
     public function create($uuid)
     {
         $pegawai = Pegawai::where('uuid', $uuid)->first();
+
         return view('riwayat_pangkat.create', compact('pegawai'));
     }
 
@@ -102,6 +104,7 @@ class RiwayatPangkatController extends Controller
     {
         $riwayatPangkat = RiwayatPangkat::where('uuid', $riwayatPangkatId)->firstOrFail();
         $pegawai = Pegawai::where('uuid', $riwayatPangkat->pegawai_uuid)->first();
+
         return view('riwayat_pangkat.edit', compact('riwayatPangkat', 'pegawai'));
     }
 

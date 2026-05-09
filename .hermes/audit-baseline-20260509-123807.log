@@ -1,0 +1,240 @@
+### BASELINE
+/Users/macbook/Developer/php/simpeg
+/Users/macbook/Developer/php/simpeg
+## main...origin/main
+D  .DS_Store
+ M .github/workflows/playwright.yml
+ M .gitignore
+ M README.md
+D  app/.DS_Store
+D  app/Http/.DS_Store
+D  app/View/.DS_Store
+D  bootstrap/.DS_Store
+D  database/.DS_Store
+ M database/factories/IzinFactory.php
+ M database/factories/PegawaiFactory.php
+ M database/factories/UserFactory.php
+ M database/migrations/2013_04_09_062329_create_revisions_table.php
+ M e2e/example.spec.js
+ M playwright.config.js
+D  public/.DS_Store
+D  public/assets/.DS_Store
+D  public/build/.DS_Store
+ D public/build/assets/app-BhOUt4Pv.css
+ M public/build/manifest.json
+D  resources/.DS_Store
+ M resources/views/layouts/navigation.blade.php
+D  storage/.DS_Store
+D  storage/framework/.DS_Store
+D  tests/.DS_Store
+ M tests/Feature/Auth/AuthenticationTest.php
+ M tests/Feature/Auth/EmailVerificationTest.php
+ M tests/Feature/Auth/RegistrationTest.php
+ M tests/Feature/ExampleTest.php
+ M tests/Feature/ProfileTest.php
+ M tests/SimpegTestCase.php
+ M tests/Unit/Middleware/SecureHeadersMiddlewareTest.php
+ M tests/Unit/Policies/IzinPolicyTest.php
+?? .github/workflows/php-tests.yml
+?? .hermes/
+?? public/build/assets/app-xXTEDPpe.css434d9a8 feat: introduce Docker development environment with Apache setup and enhanced security headers.
+eef6245 feat: Introduce extensive testing with new unit tests, factories, Playwright E2E setup, and database migrations.
+afa8d55 feat: Implement authorization policies for Izin and Cuti, enhance security headers, and refactor user registr...
+d20fce0 fix: mysql config
+7bc8c5a fix: fix application logo not showed during development
+2d9fa0f feat: add RevisionableTrait to all models
+a27c74c add module izin
+709b7e5 update module hari libur
+a6be3fa update cuti module
+402b5cc fix several bugs
+### DIFF STAT
+.github/workflows/playwright.yml                   |  63 ++-
+ .gitignore                                         |   8 +
+ README.md                                          | 452 +++++++++++++++++++--
+ database/factories/IzinFactory.php                 |   8 +-
+ database/factories/PegawaiFactory.php              |   5 +-
+ database/factories/UserFactory.php                 |   2 +-
+ .../2013_04_09_062329_create_revisions_table.php   |   9 +
+ e2e/example.spec.js                                |  20 +-
+ playwright.config.js                               |  62 +--
+ public/build/assets/app-BhOUt4Pv.css               |   1 -
+ public/build/manifest.json                         |   2 +-
+ resources/views/layouts/navigation.blade.php       |  12 +-
+ tests/Feature/Auth/AuthenticationTest.php          |   8 +-
+ tests/Feature/Auth/EmailVerificationTest.php       |   5 +-
+ tests/Feature/Auth/RegistrationTest.php            |  15 +-
+ tests/Feature/ExampleTest.php                      |   7 +-
+ tests/Feature/ProfileTest.php                      |  14 +-
+ tests/SimpegTestCase.php                           |  80 +---
+ .../Middleware/SecureHeadersMiddlewareTest.php     |  60 +--
+ tests/Unit/Policies/IzinPolicyTest.php             |   2 +-
+ 20 files changed, 575 insertions(+), 260 deletions(-)
+### COMPOSER AUDIT
++-------------------+----------------------------------------------------------------------------------+
+| Package           | league/commonmark                                                                |
+| Severity          | medium                                                                           |
+| Advisory ID       | PKSA-21fb-n1x5-5nf7                                                              |
+| CVE               | CVE-2026-33347                                                                   |
+| Title             | league/commonmark has an embed extension allowed_domains bypass                  |
+| URL               | https://github.com/advisories/GHSA-hh8v-hgvp-g3f5                                |
+| Affected versions | >=2.3.0,<=2.8.1                                                                  |
+| Reported at       | 2026-03-19T19:04:24+00:00                                                        |
++-------------------+----------------------------------------------------------------------------------+
++-------------------+----------------------------------------------------------------------------------+
+| Package           | league/commonmark                                                                |
+| Severity          | medium                                                                           |
+| Advisory ID       | PKSA-2cx9-ynrq-qdk3                                                              |
+| CVE               | CVE-2026-30838                                                                   |
+| Title             | CommonMark has DisallowedRawHtml extension bypass via whitespace in HTML tag     |
+|                   | names                                                                            |
+| URL               | https://github.com/advisories/GHSA-4v6x-c7xx-hw9f                                |
+| Affected versions | >=2.0.0,<=2.8.0                                                                  |
+| Reported at       | 2026-03-06T23:27:03+00:00                                                        |
++-------------------+----------------------------------------------------------------------------------+
++-------------------+----------------------------------------------------------------------------------+
+| Package           | phpunit/phpunit                                                                  |
+| Severity          | high                                                                             |
+| Advisory ID       | PKSA-z3gr-8qht-p93v                                                              |
+| CVE               | CVE-2026-24765                                                                   |
+| Title             | Unsafe Deserialization in PHPT Code Coverage Handling                            |
+| URL               | https://github.com/sebastianbergmann/phpunit/security/advisories/GHSA-vvj3-c3rp- |
+|                   | c85p                                                                             |
+| Affected versions | >=0,<8.5.52|>=9.0.0,<9.6.33|>=10.0.0,<10.5.62|>=11.0.0,<11.5.50|>=12.0.0,<12.5.8 |
+| Reported at       | 2026-01-27T05:21:14+00:00                                                        |
++-------------------+----------------------------------------------------------------------------------+
++-------------------+----------------------------------------------------------------------------------+
+| Package           | psy/psysh                                                                        |
+| Severity          | medium                                                                           |
+| Advisory ID       | PKSA-4s4z-t146-6123                                                              |
+| CVE               | CVE-2026-25129                                                                   |
+| Title             | PsySH has Local Privilege Escalation via CWD .psysh.php auto-load                |
+| URL               | https://github.com/advisories/GHSA-4486-gxhx-5mg7                                |
+| Affected versions | <=0.11.22|>=0.12.0,<=0.12.18                                                     |
+| Reported at       | 2026-01-30T21:28:44+00:00                                                        |
++-------------------+----------------------------------------------------------------------------------+
++-------------------+----------------------------------------------------------------------------------+
+| Package           | symfony/http-foundation                                                          |
+| Severity          | high                                                                             |
+| Advisory ID       | PKSA-365x-2zjk-pt47                                                              |
+| CVE               | CVE-2025-64500                                                                   |
+| Title             | CVE-2025-64500: Incorrect parsing of PATH_INFO can lead to limited authorization |
+|                   | bypass                                                                           |
+| URL               | https://symfony.com/blog/cve-2025-64500-incorrect-parsing-of-path-info-can-lead- |
+|                   | to-limited-authorization-bypass                                                  |
+| Affected versions | >=2.0.0,<3.0.0|>=3.0.0,<4.0.0|>=4.0.0,<5.0.0|>=5.0.0,<5.1.0|>=5.1.0,<5.2.0|>=5.2 |
+|                   | .0,<5.3.0|>=5.3.0,<5.4.0|>=5.4.0,<5.4.50|>=6.0.0,<6.1.0|>=6.1.0,<6.2.0|>=6.2.0,< |
+|                   | 6.3.0|>=6.3.0,<6.4.0|>=6.4.0,<6.4.29|>=7.0.0,<7.1.0|>=7.1.0,<7.2.0|>=7.2.0,<7.3. |
+|                   | 0|>=7.3.0,<7.3.7                                                                 |
+| Reported at       | 2025-11-12T11:09:14+00:00                                                        |
++-------------------+----------------------------------------------------------------------------------+
++-------------------+----------------------------------------------------------------------------------+
+| Package           | symfony/process                                                                  |
+| Severity          | medium                                                                           |
+| Advisory ID       | PKSA-rkkf-636k-qjb3                                                              |
+| CVE               | CVE-2026-24739                                                                   |
+| Title             | Symfony's incorrect argument escaping under MSYS2/Git Bash can lead to           |
+|                   | destructive file operations on Windows                                           |
+| URL               | https://github.com/advisories/GHSA-r39x-jcww-82v6                                |
+| Affected versions | >=8.0,<8.0.5|>=7.4,<7.4.5|>=7.3,<7.3.11|>=6.4,<6.4.33|<5.4.51                    |
+| Reported at       | 2026-01-28T21:28:10+00:00                                                        |
++-------------------+----------------------------------------------------------------------------------+
++--------------------------+----------------------------------------------------------------------------------+
+| Abandoned Package        | Suggested Replacement                                                            |
++--------------------------+----------------------------------------------------------------------------------+
+| php-http/message-factory | psr/http-factory                                                                 |
++--------------------------+----------------------------------------------------------------------------------+
+### NPM AUDIT OMIT DEV
+found 0 vulnerabilities
+### PINT
+
+  ⨯⨯.⨯⨯.⨯⨯.⨯....⨯..⨯.⨯⨯⨯...........⨯.......⨯.⨯..⨯.⨯.⨯..⨯.......⨯..⨯..⨯⨯⨯.⨯⨯..⨯
+  .....⨯.⨯.⨯.⨯⨯....⨯...⨯....⨯......⨯.......................
+
+  ──────────────────────────────────────────────────────────────────── Laravel  
+    FAIL   ........................................ 133 files, 36 style issues  
+  ⨯ app/Console/Kernel.php                         method_chaining_indentation  
+  ⨯ app/Exceptions/Handler.php    trailing_comma_in_multiline, ordered_imports  
+  ⨯ app/Http/Controllers/Auth/NewPasswordController.php method_chaining_inden…  
+  ⨯ app/Http/Controllers/Auth/PasswordResetLinkController.php method_chaining…  
+  ⨯ app/Http/Controllers/CutiController.php concat_space, control_structure_c…  
+  ⨯ app/Http/Controllers/HariLiburController.php blank_line_before_statement,…  
+  ⨯ app/Http/Controllers/PangkatController.php no_unused_imports, blank_line_…  
+  ⨯ app/Http/Controllers/PegawaiController.php concat_space, control_structur…  
+  ⨯ app/Http/Controllers/RiwayatJabatanController.php class_attributes_separa…  
+  ⨯ app/Http/Controllers/RiwayatPangkatController.php concat_space, trailing_…  
+  ⨯ app/Http/Controllers/RoleController.php concat_space, single_blank_line_a…  
+  ⨯ app/Http/Controllers/UserController.php ternary_operator_spaces, concat_s…  
+  ⨯ app/Http/Kernel.php concat_space, no_whitespace_before_comma_in_array, si…  
+  ⨯ app/Http/Middleware/CheckSecurityHeaders.php trailing_comma_in_multiline,…  
+  ⨯ app/Http/Middleware/SecureHeadersMiddleware.php   single_blank_line_at_eof  
+  ⨯ app/Http/Requests/Auth/LoginRequest.php concat_space, trailing_comma_in_m…  
+  ⨯ app/Models/Izin.php class_attributes_separation, method_argument_space, o…  
+  ⨯ app/Models/Jabatan.php                         class_attributes_separation  
+  ⨯ app/Models/Permission.php class_attributes_separation, braces_position, n…  
+  ⨯ app/Models/Role.php class_attributes_separation, ordered_traits, no_unuse…  
+  ⨯ app/Providers/AppServiceProvider.php new_with_parentheses, ordered_import…  
+  ⨯ config/app.php                                           no_unused_imports  
+  ⨯ config/permission.php single_line_comment_spacing, single_blank_line_at_e…  
+  ⨯ config/session.php                                single_blank_line_at_eof  
+  ⨯ database/migrations/2013_04_09_062329_create_revisions_table.php array_sy…  
+  ⨯ database/migrations/2019_12_14_000001_create_personal_access_tokens_table.php class_definition, single_line_comment_spacing, braces_position  
+  ⨯ database/migrations/2023_08_01_000000_create_hari_libur_table.php class_d…  
+  ⨯ database/migrations/2023_08_01_000001_create_izin_table.php class_definit…  
+  ⨯ database/migrations/2023_11_11_create_jabatan_table.php class_definition,…  
+  ⨯ database/migrations/2023_11_11_create_riwayat_jabatan_table.php class_def…  
+  ⨯ database/migrations/2024_10_18_120525_create_permission_tables.php class_…  
+  ⨯ database/migrations/2025_03_30_132338_add_user_tracking_columns.php class…  
+  ⨯ database/migrations/2025_09_27_134312_add_username_tracking_columns.php c…  
+  ⨯ database/seeders/HariLiburPermissionSeeder.php trailing_comma_in_multilin…  
+  ⨯ database/seeders/HariLiburRolePermissionSeeder.php ordered_imports, singl…  
+  ⨯ database/seeders/PegawaiSeeder.php no_whitespace_before_comma_in_array, w…  
+
+### ROUTE CACHE
+
+   LogicException 
+
+  Unable to prepare route [permissions/{permissionId}/delete] for serialization. Another route has already been assigned name [permissions.destroy].
+
+  at vendor/laravel/framework/src/Illuminate/Routing/AbstractRouteCollection.php:247
+    243▕             $route->name($this->generateRouteName());
+    244▕ 
+    245▕             $this->add($route);
+    246▕         } elseif (! is_null($symfonyRoutes->get($name))) {
+  ➜ 247▕             throw new LogicException("Unable to prepare route [{$route->uri}] for serialization. Another route has already been assigned name [{$name}].");
+    248▕         }
+    249▕ 
+    250▕         $symfonyRoutes->add($route->getName(), $route->toSymfonyRoute());
+    251▕
+
+      [2m+18 vendor frames [22m
+
+  19  artisan:35
+      Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+
+
+   INFO  Clearing cached bootstrap files.  
+
+  events ............................................................ 1ms DONE
+  views ............................................................ 12ms DONE
+  cache ............................................................. 3ms FAIL
+
+   Error 
+
+  Class "Redis" not found
+
+  at vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php:79
+     75▕      * @throws \LogicException
+     76▕      */
+     77▕     protected function createClient(array $config)
+     78▕     {
+  ➜  79▕         return tap(new Redis, function ($client) use ($config) {
+     80▕             if ($client instanceof RedisFacade) {
+     81▕                 throw new LogicException(
+     82▕                     extension_loaded('redis')
+     83▕                         ? 'Please remove or rename the Redis facade alias in your "app" configuration file in order to avoid collision with the PHP Redis extension.'
+
+      [2m+36 vendor frames [22m
+
+  37  artisan:35
+      Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+

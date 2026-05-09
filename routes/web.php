@@ -18,10 +18,8 @@ use Illuminate\Support\Facades\Route;
 Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], routes: function (): void {
     Route::group(attributes: ['middleware' => ['role:super-admin']], routes: function (): void {
         Route::resource(name: 'permissions', controller: App\Http\Controllers\PermissionController::class);
-        Route::delete(uri: 'permissions/{permissionId}/delete', action: [App\Http\Controllers\PermissionController::class, 'destroy'])->name('permissions.destroy');
         Route::post(uri: 'permissions/search', action: [App\Http\Controllers\PermissionController::class, 'search']);
         Route::resource(name: 'roles', controller: App\Http\Controllers\RoleController::class);
-        Route::delete(uri: 'roles/{roleId}/delete', action: [App\Http\Controllers\RoleController::class, 'destroy'])->name('roles.destroy');
         Route::get(uri: 'roles/{roleId}/give-permissions', action: [App\Http\Controllers\RoleController::class, 'addPermissionToRole']);
         Route::put(uri: 'roles/{roleId}/give-permissions', action: [App\Http\Controllers\RoleController::class, 'givePermissionToRole']);
         Route::post(uri: 'roles/search', action: [App\Http\Controllers\RoleController::class, 'search']);
@@ -29,7 +27,6 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
 
     Route::group(attributes: ['middleware' => ['role:super-admin|admin']], routes: function (): void {
         Route::resource(name: 'users', controller: App\Http\Controllers\UserController::class);
-        Route::delete(uri: 'users/{userId}/delete', action: [App\Http\Controllers\UserController::class, 'destroy'])->name('users.destroy');
         Route::post(uri: 'users/search', action: [App\Http\Controllers\UserController::class, 'search']);
     })->middleware(['auth', 'verified'])->name('users.');
 
@@ -48,7 +45,6 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
         Route::get(uri: 'pegawai/{pegawaiId}/detail', action: [App\Http\Controllers\PegawaiController::class, 'detail']);
         Route::get(uri: 'pegawai/{pegawaiId}/edit', action: [App\Http\Controllers\PegawaiController::class, 'edit']);
         Route::put(uri: 'pegawai/{pegawaiId}', action: [App\Http\Controllers\PegawaiController::class, 'update']);
-        Route::delete(uri: 'pegawai/{pegawaiId}/delete', action: [App\Http\Controllers\PegawaiController::class, 'destroy'])->name('pegawai.destroy');
         Route::get(uri: 'pegawai/{pegawaiId}/give-roles', action: [App\Http\Controllers\PegawaiController::class, 'addRoleToUser']);
         Route::put(uri: 'pegawai/{pegawaiId}/give-roles', action: [App\Http\Controllers\PegawaiController::class, 'giveRoleToUser']);
         Route::get(uri: 'pegawai/{pegawaiId}/give-permissions', action: [App\Http\Controllers\PegawaiController::class, 'addPermissionToUser']);
@@ -70,7 +66,6 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
         Route::post(uri: 'riwayat_jabatan', action: [App\Http\Controllers\RiwayatJabatanController::class, 'store']);
         Route::get(uri: 'riwayat_jabatan/{riwayatJabatanId}/edit', action: [App\Http\Controllers\RiwayatJabatanController::class, 'edit']);
         Route::put(uri: 'riwayat_jabatan/{riwayatJabatanId}', action: [App\Http\Controllers\RiwayatJabatanController::class, 'update']);
-        Route::delete(uri: 'riwayat_jabatan/{riwayatJabatanId}/delete', action: [App\Http\Controllers\RiwayatJabatanController::class, 'destroy'])->name('riwayat_jabatan.destroy');
 
         // Riwayat Pangkat Routes - Order matters!
         Route::prefix('riwayat_pangkat')->name('riwayat_pangkat.')->group(function () {
@@ -123,10 +118,6 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
 });
 
 Route::get('/', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
