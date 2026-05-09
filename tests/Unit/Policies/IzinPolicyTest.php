@@ -410,4 +410,51 @@ class IzinPolicyTest extends SimpegTestCase
         $otherUser = $this->createUserWithRole('pegawai');
         $this->assertFalse($policy->view($otherUser, $izin));
     }
+
+    public function test_verify_pimpinan_denies_izin_keluar_kantor_single_level(): void
+    {
+        $policy = new IzinPolicy;
+        $pimpinan = $this->createUserWithRole('pimpinan');
+        $pimpinanPegawai = Pegawai::where('nip', $pimpinan->nip)->first();
+        $user = $this->createUserWithRole('pegawai');
+        $izin = $this->createIzinForUser($user, [
+            'jenis_izin' => 'Izin Keluar Kantor',
+            'verifikasi_atasan' => 'Disetujui',
+            'verifikasi_pimpinan' => 'Belum Diverifikasi',
+            'pimpinan_uuid' => $pimpinanPegawai->uuid,
+        ]);
+
+        $this->assertFalse($policy->verifyPimpinan($pimpinan, $izin));
+    }
+
+    public function test_verify_pimpinan_denies_izin_pulang_cepat_single_level(): void
+    {
+        $policy = new IzinPolicy;
+        $pimpinan = $this->createUserWithRole('pimpinan');
+        $pimpinanPegawai = Pegawai::where('nip', $pimpinan->nip)->first();
+        $user = $this->createUserWithRole('pegawai');
+        $izin = $this->createIzinForUser($user, [
+            'jenis_izin' => 'Izin Pulang Cepat',
+            'verifikasi_atasan' => 'Disetujui',
+            'verifikasi_pimpinan' => 'Belum Diverifikasi',
+            'pimpinan_uuid' => $pimpinanPegawai->uuid,
+        ]);
+
+        $this->assertFalse($policy->verifyPimpinan($pimpinan, $izin));
+    }
+
+    public function test_verify_atasan_allows_izin_keluar_kantor_for_assigned_atasan(): void
+    {
+        $policy = new IzinPolicy;
+        $atasan = $this->createUserWithRole('atasan-pimpinan');
+        $atasanPegawai = Pegawai::where('nip', $atasan->nip)->first();
+        $user = $this->createUserWithRole('pegawai');
+        $izin = $this->createIzinForUser($user, [
+            'jenis_izin' => 'Izin Keluar Kantor',
+            'atasan_pimpinan_uuid' => $atasanPegawai->uuid,
+            'verifikasi_atasan' => 'Belum Diverifikasi',
+        ]);
+
+        $this->assertTrue($policy->verifyAtasan($atasan, $izin));
+    }
 }

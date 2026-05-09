@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -18,8 +16,40 @@ return new class extends Migration
                 return $default !== null ? $default : $expr;
             });
 
-            // SQLite stores enum as string natively — no schema change needed.
-            // The enum values are enforced at app level via validation.
+            // SQLite uses CHECK constraints for enums — recreate with new values
+            // 1. Create new table with expanded CHECK
+            DB::statement('CREATE TABLE izin_new AS SELECT * FROM izin');
+            DB::statement('DROP TABLE izin');
+            DB::statement("CREATE TABLE izin (
+                id integer primary key autoincrement,
+                uuid varchar not null unique,
+                pegawai_uuid varchar not null,
+                no_surat_izin varchar,
+                atasan_pimpinan_uuid varchar,
+                pimpinan_uuid varchar,
+                jenis_izin varchar not null check (jenis_izin in ('Izin Sakit','Izin Keperluan Keluarga','Izin Keperluan Pribadi','Izin Dinas Luar','Izin Setengah Hari','Izin Terlambat','Izin Pulang Cepat','Izin Lainnya','Izin Keluar Kantor','Izin Tidak Masuk Kerja')),
+                tanggal_mulai date not null,
+                tanggal_selesai date not null,
+                jam_mulai time,
+                jam_selesai time,
+                jumlah_hari integer not null,
+                alasan text not null,
+                status varchar not null default 'Diajukan' check (status in ('Diajukan','Disetujui Atasan','Ditolak Atasan','Disetujui','Ditolak')),
+                keterangan text,
+                dokumen varchar,
+                verifikasi_atasan varchar not null default 'Belum Diverifikasi' check (verifikasi_atasan in ('Belum Diverifikasi','Disetujui','Ditolak')),
+                verifikasi_pimpinan varchar not null default 'Belum Diverifikasi' check (verifikasi_pimpinan in ('Belum Diverifikasi','Disetujui','Ditolak')),
+                tanggal_verifikasi_atasan date,
+                tanggal_verifikasi_pimpinan date,
+                catatan_atasan text,
+                catatan_pimpinan text,
+                created_at datetime,
+                updated_at datetime,
+                foreign key (pegawai_uuid) references pegawai(uuid) on delete cascade
+            )");
+            DB::statement('INSERT INTO izin SELECT * FROM izin_new');
+            DB::statement('DROP TABLE izin_new');
+
             return;
         }
 
@@ -43,8 +73,40 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // SQLite stores enum as string natively — no revert needed
+        // SQLite stores enum as string natively — revert CHECK constraint
         if (DB::getDriverName() === 'sqlite') {
+            DB::statement('CREATE TABLE izin_new AS SELECT * FROM izin');
+            DB::statement('DROP TABLE izin');
+            DB::statement("CREATE TABLE izin (
+                id integer primary key autoincrement,
+                uuid varchar not null unique,
+                pegawai_uuid varchar not null,
+                no_surat_izin varchar,
+                atasan_pimpinan_uuid varchar,
+                pimpinan_uuid varchar,
+                jenis_izin varchar not null check (jenis_izin in ('Izin Sakit','Izin Keperluan Keluarga','Izin Keperluan Pribadi','Izin Dinas Luar','Izin Setengah Hari','Izin Terlambat','Izin Pulang Cepat','Izin Lainnya')),
+                tanggal_mulai date not null,
+                tanggal_selesai date not null,
+                jam_mulai time,
+                jam_selesai time,
+                jumlah_hari integer not null,
+                alasan text not null,
+                status varchar not null default 'Diajukan' check (status in ('Diajukan','Disetujui Atasan','Ditolak Atasan','Disetujui','Ditolak')),
+                keterangan text,
+                dokumen varchar,
+                verifikasi_atasan varchar not null default 'Belum Diverifikasi' check (verifikasi_atasan in ('Belum Diverifikasi','Disetujui','Ditolak')),
+                verifikasi_pimpinan varchar not null default 'Belum Diverifikasi' check (verifikasi_pimpinan in ('Belum Diverifikasi','Disetujui','Ditolak')),
+                tanggal_verifikasi_atasan date,
+                tanggal_verifikasi_pimpinan date,
+                catatan_atasan text,
+                catatan_pimpinan text,
+                created_at datetime,
+                updated_at datetime,
+                foreign key (pegawai_uuid) references pegawai(uuid) on delete cascade
+            )");
+            DB::statement('INSERT INTO izin SELECT * FROM izin_new');
+            DB::statement('DROP TABLE izin_new');
+
             return;
         }
 
