@@ -62,15 +62,15 @@
         <table class="data">
             <tr>
                 <td>Nama</td>
-                <td>: {{ $izin->pimpinan->nama ?? $izin->atasan->nama ?? 'N/A' }}</td>
+                <td>: {{ $izin->pimpinan->nama ?? $izin->atasan_pimpinan->nama ?? 'N/A' }}</td>
             </tr>
             <tr>
                 <td>NIP</td>
-                <td>: {{ $izin->pimpinan->nip ?? $izin->atasan->nip ?? 'N/A' }}</td>
+                <td>: {{ $izin->pimpinan->nip ?? $izin->atasan_pimpinan->nip ?? 'N/A' }}</td>
             </tr>
             <tr>
                 <td>Jabatan</td>
-                <td>: {{ $izin->pimpinan->jabatan->nama_jabatan ?? $izin->atasan->jabatan->nama_jabatan ?? 'N/A' }}</td>
+                <td>: {{ $izin->pimpinan->jabatan->nama_jabatan ?? $izin->atasan_pimpinan->jabatan->nama_jabatan ?? 'N/A' }}</td>
             </tr>
         </table>
 
@@ -110,13 +110,13 @@
 
     <div class="signature">
         <div class="signature-content">
-            <p>{{ $izin->pimpinan->tempat_tugas ?? $izin->atasan->tempat_tugas ?? 'Tanah Grogot' }}, {{ \Carbon\Carbon::now()->format('d F Y') }}</p>
-            <p>{{ $izin->pimpinan->jabatan->nama_jabatan ?? $izin->atasan->jabatan->nama_jabatan ?? 'Pimpinan' }}</p>
+            <p>{{ $izin->pimpinan->tempat_tugas ?? $izin->atasan_pimpinan->tempat_tugas ?? 'Tanah Grogot' }}, {{ \Carbon\Carbon::now()->format('d F Y') }}</p>
+            <p>{{ $izin->pimpinan->jabatan->nama_jabatan ?? $izin->atasan_pimpinan->jabatan->nama_jabatan ?? 'Pimpinan' }}</p>
 
             <div class="signature-space"></div>
 
-            <p><strong>{{ $izin->pimpinan->nama ?? $izin->atasan->nama ?? 'N/A' }}</strong></p>
-            <p>NIP. {{ $izin->pimpinan->nip ?? $izin->atasan->nip ?? 'N/A' }}</p>
+            <p><strong>{{ $izin->pimpinan->nama ?? $izin->atasan_pimpinan->nama ?? 'N/A' }}</strong></p>
+            <p>NIP. {{ $izin->pimpinan->nip ?? $izin->atasan_pimpinan->nip ?? 'N/A' }}</p>
         </div>
     </div>
 </body>

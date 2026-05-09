@@ -425,11 +425,135 @@ class IzinController extends Controller
         $izin = Izin::with(['pegawai', 'atasan_pimpinan', 'pimpinan'])->where('uuid', $uuid)->firstOrFail();
         $this->authorize('cetak', $izin);
 
-        $pdf = \PDF::loadView('izin.pdf', ['izin' => $izin]);
+        // Select PDF template based on jenis izin
+        $template = match ($izin->jenis_izin) {
+            'Izin Keluar Kantor', 'Izin Pulang Cepat' => 'izin.pdf-keluar-kantor',
+            'Izin Tidak Masuk Kerja' => 'izin.pdf-tidak-masuk',
+            default => 'izin.pdf',
+        };
+
+        $pdf = \PDF::loadView($template, ['izin' => $izin]);
 
         // Generate filename
-        $filename = 'Surat_Izin_'.$izin->pegawai->nama.'_'.$izin->no_surat_izin.'.pdf';
+        $filename = 'Surat_Izin_'.$izin->pegawai->nama.'_'.($izin->no_surat_izin ?? $izin->uuid).'.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Dedicated create form for Izin Keluar Kantor (Lampiran II PERMA No. 7/2016).
+     */
+    public function createKeluarKantor()
+    {
+        $this->authorize('create', Izin::class);
+        $user = Auth::user();
+        $pegawai = Pegawai::where('nip', $user->nip)->first();
+
+        if (! $pegawai) {
+            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+        }
+
+        $jenisIzin = 'Izin Keluar Kantor';
+
+        $atasanList = User::role('atasan-pimpinan')
+            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
+            ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
+            ->get();
+
+        $pimpinanList = User::role('pimpinan')
+            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
+            ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
+            ->get();
+
+        return view('izin.create-keluar-kantor', compact('pegawai', 'jenisIzin', 'pimpinanList', 'atasanList'));
+    }
+
+    /**
+     * Dedicated create form for Izin Tidak Masuk Kerja (Lampiran III PERMA No. 7/2016).
+     */
+    public function createTidakMasuk()
+    {
+        $this->authorize('create', Izin::class);
+        $user = Auth::user();
+        $pegawai = Pegawai::where('nip', $user->nip)->first();
+
+        if (! $pegawai) {
+            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+        }
+
+        $atasanList = User::role('atasan-pimpinan')
+            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
+            ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
+            ->get();
+
+        $pimpinanList = User::role('pimpinan')
+            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
+            ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
+            ->get();
+
+        return view('izin.create-tidak-masuk', compact('pegawai', 'pimpinanList', 'atasanList'));
+    }
+
+    /**
+     * Index for Izin Keluar Kantor & Izin Pulang Cepat.
+     */
+    public function indexKeluarKantor()
+    {
+        $this->authorize('viewAny', Izin::class);
+
+        $query = Izin::with('pegawai')
+            ->whereIn('jenis_izin', ['Izin Keluar Kantor', 'Izin Pulang Cepat']);
+
+        if (auth()->user()->hasRole(['super-admin', 'admin'])) {
+            // Admin sees all
+        } elseif (auth()->user()->hasRole('atasan-pimpinan')) {
+            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
+            if ($pegawai) {
+                $query->where('atasan_pimpinan_uuid', $pegawai->uuid);
+            }
+        } else {
+            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
+            if ($pegawai) {
+                $query->where('pegawai_uuid', $pegawai->uuid);
+            }
+        }
+
+        $izins = $query->latest()->paginate(10);
+
+        return view('izin.index-keluar-kantor', compact('izins'));
+    }
+
+    /**
+     * Index for Izin Tidak Masuk Kerja.
+     */
+    public function indexTidakMasuk()
+    {
+        $this->authorize('viewAny', Izin::class);
+
+        $query = Izin::with('pegawai')
+            ->where('jenis_izin', 'Izin Tidak Masuk Kerja');
+
+        if (auth()->user()->hasRole(['super-admin', 'admin'])) {
+            // Admin sees all
+        } elseif (auth()->user()->hasRole('atasan-pimpinan')) {
+            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
+            if ($pegawai) {
+                $query->where('atasan_pimpinan_uuid', $pegawai->uuid);
+            }
+        } elseif (auth()->user()->hasRole('pimpinan')) {
+            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
+            if ($pegawai) {
+                $query->where('pimpinan_uuid', $pegawai->uuid);
+            }
+        } else {
+            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
+            if ($pegawai) {
+                $query->where('pegawai_uuid', $pegawai->uuid);
+            }
+        }
+
+        $izins = $query->latest()->paginate(10);
+
+        return view('izin.index-tidak-masuk', compact('izins'));
     }
 }
