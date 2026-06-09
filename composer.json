@@ -15,7 +15,7 @@
         "laravel/tinker": "^2.8",
         "laravel/ui": "^4.5",
         "predis/predis": "^2.0",
-        "sentry/sentry-laravel": "^3.0",
+        "sentry/sentry-laravel": "^4.25",
         "spatie/laravel-backup": "^8.0",
         "spatie/laravel-permission": "^6.9",
         "venturecraft/revisionable": "1.*"
@@ -69,6 +69,11 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "policy": {
+            "advisories": {
+                "ignore-id": ["PKSA-mdq4-51ck-6kdq"]
+            }
         }
     },
     "minimum-stability": "stable",
