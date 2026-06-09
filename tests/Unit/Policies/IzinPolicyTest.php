@@ -305,6 +305,7 @@ class IzinPolicyTest extends SimpegTestCase
         $user = $this->createUserWithRole('pegawai');
         $izin = $this->createIzinForUser($user, [
             'pimpinan_uuid' => $pimpinanPegawai->uuid,
+            'jenis_izin' => 'Izin Sakit',
             'verifikasi_atasan' => 'Disetujui',
             'verifikasi_pimpinan' => 'Belum Diverifikasi',
         ]);
@@ -319,6 +320,7 @@ class IzinPolicyTest extends SimpegTestCase
         $pimpinan = $this->createUserWithRole('pimpinan');
         $user = $this->createUserWithRole('pegawai');
         $izin = $this->createIzinForUser($user, [
+            'jenis_izin' => 'Izin Sakit',
             'verifikasi_atasan' => 'Belum Diverifikasi',
             'verifikasi_pimpinan' => 'Belum Diverifikasi',
         ]);
@@ -332,6 +334,7 @@ class IzinPolicyTest extends SimpegTestCase
         $pimpinan = $this->createUserWithRole('pimpinan');
         $user = $this->createUserWithRole('pegawai');
         $izin = $this->createIzinForUser($user, [
+            'jenis_izin' => 'Izin Sakit',
             'verifikasi_atasan' => 'Disetujui',
             'verifikasi_pimpinan' => 'Disetujui',
         ]);
