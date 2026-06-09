@@ -304,7 +304,6 @@ class CutiController extends Controller
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil dihapus');
     }
 
-    // verifikasi method (around line 166)
     public function verifikasi($uuid)
     {
         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
@@ -331,7 +330,6 @@ class CutiController extends Controller
         return view('cuti.verifikasi', compact('cuti', 'balance'));
     }
 
-    // verifikasiPimpinan method (around line 190)
     public function verifikasiPimpinan($uuid)
     {
         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
@@ -367,7 +365,6 @@ class CutiController extends Controller
         return view('cuti.verifikasi-pimpinan', compact('cuti', 'balance'));
     }
 
-    // Verifikasi atasan pimpinan method (around line 230)
     public function verifikasiAtasanPimpinan($uuid)
     {
         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
@@ -517,7 +514,6 @@ class CutiController extends Controller
         return redirect()->route('cuti.index')->with('success', "Saldo cuti untuk $count pegawai berhasil diperbarui");
     }
 
-    // Add this method to generate PDF
     public function generatePdf($uuid)
     {
         $cuti = Cuti::with(['pegawai', 'verifikator', 'pimpinan', 'atasanPimpinan'])->where('uuid', $uuid)->firstOrFail();
