@@ -59,6 +59,12 @@ abstract class SimpegTestCase extends TestCase
             'delete izin',
             'verifikasi izin',
             'view hari libur',
+            'view user',
+            'create user',
+            'update user',
+            'delete user',
+            'view role',
+            'view permission',
         ] as $permissionName) {
             Permission::firstOrCreate(
                 ['name' => $permissionName, 'guard_name' => 'web'],
