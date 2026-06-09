@@ -5,8 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Cuti;
 use App\Models\CutiBalance;
 use App\Models\Pegawai;
-use App\Models\User;
+use App\Services\CutiApprovalService;
+use App\Services\CutiBalanceService;
+use App\Services\CutiDocumentService;
+use App\Services\CutiEligibilityService;
 use App\Services\WorkdayService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -14,8 +18,12 @@ use Illuminate\Support\Str;
 
 class CutiController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly CutiBalanceService $cutiBalances,
+        private readonly CutiEligibilityService $cutiEligibility,
+        private readonly CutiApprovalService $cutiApprovals,
+        private readonly CutiDocumentService $cutiDocuments,
+    ) {
         $this->middleware('auth');
 
         // Uncomment this line to enable role-based access
@@ -69,7 +77,7 @@ class CutiController extends Controller
             ->first();
 
         if (! $balance) {
-            $balance = CutiBalance::checkAndUpdateBalance($pegawai->uuid, $currentYear);
+            $balance = $this->cutiBalances->getOrCreateBalance($pegawai->uuid, $currentYear);
         }
 
         // Get list of potential pimpinan and atasan pimpinan
@@ -89,42 +97,6 @@ class CutiController extends Controller
             ->get();
 
         return view('cuti.create', compact('pegawai', 'jenisCuti', 'balance', 'pimpinanList', 'atasanPimpinanList'));
-    }
-
-    // Add this method to ensure a balance record exists for the employee
-    private function ensureCutiBalance($pegawaiUuid, $year)
-    {
-        $balance = CutiBalance::where('pegawai_uuid', $pegawaiUuid)
-            ->where('year', $year)
-            ->first();
-
-        if (! $balance) {
-            // Create new balance for current year
-            $carriedOver = 0;
-
-            // Check if there's a previous year balance to carry over (max 6 days)
-            $previousYearBalance = CutiBalance::where('pegawai_uuid', $pegawaiUuid)
-                ->where('year', $year - 1)
-                ->first();
-
-            if ($previousYearBalance) {
-                $remainingPreviousYear = $previousYearBalance->total_days +
-                    $previousYearBalance->carried_over -
-                    $previousYearBalance->used_days;
-                $carriedOver = min(6, max(0, $remainingPreviousYear));
-            }
-
-            $balance = CutiBalance::create([
-                'uuid' => Str::uuid(),
-                'pegawai_uuid' => $pegawaiUuid,
-                'year' => $year,
-                'total_days' => 12, // Default annual leave
-                'used_days' => 0,
-                'carried_over' => $carriedOver,
-            ]);
-        }
-
-        return $balance;
     }
 
     // In the store method, add this validation before creating the cuti record
@@ -148,96 +120,29 @@ class CutiController extends Controller
 
         $validated['pegawai_uuid'] = $pegawai->uuid;
 
-        // Calculate leave duration - count only workdays
-        $lamaCuti = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
+        $start = Carbon::parse($validated['tanggal_mulai']);
+        $end = Carbon::parse($validated['tanggal_selesai']);
 
-        // Check annual leave limit if the type is "Cuti Tahunan"
+        // Eligibility checks via service
         if ($validated['jenis_cuti'] === 'Cuti Tahunan') {
-            $currentYear = date('Y', strtotime($validated['tanggal_mulai']));
-            $balance = $this->ensureCutiBalance($pegawai->uuid, $currentYear);
-            $remainingDays = $balance->total_days + $balance->carried_over - $balance->used_days;
-
-            // Check if trying to apply for Cuti Tahunan but already has Cuti Besar in the same year
-            $existingCutiBesar = Cuti::where('pegawai_uuid', $pegawai->uuid)
-                ->where('jenis_cuti', 'Cuti Besar')
-                ->whereYear('tanggal_mulai', $currentYear)
-                ->whereIn('status', ['Pending', 'Disetujui Verifikator', 'Disetujui Pimpinan', 'Disetujui Atasan Pimpinan']) // Consider approved/pending
-                ->exists();
-
-            if ($existingCutiBesar) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Anda sudah mengajukan Cuti Besar di tahun ini, sehingga tidak dapat mengajukan Cuti Tahunan.');
+            $error = $this->cutiEligibility->checkAnnualLeave($pegawai->uuid, $start, $end);
+            if ($error) {
+                return redirect()->back()->withInput()->with('error', $error);
             }
-
-            if ($lamaCuti > $remainingDays) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', "Sisa cuti tahunan Anda tidak mencukupi. Sisa cuti: {$remainingDays} hari, permintaan: {$lamaCuti} hari.");
+        } elseif ($validated['jenis_cuti'] === 'Cuti Besar') {
+            $error = $this->cutiEligibility->checkCutiBesar($pegawai, $start, $end);
+            if ($error) {
+                return redirect()->back()->withInput()->with('error', $error);
             }
         }
-        // --- Start Cuti Besar Validation ---
-        elseif ($validated['jenis_cuti'] === 'Cuti Besar') {
-            // Check masa kerja (work period) - assuming 'tanggal_masuk' exists on Pegawai model
-            if (! $pegawai->tanggal_masuk) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Tanggal masuk kerja pegawai tidak ditemukan untuk validasi Cuti Besar.');
-            }
-            $masaKerja = now()->diffInYears(\Carbon\Carbon::parse($pegawai->tanggal_masuk));
-            if ($masaKerja < 5) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Cuti Besar hanya dapat diajukan oleh pegawai dengan masa kerja minimal 5 tahun.');
-            }
-
-            // Check if the requested leave is not more than 3 months (approx 90 workdays)
-            // Note: Using calculated $lamaCuti which counts workdays
-            if ($lamaCuti > 90) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Cuti Besar maksimal 3 bulan (sekitar 90 hari kerja). Permintaan Anda: '.$lamaCuti.' hari.');
-            }
-
-            // Check if there's already a Cuti Tahunan in the same year
-            $currentYear = date('Y', strtotime($validated['tanggal_mulai']));
-            $existingCutiTahunan = Cuti::where('pegawai_uuid', $pegawai->uuid)
-                ->where('jenis_cuti', 'Cuti Tahunan')
-                ->whereYear('tanggal_mulai', $currentYear)
-                ->whereIn('status', ['Pending', 'Disetujui Verifikator', 'Disetujui Pimpinan', 'Disetujui Atasan Pimpinan']) // Consider approved/pending
-                ->exists();
-
-            if ($existingCutiTahunan) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Anda sudah mengajukan Cuti Tahunan di tahun ini, sehingga tidak dapat mengajukan Cuti Besar.');
-            }
-
-            // Optional: Check if Cuti Besar already taken in the same year (usually only allowed once every few years, but basic check here)
-            $existingCutiBesar = Cuti::where('pegawai_uuid', $pegawai->uuid)
-                ->where('jenis_cuti', 'Cuti Besar')
-                ->whereYear('tanggal_mulai', $currentYear)
-                ->whereIn('status', ['Pending', 'Disetujui Verifikator', 'Disetujui Pimpinan', 'Disetujui Atasan Pimpinan']) // Consider approved/pending
-                ->exists();
-
-            if ($existingCutiBesar) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Anda sudah mengajukan Cuti Besar di tahun ini.');
-            }
-        }
-        // --- End Cuti Besar Validation ---
 
         $validated['uuid'] = Str::uuid();
-        $validated['lama_cuti'] = $lamaCuti;
+        $validated['lama_cuti'] = WorkdayService::countWorkdays($start, $end);
         $validated['status'] = 'Pending';
 
         // Handle document upload
         if ($request->hasFile('dokumen')) {
-            $file = $request->file('dokumen');
-            $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
-            $file->storeAs('public/dokumen/cuti', $filename);
-            $validated['dokumen'] = $filename;
+            $validated['dokumen'] = $this->cutiDocuments->storeDocument($request->file('dokumen'));
         }
 
         Cuti::create($validated);
@@ -259,7 +164,7 @@ class CutiController extends Controller
                 ->first();
 
             if (! $balance) {
-                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
+                $balance = $this->cutiBalances->getOrCreateBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
 
@@ -299,7 +204,7 @@ class CutiController extends Controller
                 ->first();
 
             if (! $balance) {
-                $balance = CutiBalance::checkAndUpdateBalance($cuti->pegawai_uuid, $currentYear);
+                $balance = $this->cutiBalances->getOrCreateBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
 
@@ -347,93 +252,23 @@ class CutiController extends Controller
             'atasan_pimpinan_uuid' => 'sometimes|required|exists:pegawai,uuid',
         ]);
 
-        // Calculate leave duration - count only workdays
-        $lamaCuti = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
+        $start = Carbon::parse($validated['tanggal_mulai']);
+        $end = Carbon::parse($validated['tanggal_selesai']);
 
-        // Check annual leave limit if the type is "Cuti Tahunan"
+        // Eligibility checks via service (excluding the current cuti being updated)
         if ($validated['jenis_cuti'] === 'Cuti Tahunan') {
-            $currentYear = date('Y', strtotime($validated['tanggal_mulai']));
-            $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
-            $usedDaysExcludingThis = $balance->used_days;
-            if ($cuti->jenis_cuti === 'Cuti Tahunan' && date('Y', strtotime($cuti->tanggal_mulai)) == $currentYear) {
-                $usedDaysExcludingThis -= $cuti->lama_cuti;
+            $error = $this->cutiEligibility->checkAnnualLeave($cuti->pegawai_uuid, $start, $end, $cuti->uuid);
+            if ($error) {
+                return redirect()->back()->withInput()->with('error', $error);
             }
-            $remainingDays = $balance->total_days + $balance->carried_over - $usedDaysExcludingThis;
-
-            // Check if trying to apply for Cuti Tahunan but already has Cuti Besar in the same year
-            $existingCutiBesar = Cuti::where('pegawai_uuid', $cuti->pegawai_uuid)
-                ->where('jenis_cuti', 'Cuti Besar')
-                ->where('uuid', '!=', $cuti->uuid) // Exclude current request
-                ->whereYear('tanggal_mulai', $currentYear)
-                ->whereIn('status', ['Pending', 'Disetujui Verifikator', 'Disetujui Pimpinan', 'Disetujui Atasan Pimpinan'])
-                ->exists();
-
-            if ($existingCutiBesar) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Anda sudah mengajukan Cuti Besar di tahun ini, sehingga tidak dapat mengajukan Cuti Tahunan.');
-            }
-
-            if ($lamaCuti > $remainingDays) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', "Sisa cuti tahunan Anda tidak mencukupi. Sisa cuti: {$remainingDays} hari, permintaan: {$lamaCuti} hari.");
+        } elseif ($validated['jenis_cuti'] === 'Cuti Besar') {
+            $error = $this->cutiEligibility->checkCutiBesar($pegawai, $start, $end, $cuti->uuid);
+            if ($error) {
+                return redirect()->back()->withInput()->with('error', $error);
             }
         }
-        // --- Start Cuti Besar Validation ---
-        elseif ($validated['jenis_cuti'] === 'Cuti Besar') {
-            // Check masa kerja (work period)
-            if (! $pegawai->tanggal_masuk) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Tanggal masuk kerja pegawai tidak ditemukan untuk validasi Cuti Besar.');
-            }
-            $masaKerja = now()->diffInYears(\Carbon\Carbon::parse($pegawai->tanggal_masuk));
-            if ($masaKerja < 5) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Cuti Besar hanya dapat diajukan oleh pegawai dengan masa kerja minimal 5 tahun.');
-            }
 
-            // Check if the requested leave is not more than 3 months (approx 90 workdays)
-            if ($lamaCuti > 90) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Cuti Besar maksimal 3 bulan (sekitar 90 hari kerja). Permintaan Anda: '.$lamaCuti.' hari.');
-            }
-
-            // Check if there's already a Cuti Tahunan in the same year
-            $currentYear = date('Y', strtotime($validated['tanggal_mulai']));
-            $existingCutiTahunan = Cuti::where('pegawai_uuid', $cuti->pegawai_uuid)
-                ->where('jenis_cuti', 'Cuti Tahunan')
-                ->where('uuid', '!=', $cuti->uuid) // Exclude current request
-                ->whereYear('tanggal_mulai', $currentYear)
-                ->whereIn('status', ['Pending', 'Disetujui Verifikator', 'Disetujui Pimpinan', 'Disetujui Atasan Pimpinan'])
-                ->exists();
-
-            if ($existingCutiTahunan) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Anda sudah mengajukan Cuti Tahunan di tahun ini, sehingga tidak dapat mengajukan Cuti Besar.');
-            }
-
-            // Optional: Check if Cuti Besar already taken in the same year (excluding current)
-            $existingCutiBesar = Cuti::where('pegawai_uuid', $cuti->pegawai_uuid)
-                ->where('jenis_cuti', 'Cuti Besar')
-                ->where('uuid', '!=', $cuti->uuid) // Exclude current request
-                ->whereYear('tanggal_mulai', $currentYear)
-                ->whereIn('status', ['Pending', 'Disetujui Verifikator', 'Disetujui Pimpinan', 'Disetujui Atasan Pimpinan'])
-                ->exists();
-
-            if ($existingCutiBesar) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Anda sudah mengajukan Cuti Besar lain di tahun ini.');
-            }
-        }
-        // --- End Cuti Besar Validation ---
-
-        $validated['lama_cuti'] = $lamaCuti;
+        $validated['lama_cuti'] = WorkdayService::countWorkdays($start, $end);
 
         // Handle document upload
         if ($request->hasFile('dokumen')) {
@@ -441,11 +276,7 @@ class CutiController extends Controller
             if ($cuti->dokumen) {
                 Storage::delete('public/dokumen/cuti/'.$cuti->dokumen);
             }
-
-            $file = $request->file('dokumen');
-            $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
-            $file->storeAs('public/dokumen/cuti', $filename);
-            $validated['dokumen'] = $filename;
+            $validated['dokumen'] = $this->cutiDocuments->storeDocument($request->file('dokumen'));
         }
 
         $cuti->update($validated);
@@ -493,7 +324,7 @@ class CutiController extends Controller
                 ->first();
 
             if (! $balance) {
-                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
+                $balance = $this->cutiBalances->getOrCreateBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
 
@@ -529,7 +360,7 @@ class CutiController extends Controller
                 ->first();
 
             if (! $balance) {
-                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
+                $balance = $this->cutiBalances->getOrCreateBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
 
@@ -565,14 +396,14 @@ class CutiController extends Controller
                 ->first();
 
             if (! $balance) {
-                $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $currentYear);
+                $balance = $this->cutiBalances->getOrCreateBalance($cuti->pegawai_uuid, $currentYear);
             }
         }
 
         return view('cuti.verifikasi-atasan-pimpinan', compact('cuti', 'balance'));
     }
 
-    // Proses verifikasi method (around line 270)
+    // Proses verifikasi method
     public function prosesVerifikasi(Request $request, $uuid)
     {
         $validated = $request->validate([
@@ -580,36 +411,20 @@ class CutiController extends Controller
             'catatan_verifikator' => 'nullable|string',
         ]);
 
-        $user = Auth::user();
-        $verifikator = Pegawai::where('nip', $user->nip)->first();
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verify', $cuti);
 
-        if (! $verifikator) {
-            return redirect()->route('cuti.index')->with('error', 'Data verifikator tidak ditemukan');
-        }
-
-        // Update status based on verifikator decision
-        $newStatus = $validated['status_verifikator'] === 'Disetujui' ? 'Disetujui Verifikator' : 'Ditolak Verifikator';
-
-        $cuti->update([
-            'status' => $newStatus,
-            'status_verifikator' => $validated['status_verifikator'],
-            'catatan_verifikator' => $validated['catatan_verifikator'],
-            'verifikator_uuid' => $verifikator->uuid,
-            'tanggal_verifikasi' => now(),
-        ]);
+        $this->cutiApprovals->applyVerifikator($cuti, $validated['status_verifikator'], $validated['catatan_verifikator'] ?? null);
 
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diverifikasi');
     }
 
-    // Proses verifikasi pimpinan method (around line 300)
+    // Proses verifikasi pimpinan method
     public function prosesVerifikasiPimpinan(Request $request, $uuid)
     {
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyPimpinan', $cuti);
 
-        // Only allow pimpinan verification if already approved by verifikator
         if ($cuti->status !== 'Disetujui Verifikator') {
             return redirect()->route('cuti.index')->with('error', 'Permohonan cuti harus disetujui oleh verifikator terlebih dahulu');
         }
@@ -619,53 +434,26 @@ class CutiController extends Controller
             'catatan_pimpinan' => 'nullable|string',
         ]);
 
-        $user = Auth::user();
-        $pimpinan = Pegawai::where('nip', $user->nip)->first();
-
-        if (! $pimpinan) {
+        $pimpinans = Pegawai::where('nip', auth()->user()->nip)->first();
+        if (! $pimpinans) {
             return redirect()->route('cuti.index')->with('error', 'Data pimpinan tidak ditemukan');
         }
 
-        // Check if the current pimpinan is the assigned pimpinan for this request
-        if ($pimpinan->uuid !== $cuti->pimpinan_uuid) {
+        if ($pimpinans->uuid !== $cuti->pimpinan_uuid) {
             return redirect()->route('cuti.index')->with('error', 'Anda bukan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
         }
 
-        // Update status based on pimpinan decision
-        $newStatus = $validated['status_pimpinan'] === 'Disetujui' ? 'Disetujui Pimpinan' : 'Ditolak Pimpinan';
-
-        $cuti->update([
-            'status' => $newStatus,
-            'status_pimpinan' => $validated['status_pimpinan'],
-            'catatan_pimpinan' => $validated['catatan_pimpinan'],
-            'pimpinan_uuid' => $pimpinan->uuid,
-            'tanggal_verifikasi_pimpinan' => now(),
-        ]);
-
-        // In the prosesVerifikasiPimpinan method, modify the part where we update the balance
-
-        // If this is an approved annual leave, update the balance
-        if ($newStatus === 'Disetujui Pimpinan' && $cuti->jenis_cuti === 'Cuti Tahunan') {
-            $year = date('Y', strtotime($cuti->tanggal_mulai));
-            $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $year);
-
-            $workdays = WorkdayService::countWorkdays($cuti->tanggal_mulai, $cuti->tanggal_selesai);
-
-            // Update the balance with only workdays
-            $balance->used_days += $workdays;
-            $balance->save();
-        }
+        $this->cutiApprovals->applyPimpinan($cuti, $pimpinans, $validated['status_pimpinan'], $validated['catatan_pimpinan'] ?? null);
 
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diverifikasi oleh pimpinan');
     }
 
-    // Proses verifikasi atasan pimpinan method (around line 340)
+    // Proses verifikasi atasan pimpinan method
     public function prosesVerifikasiAtasanPimpinan(Request $request, $uuid)
     {
         $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyAtasanPimpinan', $cuti);
 
-        // Only allow atasan pimpinan verification if status is appropriate
         if ($cuti->status !== 'Disetujui Pimpinan') {
             return redirect()->route('cuti.index')->with('error', 'Permohonan cuti harus disetujui oleh pimpinan terlebih dahulu');
         }
@@ -675,41 +463,20 @@ class CutiController extends Controller
             'catatan_atasan_pimpinan' => 'nullable|string',
         ]);
 
-        $user = Auth::user();
-        $atasanPimpinan = Pegawai::where('nip', $user->nip)->first();
-
+        $atasanPimpinan = Pegawai::where('nip', auth()->user()->nip)->first();
         if (! $atasanPimpinan) {
             return redirect()->route('cuti.index')->with('error', 'Data atasan pimpinan tidak ditemukan');
         }
 
-        // Check if the current atasan pimpinan is the assigned atasan pimpinan for this request
         if ($atasanPimpinan->uuid !== $cuti->atasan_pimpinan_uuid) {
             return redirect()->route('cuti.index')->with('error', 'Anda bukan atasan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
         }
 
-        // Update status based on atasan pimpinan decision
-        $newStatus = $validated['status_atasan_pimpinan'] === 'Disetujui' ? 'Disetujui Atasan Pimpinan' : 'Ditolak Atasan Pimpinan';
-
-        $cuti->update([
-            'status' => $newStatus,
-            'status_atasan_pimpinan' => $validated['status_atasan_pimpinan'],
-            'catatan_atasan_pimpinan' => $validated['catatan_atasan_pimpinan'],
-            'atasan_pimpinan_uuid' => $atasanPimpinan->uuid,
-            'tanggal_verifikasi_atasan_pimpinan' => now(),
-        ]);
-
-        if ($newStatus === 'Ditolak Atasan Pimpinan' && $cuti->jenis_cuti === 'Cuti Tahunan') {
-            $year = date('Y', strtotime($cuti->tanggal_mulai));
-            $balance = $this->ensureCutiBalance($cuti->pegawai_uuid, $year);
-            $workdays = WorkdayService::countWorkdays($cuti->tanggal_mulai, $cuti->tanggal_selesai);
-            $balance->used_days = max(0, $balance->used_days - $workdays);
-            $balance->save();
-        }
+        $this->cutiApprovals->applyAtasanPimpinan($cuti, $atasanPimpinan, $validated['status_atasan_pimpinan'], $validated['catatan_atasan_pimpinan'] ?? null);
 
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diverifikasi oleh atasan pimpinan');
     }
 
-    // Add a method to display leave balance
     public function showBalance()
     {
         $user = Auth::user();
@@ -719,43 +486,32 @@ class CutiController extends Controller
             return redirect()->route('cuti')->with('error', 'Data pegawai tidak ditemukan');
         }
 
-        $currentYear = date('Y');
-        $balance = $this->ensureCutiBalance($pegawai->uuid, $currentYear);
+        $balance = $this->cutiBalances->getOrCreateBalance($pegawai->uuid, date('Y'));
 
         return view('cuti.balance', compact('balance', 'pegawai'));
     }
 
-    // Update jumlah cuti pegawai method (around line 400)
     public function updateBalance()
     {
-        $user = auth()->user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
+        $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
 
         if (! $pegawai) {
             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
         }
 
-        $currentYear = date('Y');
-
-        // Make sure we're using the fully qualified class name or the imported class
-        CutiBalance::checkAndUpdateBalance($pegawai->uuid, $currentYear);
+        $this->cutiBalances->refreshBalance($pegawai->uuid, date('Y'));
 
         return redirect()->route('cuti.index')->with('success', 'Saldo cuti berhasil diperbarui');
     }
 
-    // Update semua jumlah cuti pegawai method (around line 410)
     public function updateAllBalances()
     {
-        // Check if user has admin permissions
         if (! auth()->user()->can('update cuti')) {
             return redirect()->route('dashboard')->with('error', 'Anda tidak memiliki izin untuk melakukan tindakan ini');
         }
 
-        $pegawai = Pegawai::all();
-        $currentYear = date('Y');
-
-        $uuids = $pegawai->pluck('uuid')->toArray();
-        CutiBalance::bulkCheckAndUpdateBalance($uuids, $currentYear);
+        $uuids = Pegawai::pluck('uuid')->toArray();
+        $this->cutiBalances->refreshAll($uuids, date('Y'));
         $count = count($uuids);
 
         return redirect()->route('cuti.index')->with('success', "Saldo cuti untuk $count pegawai berhasil diperbarui");
