@@ -5,9 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Pegawai;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str; // Add this line
+use Illuminate\Support\Str;
 
 class PegawaiController extends Controller
 {
@@ -67,35 +66,26 @@ class PegawaiController extends Controller
 
     public function store(Request $request)
     {
-        try {
-            $validatedData = $request->validate([
-                'nip' => 'required|string|max:255|unique:pegawai,nip',
-                'nama' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
-                'tempat_lahir' => 'required|string|max:255',
-                'tanggal_lahir' => 'required|date|before:today',
-                'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
-                'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
-                'status_perkawinan' => 'required|in:Kawin,Belum Kawin,Duda,Janda',
-                'alamat' => 'required|string|max:500',
-                'no_hp' => 'required|string|max:20|regex:/^[0-9]+$/',
-                'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
-            ]);
+        $validatedData = $request->validate([
+            'nip' => 'required|string|max:255|unique:pegawai,nip',
+            'nama' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
+            'tempat_lahir' => 'required|string|max:255',
+            'tanggal_lahir' => 'required|date|before:today',
+            'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
+            'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
+            'status_perkawinan' => 'required|in:Kawin,Belum Kawin,Duda,Janda',
+            'alamat' => 'required|string|max:500',
+            'no_hp' => 'required|string|max:20|regex:/^[0-9]+$/',
+            'status_pegawai' => 'required|in:CPNS,Hakim,PNS,PPPK,PPNPN',
+        ]);
 
-            $pegawai = Pegawai::create($validatedData);
-            if ($request->hasFile('foto')) {
-                $this->handleFotoUpload($request, $pegawai);
-            }
-            if ($pegawai) {
-                return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil ditambahkan');
-            } else {
-                return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal ditambahkan');
-            }
-            Log::info('Pegawai created successfully', ['id' => $pegawai->id]);
-        } catch (\Exception $e) {
-            Log::error('Error creating pegawai', ['error' => $e->getMessage()]);
-
-            return redirect()->back()->with('error', 'Failed to create pegawai');
+        $pegawai = Pegawai::create($validatedData);
+        if ($request->hasFile('foto')) {
+            $this->handleFotoUpload($request, $pegawai);
         }
+
+        return redirect()->route('pegawai.index')
+            ->with($pegawai ? 'success' : 'error', $pegawai ? 'Data Pegawai berhasil ditambahkan' : 'Data Pegawai gagal ditambahkan');
     }
 
     public function edit($uuid)
@@ -125,11 +115,9 @@ class PegawaiController extends Controller
         if ($request->hasFile('foto')) {
             $this->handleFotoUpload($request, $pegawai);
         }
-        if ($pegawai) {
-            return redirect()->route('pegawai.index')->with('success', 'Data Pegawai berhasil diubah');
-        } else {
-            return redirect()->route('pegawai.index')->with('error', 'Data Pegawai gagal diubah');
-        }
+
+        return redirect()->route('pegawai.index')
+            ->with('success', 'Data Pegawai berhasil diubah');
     }
 
     public function destroy($uuid)
@@ -194,8 +182,10 @@ class PegawaiController extends Controller
     {
         $search = $request->input('search');
 
-        $pegawai = Pegawai::where('nama', 'LIKE', "%{$search}%")
-            ->orWhere('nip', 'LIKE', "%{$search}%")
+        $pegawai = Pegawai::where(function ($q) use ($search) {
+            $q->where('nama', 'LIKE', "%{$search}%")
+                ->orWhere('nip', 'LIKE', "%{$search}%");
+        })
             ->paginate(10);
 
         return view('pegawai.index', compact('pegawai'));

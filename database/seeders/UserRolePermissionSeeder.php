@@ -6,31 +6,23 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class UserRolePermissionSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Check if the uuid column exists in the roles table
         if (! Schema::hasColumn('roles', 'uuid')) {
             throw new \Exception('The roles table is missing the uuid column. Please run the appropriate migration.');
         }
 
-        // Ensure all existing roles have UUIDs
-        Role::whereNull('uuid')->orderBy('uuid')->each(function ($role) {
+        Role::whereNull('uuid')->each(function ($role) {
             $role->uuid = Str::uuid()->toString();
             $role->save();
         });
 
-        // Create Permissions
         $permissions = [
             'view role', 'create role', 'update role', 'delete role',
             'view permission', 'create permission', 'update permission', 'delete permission',
@@ -40,8 +32,6 @@ class UserRolePermissionSeeder extends Seeder
             'view jabatan', 'create jabatan', 'update jabatan', 'delete jabatan',
             'view riwayat_jabatan', 'create riwayat_jabatan', 'update riwayat_jabatan', 'delete riwayat_jabatan',
             'view cuti', 'create cuti', 'update cuti', 'verifikasi cuti', 'delete cuti', 'pimpinan cuti', 'atasan pimpinan cuti', 'proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti',
-            'view izin', 'create izin', 'update izin', 'verifikasi izin', 'delete izin',
-            'verifikasi data',
             'view izin', 'create izin', 'update izin', 'verifikasi izin', 'delete izin',
             'verifikasi data',
         ];
@@ -55,30 +45,16 @@ class UserRolePermissionSeeder extends Seeder
             ]);
         }
 
-        // Add this before giving permissions to roles
-        $permissions = Permission::all();
-        foreach ($permissions as $permission) {
-            if (empty($permission->uuid)) {
-                Log::error("Permission '{$permission->name}' has no UUID");
-            }
-        }
-
-        // Create Roles
         $roles = ['super-admin', 'admin', 'pimpinan', 'verifikator', 'user', 'atasan-pimpinan'];
 
         foreach ($roles as $roleName) {
-            $role = Role::firstOrCreate([
+            Role::firstOrCreate([
                 'uuid' => Str::uuid()->toString(),
                 'name' => $roleName,
                 'guard_name' => 'web',
             ]);
-            Log::info('Created role: '.json_encode($role->toArray()));
         }
 
-        // After creating roles
-        Log::info('Roles created: '.json_encode(Role::all()->toArray()));
-
-        // Let's give all permission to super-admin role.
         $allPermissionNames = Permission::pluck('name')->toArray();
 
         $superAdminRole = Role::where('name', 'super-admin')->first();
@@ -86,56 +62,10 @@ class UserRolePermissionSeeder extends Seeder
             throw new \Exception('Super-admin role not found');
         }
 
-        Log::info('Super-admin role UUID: '.$superAdminRole->uuid);
-
-        if ($superAdminRole) {
-            try {
-                // Add this debug line
-                Log::info('Super-admin role: '.json_encode($superAdminRole->toArray()));
-
-                // Ensure the role has a UUID before assigning permissions
-                if ($superAdminRole->uuid) {
-                    // Before assigning permissions
-                    Log::info('Permissions to be assigned: '.json_encode($allPermissionNames));
-                    Log::info('Super-admin role before assignment: '.json_encode($superAdminRole->toArray()));
-
-                    // Inside the try block, just before $superAdminRole->givePermissionTo($allPermissionNames);
-                    Log::info('Attempting to assign permissions to super-admin role');
-
-                    $superAdminRole->givePermissionTo($allPermissionNames);
-                } else {
-                    Log::error('Super-admin role has no UUID');
-                }
-            } catch (\Exception $e) {
-                Log::error('Failed to give permissions to super-admin: '.$e->getMessage());
-                Log::error('Super-admin role UUID: '.$superAdminRole->uuid);
-                Log::error('Permissions: '.implode(', ', $allPermissionNames));
-
-                // Add these debug lines
-                Log::error('All roles: '.json_encode(Role::all()->toArray()));
-                Log::error('All permissions: '.json_encode(Permission::all()->toArray()));
-
-                throw $e;
-            }
-        } else {
-            Log::error('Super-admin role not found');
-
-            // Add this debug line
-            Log::error('All roles: '.json_encode(Role::all()->toArray()));
+        if ($superAdminRole->uuid) {
+            $superAdminRole->givePermissionTo($allPermissionNames);
         }
 
-        // After assigning permissions to the super-admin role
-        $superAdminRole = Role::where('name', 'super-admin')->first();
-        $assignedPermissions = $superAdminRole->permissions()->pluck('name')->toArray();
-        Log::info('Assigned permissions to super-admin: '.json_encode($assignedPermissions));
-
-        // Check if all expected permissions are assigned
-        $missingPermissions = array_diff($allPermissionNames, $assignedPermissions);
-        if (! empty($missingPermissions)) {
-            Log::warning('Missing permissions for super-admin: '.json_encode($missingPermissions));
-        }
-
-        // Let's give few permissions to admin role.
         $adminRole = Role::where('name', 'admin')->first();
         $adminRole->givePermissionTo(['create user', 'view user', 'update user']);
         $adminRole->givePermissionTo(['create pegawai', 'view pegawai', 'update pegawai']);
@@ -147,14 +77,13 @@ class UserRolePermissionSeeder extends Seeder
         $adminRole->givePermissionTo(['verifikasi data']);
 
         $atasanpimpinanRole = Role::where('name', 'atasan-pimpinan')->first();
-        $atasanpimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti', 'delete cuti', 'pimpinan cuti', 'atasan pimpinan cuti', 'proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti']);
+        $atasanpimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti', 'delete cuti', 'pimpinan cuti', 'atasan pimpinan cuti', 'proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti']);
         $atasanpimpinanRole->givePermissionTo(['create izin', 'view izin', 'update izin', 'delete izin']);
         $atasanpimpinanRole->givePermissionTo(['view pegawai', 'update pegawai']);
         $atasanpimpinanRole->givePermissionTo(['verifikasi cuti', 'verifikasi izin']);
         $atasanpimpinanRole->givePermissionTo(['view pangkat']);
         $atasanpimpinanRole->givePermissionTo(['view jabatan']);
         $atasanpimpinanRole->givePermissionTo(['create riwayat_jabatan', 'view riwayat_jabatan', 'update riwayat_jabatan', 'delete riwayat_jabatan']);
-        $atasanpimpinanRole->givePermissionTo(['view pegawai', 'update pegawai']);
         $atasanpimpinanRole->givePermissionTo(['verifikasi data']);
 
         $pimpinanRole = Role::where('name', 'pimpinan')->first();
@@ -165,7 +94,6 @@ class UserRolePermissionSeeder extends Seeder
         $pimpinanRole->givePermissionTo(['view pangkat']);
         $pimpinanRole->givePermissionTo(['view jabatan']);
         $pimpinanRole->givePermissionTo(['create riwayat_jabatan', 'view riwayat_jabatan', 'update riwayat_jabatan', 'delete riwayat_jabatan']);
-        $pimpinanRole->givePermissionTo(['view pegawai', 'update pegawai']);
         $pimpinanRole->givePermissionTo(['verifikasi data']);
 
         $verifikatorRole = Role::where('name', 'verifikator')->first();
@@ -186,15 +114,6 @@ class UserRolePermissionSeeder extends Seeder
         $userRole->givePermissionTo(['create riwayat_jabatan', 'view riwayat_jabatan', 'update riwayat_jabatan', 'delete riwayat_jabatan']);
         $userRole->givePermissionTo(['view pegawai', 'update pegawai']);
 
-        // After assigning permissions to all roles
-        $roles = ['admin', 'pimpinan', 'verifikator', 'user'];
-        foreach ($roles as $roleName) {
-            $role = Role::where('name', $roleName)->first();
-            $assignedPermissions = $role->permissions()->pluck('name')->toArray();
-            Log::info("Assigned permissions to {$roleName}: ".json_encode($assignedPermissions));
-        }
-
-        // Let's Create User and assign Role to it.
         $defaultPassword = Hash::make(env('SEEDER_DEFAULT_PASSWORD', 'ChangeMeImmediately!'));
 
         $superAdminUser = User::firstOrCreate([
@@ -255,31 +174,5 @@ class UserRolePermissionSeeder extends Seeder
         ]);
 
         $userUser->assignRole($userRole);
-
-        // After creating and assigning roles to users
-        $users = User::with('roles')->get();
-        foreach ($users as $user) {
-            Log::info("User {$user->name} (email: {$user->email}) has roles: ".$user->roles->pluck('name')->implode(', '));
-        }
-
-        // Final check
-        $roleCount = Role::count();
-        $permissionCount = Permission::count();
-        $userCount = User::count();
-        $roleHasPermissionsCount = DB::table('role_has_permissions')->count();
-        $modelHasRolesCount = DB::table('model_has_roles')->count();
-
-        Log::info('Seeding completed. Summary:');
-        Log::info("- Roles created: {$roleCount}");
-        Log::info("- Permissions created: {$permissionCount}");
-        Log::info("- Users created: {$userCount}");
-        Log::info("- Role-Permission associations: {$roleHasPermissionsCount}");
-        Log::info("- User-Role associations: {$modelHasRolesCount}");
-
-        if ($roleCount === 6 && $permissionCount === 36 && $userCount === 5) {
-            Log::info('Seeding successful!');
-        } else {
-            Log::warning('Seeding may be incomplete. Please check the logs for any errors.');
-        }
     }
 }
