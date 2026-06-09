@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Izin;
 use App\Models\Pegawai;
 use App\Models\User;
+use App\Support\IzinType;
 
 class IzinPolicy
 {
@@ -96,7 +97,7 @@ class IzinPolicy
      */
     public function verifyPimpinan(User $user, Izin $izin): bool
     {
-        if (in_array($izin->jenis_izin, ['Izin Keluar Kantor', 'Izin Pulang Cepat'])) {
+        if (IzinType::isSingleLevel($izin->jenis_izin)) {
             return false; // Single-level approval — no pimpinan step
         }
 

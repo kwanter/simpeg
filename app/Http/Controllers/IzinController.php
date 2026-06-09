@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Izin;
 use App\Models\Pegawai;
-use App\Models\User;
+use App\Services\ApproverDirectoryService;
+use App\Services\IzinQueryService;
 use App\Services\WorkdayService;
+use App\Support\IzinType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -14,8 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class IzinController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly ApproverDirectoryService $approvers,
+        private readonly IzinQueryService $izinQuery,
+    ) {
         $this->middleware('auth');
     }
 
@@ -62,44 +66,7 @@ class IzinController extends Controller
     public function index()
     {
         $this->authorize('viewAny', Izin::class);
-        // Check if the user has any of these roles
-        if (auth()->user()->hasRole(['super-admin', 'admin'])) {
-            // Admin can see all izin
-            $izinList = Izin::with('pegawai')->latest()->paginate(10);
-        } elseif (auth()->user()->hasRole('atasan-pimpinan')) {
-            // Atasan can see izin where they are assigned as atasan_pimpinan
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $izinList = Izin::with('pegawai')
-                    ->where('atasan_pimpinan_uuid', $pegawai->uuid)
-                    ->latest()
-                    ->paginate(10);
-            } else {
-                $izinList = collect(); // Empty collection if pegawai not found
-            }
-        } elseif (auth()->user()->hasRole('pimpinan')) {
-            // Pimpinan can see izin where they are assigned as pimpinan
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $izinList = Izin::with('pegawai')
-                    ->where('pimpinan_uuid', $pegawai->uuid)
-                    ->latest()
-                    ->paginate(10);
-            } else {
-                $izinList = collect(); // Empty collection if pegawai not found
-            }
-        } else {
-            // Regular users can only see their own izin
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $izinList = Izin::with('pegawai')
-                    ->where('pegawai_uuid', $pegawai->uuid)
-                    ->latest()
-                    ->paginate(10);
-            } else {
-                $izinList = collect(); // Empty collection if pegawai not found
-            }
-        }
+        $izinList = $this->izinQuery->forUser(Auth::user())->latest()->paginate(10);
 
         return view('izin.index', compact('izinList'));
     }
@@ -114,31 +81,7 @@ class IzinController extends Controller
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
         }
 
-        $jenisIzin = [
-            'Izin Sakit',
-            'Izin Keperluan Keluarga',
-            'Izin Keperluan Pribadi',
-            'Izin Dinas Luar',
-            'Izin Setengah Hari',
-            'Izin Terlambat',
-            'Izin Pulang Cepat',
-            'Izin Keluar Kantor',
-            'Izin Tidak Masuk Kerja',
-            'Izin Lainnya',
-        ];
-
-        // Get list of pimpinan and atasan for dropdown
-        $pimpinanList = User::role('pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        $atasanList = User::role('atasan-pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        return view('izin.create', compact('pegawai', 'jenisIzin', 'pimpinanList', 'atasanList'));
+        return view('izin.create', $this->formData($pegawai));
     }
 
     public function edit($uuid)
@@ -156,31 +99,23 @@ class IzinController extends Controller
             return redirect()->route('izin.index')->with('error', 'Pengajuan izin yang sudah diverifikasi tidak dapat diedit');
         }
 
-        $jenisIzin = [
-            'Izin Sakit',
-            'Izin Keperluan Keluarga',
-            'Izin Keperluan Pribadi',
-            'Izin Dinas Luar',
-            'Izin Setengah Hari',
-            'Izin Terlambat',
-            'Izin Pulang Cepat',
-            'Izin Keluar Kantor',
-            'Izin Tidak Masuk Kerja',
-            'Izin Lainnya',
+        return view('izin.edit', array_merge(
+            $this->formData($izin->pegawai),
+            ['izin' => $izin]
+        ));
+    }
+
+    /**
+     * Shared form data for create/edit and PERMA-specific create methods.
+     */
+    private function formData(Pegawai $pegawai): array
+    {
+        return [
+            'pegawai' => $pegawai,
+            'jenisIzin' => IzinType::all(),
+            'pimpinanList' => $this->approvers->pimpinanList(),
+            'atasanList' => $this->approvers->atasanList(),
         ];
-
-        // Get list of pimpinan and atasan for dropdown
-        $pimpinanList = User::role('pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        $atasanList = User::role('atasan-pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        return view('izin.edit', compact('izin', 'jenisIzin', 'pimpinanList', 'atasanList'));
     }
 
     // In the store method, remove no_surat_izin from validation and don't set it initially
@@ -189,7 +124,7 @@ class IzinController extends Controller
         $this->authorize('create', Izin::class);
         $validated = $request->validate([
             'pegawai_uuid' => 'nullable|exists:pegawai,uuid',
-            'jenis_izin' => 'required|string',
+            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
             'jam_mulai' => 'nullable|date_format:H:i',
@@ -206,7 +141,7 @@ class IzinController extends Controller
 
         // Generate UUID for the new record
         $validated['uuid'] = Str::uuid();
-        $validated['status'] = 'Diajukan'; // Changed from 'Belum Diverifikasi' to 'Diajukan'
+        $validated['status'] = 'Diajukan';
         $validated['verifikasi_atasan'] = 'Belum Diverifikasi';
         $validated['verifikasi_pimpinan'] = 'Belum Diverifikasi';
 
@@ -215,22 +150,20 @@ class IzinController extends Controller
         $validated['jumlah_hari'] = $jumlahHari;
 
         // Jenis-specific validation for new izin types
-        if (in_array($validated['jenis_izin'], ['Izin Keluar Kantor', 'Izin Pulang Cepat'])) {
+        if (IzinType::isSingleLevel($validated['jenis_izin'])) {
             [$rules, $messages] = $this->validateIzinKeluarKantor($request);
             $request->validate($rules, $messages);
-            // Override: same-day time-range, jumlah_hari = 0
+            // Same-day time-range, jumlah_hari = 0
             $validated['jumlah_hari'] = 0;
             $validated['tanggal_mulai'] = now()->toDateString();
             $validated['tanggal_selesai'] = now()->toDateString();
-            // For single-level jenis, pimpinan_uuid is not required — make nullable
-            unset($validated['pimpinan_uuid']); // Will be set to same as atasan_pimpinan_uuid later
-            // Actually, keep it but it won't be used in verification flow
-        } elseif ($validated['jenis_izin'] === 'Izin Tidak Masuk Kerja') {
+            // Single-level jenis — keep pimpinan_uuid value but it is unused in verification flow.
+        } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
             [$rules, $messages] = $this->validateIzinTidakMasukKerja($request);
             $request->validate($rules, $messages);
             // Maks 2 hari kerja (Pasal 8 ayat 4 PERMA No. 7 Tahun 2016)
             $workDays = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
-            if ($workDays > 2) {
+            if ($workDays > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
                 throw ValidationException::withMessages([
                     'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],
                 ]);
@@ -240,7 +173,7 @@ class IzinController extends Controller
         // Handle file upload
         if ($request->hasFile('dokumen')) {
             $file = $request->file('dokumen');
-            $fileName = \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension();
+            $fileName = Str::uuid().'.'.$file->getClientOriginalExtension();
             $file->storeAs('public/dokumen/izin', $fileName);
             $validated['dokumen'] = $fileName;
         }
@@ -289,7 +222,7 @@ class IzinController extends Controller
 
         // Full update for non-verified izin
         $validationRules = [
-            'jenis_izin' => 'required|string',
+            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
             'jam_mulai' => 'nullable|date_format:H:i',
@@ -314,7 +247,7 @@ class IzinController extends Controller
             }
 
             $file = $request->file('dokumen');
-            $fileName = \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension();
+            $fileName = Str::uuid().'.'.$file->getClientOriginalExtension();
             $file->storeAs('public/dokumen/izin', $fileName);
             $validated['dokumen'] = $fileName;
         }
@@ -341,8 +274,6 @@ class IzinController extends Controller
 
     public function verifikasiAtasan($uuid)
     {
-        $user = Auth::user();
-
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyAtasan', $izin);
 
@@ -351,8 +282,6 @@ class IzinController extends Controller
 
     public function verifikasiPimpinan($uuid)
     {
-        $user = Auth::user();
-
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyPimpinan', $izin);
 
@@ -361,8 +290,6 @@ class IzinController extends Controller
 
     public function prosesVerifikasiAtasan(Request $request, $uuid)
     {
-        $user = Auth::user();
-
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyAtasan', $izin);
 
@@ -378,11 +305,9 @@ class IzinController extends Controller
         if ($validated['verifikasi_atasan'] === 'Disetujui') {
             // Single-level approval for Izin Keluar Kantor and Izin Pulang Cepat
             // Pasal 5 PERMA No. 7 Tahun 2016 — atasan langsung only
-            if (in_array($izin->jenis_izin, ['Izin Keluar Kantor', 'Izin Pulang Cepat'])) {
-                $izin->status = 'Disetujui';
-            } else {
-                $izin->status = 'Disetujui Atasan';
-            }
+            $izin->status = IzinType::isSingleLevel($izin->jenis_izin)
+                ? 'Disetujui'
+                : 'Disetujui Atasan';
         } else {
             $izin->status = 'Ditolak Atasan';
         }
@@ -394,8 +319,6 @@ class IzinController extends Controller
 
     public function prosesVerifikasiPimpinan(Request $request, $uuid)
     {
-        $user = Auth::user();
-
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyPimpinan', $izin);
 
@@ -425,12 +348,7 @@ class IzinController extends Controller
         $izin = Izin::with(['pegawai', 'atasan_pimpinan', 'pimpinan'])->where('uuid', $uuid)->firstOrFail();
         $this->authorize('cetak', $izin);
 
-        // Select PDF template based on jenis izin
-        $template = match ($izin->jenis_izin) {
-            'Izin Keluar Kantor', 'Izin Pulang Cepat' => 'izin.pdf-keluar-kantor',
-            'Izin Tidak Masuk Kerja' => 'izin.pdf-tidak-masuk',
-            default => 'izin.pdf',
-        };
+        $template = IzinType::pdfTemplate($izin->jenis_izin);
 
         $pdf = \PDF::loadView($template, ['izin' => $izin]);
 
@@ -453,19 +371,10 @@ class IzinController extends Controller
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
         }
 
-        $jenisIzin = 'Izin Keluar Kantor';
+        $data = $this->formData($pegawai);
+        $data['jenisIzin'] = IzinType::KELUAR_KANTOR;
 
-        $atasanList = User::role('atasan-pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        $pimpinanList = User::role('pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        return view('izin.create-keluar-kantor', compact('pegawai', 'jenisIzin', 'pimpinanList', 'atasanList'));
+        return view('izin.create-keluar-kantor', $data);
     }
 
     /**
@@ -481,17 +390,7 @@ class IzinController extends Controller
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
         }
 
-        $atasanList = User::role('atasan-pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        $pimpinanList = User::role('pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
-            ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
-            ->get();
-
-        return view('izin.create-tidak-masuk', compact('pegawai', 'pimpinanList', 'atasanList'));
+        return view('izin.create-tidak-masuk', $this->formData($pegawai));
     }
 
     /**
@@ -501,24 +400,10 @@ class IzinController extends Controller
     {
         $this->authorize('viewAny', Izin::class);
 
-        $query = Izin::with('pegawai')
-            ->whereIn('jenis_izin', ['Izin Keluar Kantor', 'Izin Pulang Cepat']);
-
-        if (auth()->user()->hasRole(['super-admin', 'admin'])) {
-            // Admin sees all
-        } elseif (auth()->user()->hasRole('atasan-pimpinan')) {
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $query->where('atasan_pimpinan_uuid', $pegawai->uuid);
-            }
-        } else {
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $query->where('pegawai_uuid', $pegawai->uuid);
-            }
-        }
-
-        $izins = $query->latest()->paginate(10);
+        $izins = $this->izinQuery
+            ->forUser(Auth::user(), IzinType::keluarKantorGroup()->all())
+            ->latest()
+            ->paginate(10);
 
         return view('izin.index-keluar-kantor', compact('izins'));
     }
@@ -530,29 +415,10 @@ class IzinController extends Controller
     {
         $this->authorize('viewAny', Izin::class);
 
-        $query = Izin::with('pegawai')
-            ->where('jenis_izin', 'Izin Tidak Masuk Kerja');
-
-        if (auth()->user()->hasRole(['super-admin', 'admin'])) {
-            // Admin sees all
-        } elseif (auth()->user()->hasRole('atasan-pimpinan')) {
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $query->where('atasan_pimpinan_uuid', $pegawai->uuid);
-            }
-        } elseif (auth()->user()->hasRole('pimpinan')) {
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $query->where('pimpinan_uuid', $pegawai->uuid);
-            }
-        } else {
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if ($pegawai) {
-                $query->where('pegawai_uuid', $pegawai->uuid);
-            }
-        }
-
-        $izins = $query->latest()->paginate(10);
+        $izins = $this->izinQuery
+            ->forUser(Auth::user(), [IzinType::TIDAK_MASUK])
+            ->latest()
+            ->paginate(10);
 
         return view('izin.index-tidak-masuk', compact('izins'));
     }
