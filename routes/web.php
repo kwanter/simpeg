@@ -5,69 +5,56 @@ use App\Http\Controllers\RiwayatJabatanController;
 use App\Http\Controllers\RiwayatPangkatController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
-Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], routes: function (): void {
-    Route::group(attributes: ['middleware' => ['role:super-admin']], routes: function (): void {
-        Route::resource(name: 'permissions', controller: App\Http\Controllers\PermissionController::class);
-        Route::post(uri: 'permissions/search', action: [App\Http\Controllers\PermissionController::class, 'search']);
-        Route::resource(name: 'roles', controller: App\Http\Controllers\RoleController::class);
-        Route::get(uri: 'roles/{roleId}/give-permissions', action: [App\Http\Controllers\RoleController::class, 'addPermissionToRole']);
-        Route::put(uri: 'roles/{roleId}/give-permissions', action: [App\Http\Controllers\RoleController::class, 'givePermissionToRole']);
-        Route::post(uri: 'roles/search', action: [App\Http\Controllers\RoleController::class, 'search']);
-    })->middleware(['auth', 'verified'])->name('roles.');
+Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], function (): void {
+    Route::group(['middleware' => ['role:super-admin', 'auth', 'verified']], function (): void {
+        Route::resource('permissions', App\Http\Controllers\PermissionController::class);
+        Route::post('permissions/search', [App\Http\Controllers\PermissionController::class, 'search']);
+        Route::resource('roles', App\Http\Controllers\RoleController::class);
+        Route::get('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'addPermissionToRole']);
+        Route::put('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'givePermissionToRole']);
+        Route::post('roles/search', [App\Http\Controllers\RoleController::class, 'search']);
+    })->name('roles.');
 
-    Route::group(attributes: ['middleware' => ['role:super-admin|admin']], routes: function (): void {
-        Route::resource(name: 'users', controller: App\Http\Controllers\UserController::class);
-        Route::post(uri: 'users/search', action: [App\Http\Controllers\UserController::class, 'search']);
-    })->middleware(['auth', 'verified'])->name('users.');
+    Route::group(['middleware' => ['role:super-admin|admin', 'auth', 'verified']], function (): void {
+        Route::resource('users', App\Http\Controllers\UserController::class);
+        Route::post('users/search', [App\Http\Controllers\UserController::class, 'search']);
+    })->name('users.');
 
-    // Add this to your existing routes
-    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator']], function () {
+    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator', 'auth', 'verified']], function (): void {
         Route::resource('hari-libur', App\Http\Controllers\HariLiburController::class);
-    })->middleware(['auth', 'verified'])->name('hari-libur.');
+    })->name('hari-libur.');
 
-    // Inside the middleware group for super-admin|admin|pimpinan|verifikator
-    Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator']], routes: function (): void {
+    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator', 'auth', 'verified']], function (): void {
         Route::get('pegawai/search', [App\Http\Controllers\PegawaiController::class, 'search'])->name('pegawai.search');
-        // Add this line for jabatan search
         Route::post('jabatan/search', [App\Http\Controllers\JabatanController::class, 'search'])->name('jabatan.search');
 
-        Route::resource(name: 'pegawai', controller: App\Http\Controllers\PegawaiController::class);
-        Route::get(uri: 'pegawai/{pegawaiId}/detail', action: [App\Http\Controllers\PegawaiController::class, 'detail']);
-        Route::get(uri: 'pegawai/{pegawaiId}/edit', action: [App\Http\Controllers\PegawaiController::class, 'edit']);
-        Route::put(uri: 'pegawai/{pegawaiId}', action: [App\Http\Controllers\PegawaiController::class, 'update']);
-        Route::get(uri: 'pegawai/{pegawaiId}/give-roles', action: [App\Http\Controllers\PegawaiController::class, 'addRoleToUser']);
-        Route::put(uri: 'pegawai/{pegawaiId}/give-roles', action: [App\Http\Controllers\PegawaiController::class, 'giveRoleToUser']);
-        Route::get(uri: 'pegawai/{pegawaiId}/give-permissions', action: [App\Http\Controllers\PegawaiController::class, 'addPermissionToUser']);
-        Route::put(uri: 'pegawai/{pegawaiId}/give-permissions', action: [App\Http\Controllers\PegawaiController::class, 'givePermissionToUser']);
-        Route::get(uri: 'pegawai/{pegawaiId}/pangkat', action: [App\Http\Controllers\PegawaiController::class, 'pangkat']);
-        Route::get(uri: 'pegawai/{pegawaiId}/jabatan', action: [App\Http\Controllers\PegawaiController::class, 'jabatan']);
-        Route::get(uri: 'pegawai/{pegawaiId}/cuti', action: [App\Http\Controllers\PegawaiController::class, 'cuti']);
-        Route::get(uri: 'pegawai/{pegawaiId}/cuti/create', action: [App\Http\Controllers\PegawaiController::class, 'createCuti']);
-        Route::post(uri: 'pegawai/{pegawaiId}/cuti', action: [App\Http\Controllers\PegawaiController::class, 'storeCuti']);
-        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_pangkat', action: [App\Http\Controllers\PegawaiController::class, 'riwayatPangkat']);
-        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_jabatan', action: [App\Http\Controllers\PegawaiController::class, 'riwayatJabatan']);
-        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_cuti', action: [App\Http\Controllers\PegawaiController::class, 'riwayatCuti']);
-        Route::get(uri: 'pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}/edit', action: [App\Http\Controllers\PegawaiController::class, 'editRiwayatCuti']);
-        Route::put(uri: 'pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}', action: [App\Http\Controllers\PegawaiController::class, 'updateRiwayatCuti']);
-        Route::delete(uri: 'pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}/delete', action: [App\Http\Controllers\PegawaiController::class, 'destroyRiwayatCuti'])->name('pegawai.riwayat_cuti.destroy');
-        Route::resource(name: 'jabatan', controller: App\Http\Controllers\JabatanController::class);
-        Route::get(uri: 'riwayat_jabatan/{pegawai_uuid}', action: [App\Http\Controllers\RiwayatJabatanController::class, 'index']);
-        Route::get(uri: 'riwayat_jabatan/{pegawai_uuid}/create', action: [App\Http\Controllers\RiwayatJabatanController::class, 'create']);
-        Route::post(uri: 'riwayat_jabatan', action: [App\Http\Controllers\RiwayatJabatanController::class, 'store']);
-        Route::get(uri: 'riwayat_jabatan/{riwayatJabatanId}/edit', action: [App\Http\Controllers\RiwayatJabatanController::class, 'edit']);
-        Route::put(uri: 'riwayat_jabatan/{riwayatJabatanId}', action: [App\Http\Controllers\RiwayatJabatanController::class, 'update']);
+        Route::resource('pegawai', App\Http\Controllers\PegawaiController::class);
+        Route::get('pegawai/{pegawaiId}/detail', [App\Http\Controllers\PegawaiController::class, 'detail']);
+        Route::get('pegawai/{pegawaiId}/edit', [App\Http\Controllers\PegawaiController::class, 'edit']);
+        Route::put('pegawai/{pegawaiId}', [App\Http\Controllers\PegawaiController::class, 'update']);
+        Route::get('pegawai/{pegawaiId}/give-roles', [App\Http\Controllers\PegawaiController::class, 'addRoleToUser']);
+        Route::put('pegawai/{pegawaiId}/give-roles', [App\Http\Controllers\PegawaiController::class, 'giveRoleToUser']);
+        Route::get('pegawai/{pegawaiId}/give-permissions', [App\Http\Controllers\PegawaiController::class, 'addPermissionToUser']);
+        Route::put('pegawai/{pegawaiId}/give-permissions', [App\Http\Controllers\PegawaiController::class, 'givePermissionToUser']);
+        Route::get('pegawai/{pegawaiId}/pangkat', [App\Http\Controllers\PegawaiController::class, 'pangkat']);
+        Route::get('pegawai/{pegawaiId}/jabatan', [App\Http\Controllers\PegawaiController::class, 'jabatan']);
+        Route::get('pegawai/{pegawaiId}/cuti', [App\Http\Controllers\PegawaiController::class, 'cuti']);
+        Route::get('pegawai/{pegawaiId}/cuti/create', [App\Http\Controllers\PegawaiController::class, 'createCuti']);
+        Route::post('pegawai/{pegawaiId}/cuti', [App\Http\Controllers\PegawaiController::class, 'storeCuti']);
+        Route::get('pegawai/{pegawaiId}/riwayat_pangkat', [App\Http\Controllers\PegawaiController::class, 'riwayatPangkat']);
+        Route::get('pegawai/{pegawaiId}/riwayat_jabatan', [App\Http\Controllers\PegawaiController::class, 'riwayatJabatan']);
+        Route::get('pegawai/{pegawaiId}/riwayat_cuti', [App\Http\Controllers\PegawaiController::class, 'riwayatCuti']);
+        Route::get('pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}/edit', [App\Http\Controllers\PegawaiController::class, 'editRiwayatCuti']);
+        Route::put('pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}', [App\Http\Controllers\PegawaiController::class, 'updateRiwayatCuti']);
+        Route::delete('pegawai/{pegawaiId}/riwayat_cuti/{riwayatCutiId}/delete', [App\Http\Controllers\PegawaiController::class, 'destroyRiwayatCuti'])->name('pegawai.riwayat_cuti.destroy');
+        Route::resource('jabatan', App\Http\Controllers\JabatanController::class);
 
-        // Riwayat Pangkat Routes - Order matters!
+        Route::get('riwayat_jabatan/{pegawai_uuid}', [RiwayatJabatanController::class, 'index']);
+        Route::get('riwayat_jabatan/{pegawai_uuid}/create', [RiwayatJabatanController::class, 'create']);
+        Route::post('riwayat_jabatan', [RiwayatJabatanController::class, 'store']);
+        Route::get('riwayat_jabatan/{riwayatJabatanId}/edit', [RiwayatJabatanController::class, 'edit']);
+        Route::put('riwayat_jabatan/{riwayatJabatanId}', [RiwayatJabatanController::class, 'update']);
+
         Route::prefix('riwayat_pangkat')->name('riwayat_pangkat.')->group(function () {
             Route::get('/create/{uuid}', [RiwayatPangkatController::class, 'create'])->name('create');
             Route::post('/', [RiwayatPangkatController::class, 'store'])->name('store');
@@ -77,7 +64,6 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
             Route::delete('/{uuid}', [RiwayatPangkatController::class, 'destroy'])->name('destroy');
         });
 
-        // Riwayat Jabatan Routes - Order matters!
         Route::prefix('riwayat_jabatan')->name('riwayat_jabatan.')->group(function () {
             Route::get('/create/{uuid}', [RiwayatJabatanController::class, 'create'])->name('create');
             Route::post('/', [RiwayatJabatanController::class, 'store'])->name('store');
@@ -86,13 +72,11 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
             Route::put('/{uuid}', [RiwayatJabatanController::class, 'update'])->name('update');
             Route::delete('/{uuid}', [RiwayatJabatanController::class, 'destroy'])->name('destroy');
         });
-    })->middleware(['auth', 'verified'])->name('pegawai.');
+    })->name('pegawai.');
 
-    // Cuti routes - Allow super-admin access
-    Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], routes: function (): void {
-        // Inside your cuti routes group, make sure these routes are defined correctly
+    // Cuti routes
+    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], function (): void {
         Route::prefix('cuti')->name('cuti.')->group(function () {
-            // First define routes with specific paths
             Route::get('/update-balance', [App\Http\Controllers\CutiController::class, 'updateBalance'])->name('update-balance');
             Route::get('/update-all-balances', [App\Http\Controllers\CutiController::class, 'updateAllBalances'])->name('update-all-balances');
             Route::get('/balance', [App\Http\Controllers\CutiController::class, 'showBalance'])->name('balance');
@@ -100,7 +84,6 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
             Route::get('/', [App\Http\Controllers\CutiController::class, 'index'])->name('index');
             Route::post('/', [App\Http\Controllers\CutiController::class, 'store'])->name('store');
 
-            // Then define routes with parameters
             Route::get('/{uuid}', [App\Http\Controllers\CutiController::class, 'show'])->name('show');
             Route::get('/{uuid}/edit', [App\Http\Controllers\CutiController::class, 'edit'])->name('edit');
             Route::put('/{uuid}', [App\Http\Controllers\CutiController::class, 'update'])->name('update');
@@ -109,7 +92,6 @@ Route::group(attributes: ['middleware' => ['role:super-admin|admin|atasan-pimpin
             Route::post('/{uuid}/proses-verifikasi', [App\Http\Controllers\CutiController::class, 'prosesVerifikasi'])->name('proses-verifikasi');
             Route::get('/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiPimpinan'])->name('verifikasi-pimpinan');
             Route::post('/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiPimpinan'])->name('proses-verifikasi-pimpinan');
-            // Add these routes for atasan pimpinan verification
             Route::get('/{uuid}/verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiAtasanPimpinan'])->name('verifikasi-atasan-pimpinan');
             Route::post('/{uuid}/proses-verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiAtasanPimpinan'])->name('proses-verifikasi-atasan-pimpinan');
             Route::get('/{uuid}/pdf', [App\Http\Controllers\CutiController::class, 'generatePdf'])->name('pdf');
@@ -127,19 +109,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Remove the standalone cuti routes since they're now in the middleware group
 require __DIR__.'/auth.php';
 
-// Izin routes - protected by auth middleware
+// Izin routes — fixed-path PERMA routes BEFORE resource to avoid {uuid} collision
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('izin/keluar-kantor', [App\Http\Controllers\IzinController::class, 'indexKeluarKantor'])->name('izin.index-keluar-kantor');
+    Route::get('izin/keluar-kantor/create', [App\Http\Controllers\IzinController::class, 'createKeluarKantor'])->name('izin.create-keluar-kantor');
+    Route::get('izin/tidak-masuk', [App\Http\Controllers\IzinController::class, 'indexTidakMasuk'])->name('izin.index-tidak-masuk');
+    Route::get('izin/tidak-masuk/create', [App\Http\Controllers\IzinController::class, 'createTidakMasuk'])->name('izin.create-tidak-masuk');
     Route::resource('izin', App\Http\Controllers\IzinController::class);
     Route::get('izin/{uuid}/verifikasi-atasan', [App\Http\Controllers\IzinController::class, 'verifikasiAtasan'])->name('izin.verifikasi-atasan');
     Route::post('izin/{uuid}/proses-verifikasi-atasan', [App\Http\Controllers\IzinController::class, 'prosesVerifikasiAtasan'])->name('izin.proses-verifikasi-atasan');
     Route::get('izin/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'verifikasiPimpinan'])->name('izin.verifikasi-pimpinan');
     Route::post('izin/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\IzinController::class, 'prosesVerifikasiPimpinan'])->name('izin.proses-verifikasi-pimpinan');
     Route::get('izin/{uuid}/pdf', [App\Http\Controllers\IzinController::class, 'generatePdf'])->name('izin.pdf');
-    Route::get('izin/keluar-kantor/create', [App\Http\Controllers\IzinController::class, 'createKeluarKantor'])->name('izin.create-keluar-kantor');
-    Route::get('izin/tidak-masuk/create', [App\Http\Controllers\IzinController::class, 'createTidakMasuk'])->name('izin.create-tidak-masuk');
-    Route::get('izin/keluar-kantor', [App\Http\Controllers\IzinController::class, 'indexKeluarKantor'])->name('izin.index-keluar-kantor');
-    Route::get('izin/tidak-masuk', [App\Http\Controllers\IzinController::class, 'indexTidakMasuk'])->name('izin.index-tidak-masuk');
 });

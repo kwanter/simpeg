@@ -32,7 +32,7 @@ abstract class SimpegTestCase extends TestCase
 
         $user = User::factory()->create(array_merge([
             'nip' => $nip,
-            'status' => 'aktif',
+            'status' => '1',
         ], $userAttributes));
 
         $user->assignRole($roleModel);
@@ -65,6 +65,15 @@ abstract class SimpegTestCase extends TestCase
             'delete user',
             'view role',
             'view permission',
+            'view pegawai',
+            'create pegawai',
+            'update pegawai',
+            'delete pegawai',
+            'detail pegawai',
+            'view jabatan',
+            'create jabatan',
+            'update jabatan',
+            'delete jabatan',
         ] as $permissionName) {
             Permission::firstOrCreate(
                 ['name' => $permissionName, 'guard_name' => 'web'],
