@@ -146,4 +146,71 @@ class CutiBalanceServiceTest extends SimpegTestCase
 
         $this->assertSame(10, $remaining); // 12 + 3 - 5
     }
+
+    public function test_refresh_balance_updates_current_year_carry_over_from_previous_year(): void
+    {
+        $pegawai = Pegawai::factory()->create();
+        $year = now()->year;
+
+        CutiBalance::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $pegawai->uuid,
+            'year' => $year - 1,
+            'total_days' => 12,
+            'used_days' => 7,
+            'carried_over' => 0,
+        ]);
+
+        CutiBalance::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $pegawai->uuid,
+            'year' => $year,
+            'total_days' => 12,
+            'used_days' => 1,
+            'carried_over' => 0,
+        ]);
+
+        $balance = $this->service->refreshBalance($pegawai->uuid, $year);
+
+        $this->assertSame(5, $balance->fresh()->carried_over);
+        $this->assertSame(1, $balance->fresh()->used_days);
+    }
+
+    public function test_refresh_all_updates_balances_for_multiple_pegawai(): void
+    {
+        $first = Pegawai::factory()->create();
+        $second = Pegawai::factory()->create();
+        $year = now()->year;
+
+        CutiBalance::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $first->uuid,
+            'year' => $year - 1,
+            'total_days' => 12,
+            'used_days' => 4,
+            'carried_over' => 0,
+        ]);
+
+        CutiBalance::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $second->uuid,
+            'year' => $year - 1,
+            'total_days' => 12,
+            'used_days' => 9,
+            'carried_over' => 0,
+        ]);
+
+        $this->service->refreshAll([$first->uuid, $second->uuid], $year);
+
+        $this->assertDatabaseHas('cuti_balance', [
+            'pegawai_uuid' => $first->uuid,
+            'year' => $year,
+            'carried_over' => 6,
+        ]);
+        $this->assertDatabaseHas('cuti_balance', [
+            'pegawai_uuid' => $second->uuid,
+            'year' => $year,
+            'carried_over' => 3,
+        ]);
+    }
 }

@@ -27,7 +27,7 @@
                         <x-nav-link :href="route('cuti.index')" :active="request()->routeIs('cuti.index')">
                             Cuti
                         </x-nav-link>
-                        <!-- Add this menu item in the appropriate section of your navigation -->
+
                         @can('view izin')
                         <x-nav-link :href="route('izin.index')" :active="request()->routeIs('izin.*')">
                             <i class="fas fa-clipboard-list mr-3"></i>

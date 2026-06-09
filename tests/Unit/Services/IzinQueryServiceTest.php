@@ -81,4 +81,49 @@ class IzinQueryServiceTest extends SimpegTestCase
 
         $this->assertSame(0, $result->count());
     }
+
+    public function test_admin_scope_can_filter_by_single_jenis(): void
+    {
+        $admin = $this->createUserWithRole('super-admin');
+        $pegawai = Pegawai::where('nip', $admin->nip)->firstOrFail();
+
+        Izin::factory()->count(2)->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_izin' => 'Izin Keluar Kantor',
+        ]);
+        Izin::factory()->count(3)->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_izin' => 'Izin Tidak Masuk Kerja',
+        ]);
+
+        $result = (new IzinQueryService)->forUser($admin, ['Izin Keluar Kantor']);
+
+        $this->assertSame(2, $result->count());
+    }
+
+    public function test_admin_scope_can_filter_by_multiple_jenis(): void
+    {
+        $admin = $this->createUserWithRole('super-admin');
+        $pegawai = Pegawai::where('nip', $admin->nip)->firstOrFail();
+
+        Izin::factory()->count(2)->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_izin' => 'Izin Keluar Kantor',
+        ]);
+        Izin::factory()->count(3)->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_izin' => 'Izin Tidak Masuk Kerja',
+        ]);
+        Izin::factory()->count(4)->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_izin' => 'Izin Sakit',
+        ]);
+
+        $result = (new IzinQueryService)->forUser($admin, [
+            'Izin Keluar Kantor',
+            'Izin Tidak Masuk Kerja',
+        ]);
+
+        $this->assertSame(5, $result->count());
+    }
 }

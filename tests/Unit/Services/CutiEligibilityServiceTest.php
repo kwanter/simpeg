@@ -214,4 +214,74 @@ class CutiEligibilityServiceTest extends SimpegTestCase
         $this->assertNotNull($error);
         $this->assertStringContainsString('Cuti Besar', $error);
     }
+
+    public function test_annual_leave_allows_excluding_current_cuti_besar_during_update(): void
+    {
+        $pegawai = Pegawai::factory()->create();
+        $year = now()->year;
+        \App\Models\CutiBalance::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $pegawai->uuid,
+            'year' => $year,
+            'total_days' => 12,
+            'used_days' => 0,
+            'carried_over' => 0,
+        ]);
+
+        $cuti = Cuti::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_cuti' => 'Cuti Besar',
+            'tanggal_mulai' => Carbon::create($year, 1, 1),
+            'tanggal_selesai' => Carbon::create($year, 1, 5),
+            'lama_cuti' => 5,
+            'alasan' => 'test',
+            'alamat_selama_cuti' => 'x',
+            'no_hp_selama_cuti' => 'x',
+            'pimpinan_uuid' => null,
+            'atasan_pimpinan_uuid' => null,
+            'status' => 'Pending',
+        ]);
+
+        $error = $this->service->checkAnnualLeave(
+            $pegawai->uuid,
+            Carbon::create($year, 5, 1),
+            Carbon::create($year, 5, 5),
+            $cuti->uuid
+        );
+
+        $this->assertNull($error);
+    }
+
+    public function test_cuti_besar_allows_excluding_current_record_during_update(): void
+    {
+        $pegawai = Pegawai::factory()->create([
+            'tanggal_masuk' => Carbon::now()->subYears(10)->format('Y-m-d'),
+        ]);
+        $year = now()->year;
+
+        $cuti = Cuti::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_cuti' => 'Cuti Besar',
+            'tanggal_mulai' => Carbon::create($year, 1, 1),
+            'tanggal_selesai' => Carbon::create($year, 1, 5),
+            'lama_cuti' => 5,
+            'alasan' => 'test',
+            'alamat_selama_cuti' => 'x',
+            'no_hp_selama_cuti' => 'x',
+            'pimpinan_uuid' => null,
+            'atasan_pimpinan_uuid' => null,
+            'status' => 'Pending',
+        ]);
+
+        $error = $this->service->checkCutiBesar(
+            $pegawai,
+            Carbon::create($year, 6, 1),
+            Carbon::create($year, 6, 5),
+            $cuti->uuid
+        );
+
+        $this->assertNull($error);
+    }
 }
