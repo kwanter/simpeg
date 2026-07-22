@@ -195,6 +195,58 @@ class IzinPermaValidationTest extends SimpegTestCase
         Carbon::setTestNow();
     }
 
+    public function test_update_izin_tidak_masuk_more_than_two_workdays_is_rejected(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05'));
+        [$user, $pegawai] = $this->createPegawaiUser();
+        $atasan = $this->createApprover('atasan-pimpinan');
+        $pimpinan = $this->createApprover('pimpinan');
+        $izin = Izin::factory()->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'atasan_pimpinan_uuid' => $atasan->uuid,
+            'pimpinan_uuid' => $pimpinan->uuid,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('izin.update', $izin->uuid), [
+            'jenis_izin' => 'Izin Tidak Masuk Kerja',
+            'atasan_pimpinan_uuid' => $atasan->uuid,
+            'pimpinan_uuid' => $pimpinan->uuid,
+            'tanggal_mulai' => '2026-01-05',
+            'tanggal_selesai' => '2026-01-07',
+            'alasan' => 'Tiga hari',
+        ]);
+
+        $response->assertSessionHasErrors('tanggal_selesai');
+        Carbon::setTestNow();
+    }
+
+    public function test_update_single_level_izin_must_use_today_and_valid_time_range(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05'));
+        [$user, $pegawai] = $this->createPegawaiUser();
+        $atasan = $this->createApprover('atasan-pimpinan');
+        $pimpinan = $this->createApprover('pimpinan');
+        $izin = Izin::factory()->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'atasan_pimpinan_uuid' => $atasan->uuid,
+            'pimpinan_uuid' => $pimpinan->uuid,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('izin.update', $izin->uuid), [
+            'jenis_izin' => 'Izin Keluar Kantor',
+            'atasan_pimpinan_uuid' => $atasan->uuid,
+            'pimpinan_uuid' => $pimpinan->uuid,
+            'tanggal_mulai' => '2026-01-06',
+            'tanggal_selesai' => '2026-01-06',
+            'jam_mulai' => '14:00',
+            'jam_selesai' => '10:00',
+            'alasan' => 'Tidak valid',
+        ]);
+
+        $response->assertSessionHasErrors(['tanggal_mulai', 'tanggal_selesai', 'jam_selesai']);
+        Carbon::setTestNow();
+    }
+
     public function test_izin_tidak_masuk_today_and_tomorrow_is_two_workdays(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-01-05')); // Monday

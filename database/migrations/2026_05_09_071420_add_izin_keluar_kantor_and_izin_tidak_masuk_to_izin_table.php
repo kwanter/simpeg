@@ -53,7 +53,28 @@ return new class extends Migration
             return;
         }
 
-        // For MySQL: ALTER the enum to include new values
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE izin DROP CONSTRAINT IF EXISTS izin_jenis_izin_check');
+            DB::statement("ALTER TABLE izin ADD CONSTRAINT izin_jenis_izin_check CHECK (jenis_izin IN (
+                'Izin Sakit',
+                'Izin Keperluan Keluarga',
+                'Izin Keperluan Pribadi',
+                'Izin Dinas Luar',
+                'Izin Setengah Hari',
+                'Izin Terlambat',
+                'Izin Pulang Cepat',
+                'Izin Lainnya',
+                'Izin Keluar Kantor',
+                'Izin Tidak Masuk Kerja'
+            ))");
+
+            return;
+        }
+
+        if (DB::getDriverName() !== 'mysql') {
+            throw new RuntimeException('Unsupported database driver for izin enum migration.');
+        }
+
         DB::statement("ALTER TABLE izin MODIFY COLUMN jenis_izin ENUM(
             'Izin Sakit',
             'Izin Keperluan Keluarga',
@@ -110,7 +131,26 @@ return new class extends Migration
             return;
         }
 
-        // Revert MySQL to original 8 enum values
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE izin DROP CONSTRAINT IF EXISTS izin_jenis_izin_check');
+            DB::statement("ALTER TABLE izin ADD CONSTRAINT izin_jenis_izin_check CHECK (jenis_izin IN (
+                'Izin Sakit',
+                'Izin Keperluan Keluarga',
+                'Izin Keperluan Pribadi',
+                'Izin Dinas Luar',
+                'Izin Setengah Hari',
+                'Izin Terlambat',
+                'Izin Pulang Cepat',
+                'Izin Lainnya'
+            ))");
+
+            return;
+        }
+
+        if (DB::getDriverName() !== 'mysql') {
+            throw new RuntimeException('Unsupported database driver for izin enum rollback.');
+        }
+
         DB::statement("ALTER TABLE izin MODIFY COLUMN jenis_izin ENUM(
             'Izin Sakit',
             'Izin Keperluan Keluarga',

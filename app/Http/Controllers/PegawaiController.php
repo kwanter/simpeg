@@ -159,11 +159,15 @@ class PegawaiController extends Controller
             ],
         ]);
 
-        // Generate unique filename
-        $filename = Str::uuid().'.'.$request->file('foto')->getClientOriginalExtension();
+        $mimeExt = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+        ];
+        $foto = $request->file('foto');
+        $ext = $mimeExt[$foto->getMimeType()] ?? $mimeExt[$foto->getClientMimeType()] ?? 'jpg';
+        $filename = Str::uuid().'.'.$ext;
 
-        // Store using Storage facade
-        $path = $request->file('foto')->storeAs('public/pic/pegawai', $filename);
+        $path = $foto->storeAs('public/pic/pegawai', $filename);
 
         // Delete old file if exists
         if ($pegawai->foto) {

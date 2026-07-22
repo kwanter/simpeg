@@ -56,7 +56,7 @@
                                         <th>Dokumen Pendukung</th>
                                         <td>
                                             @if($izin->dokumen)
-                                                <a href="{{ asset('storage/dokumen/izin/' . $izin->dokumen) }}" target="_blank" class="btn btn-sm btn-info">Lihat Dokumen</a>
+                                                <a href="{{ route('izin.dokumen', $izin->uuid) }}" target="_blank" class="btn btn-sm btn-info">Lihat Dokumen</a>
                                             @else
                                                 <span class="text-muted">Tidak ada dokumen</span>
                                             @endif

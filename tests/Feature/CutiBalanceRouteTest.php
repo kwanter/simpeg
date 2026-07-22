@@ -43,20 +43,19 @@ class CutiBalanceRouteTest extends SimpegTestCase
         $response->assertSessionHas('error');
     }
 
-    public function test_update_all_balances_requires_update_cuti_permission(): void
+    public function test_update_all_balances_forbidden_for_regular_user(): void
     {
         $user = $this->createUserWithRole('user');
+        $user->givePermissionTo('update cuti');
 
         $response = $this->actingAs($user)->get(route('cuti.update-all-balances'));
 
-        $response->assertRedirect(route('dashboard'));
-        $response->assertSessionHas('error');
+        $response->assertForbidden();
     }
 
-    public function test_update_all_balances_succeeds_with_permission(): void
+    public function test_update_all_balances_succeeds_for_admin(): void
     {
         $admin = $this->createUserWithRole('admin');
-        $admin->givePermissionTo('update cuti');
         Pegawai::factory()->count(3)->create();
 
         $response = $this->actingAs($admin)->get(route('cuti.update-all-balances'));

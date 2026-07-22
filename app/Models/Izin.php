@@ -18,6 +18,7 @@ class Izin extends Model
 
     protected $keyType = 'string';
 
+    // Request boundaries whitelist fields; approval metadata remains non-fillable.
     protected $fillable = [
         'uuid',
         'pegawai_uuid',
@@ -36,10 +37,6 @@ class Izin extends Model
         'dokumen',
         'verifikasi_atasan',
         'verifikasi_pimpinan',
-        'tanggal_verifikasi_atasan',
-        'tanggal_verifikasi_pimpinan',
-        'catatan_atasan',
-        'catatan_pimpinan',
     ];
 
     protected $casts = [

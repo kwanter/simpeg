@@ -262,6 +262,32 @@ class CutiPolicyTest extends SimpegTestCase
         $this->assertFalse($policy->update($user, $cutiPending));
     }
 
+    public function test_update_denies_other_users_pending_cuti(): void
+    {
+        $policy = new CutiPolicy;
+        $owner = $this->createUserWithRole('user');
+        $owner->givePermissionTo('update cuti');
+        $other = $this->createUserWithRole('user');
+        $other->givePermissionTo('update cuti');
+
+        $cuti = $this->createCutiForUser($owner, ['status' => 'Pending']);
+
+        $this->assertTrue($policy->update($owner, $cuti));
+        $this->assertFalse($policy->update($other, $cuti));
+    }
+
+    public function test_update_allows_verifikator_on_any_pending_cuti(): void
+    {
+        $policy = new CutiPolicy;
+        $owner = $this->createUserWithRole('user');
+        $verifikator = $this->createUserWithRole('verifikator');
+        $verifikator->givePermissionTo('update cuti');
+
+        $cuti = $this->createCutiForUser($owner, ['status' => 'Pending']);
+
+        $this->assertTrue($policy->update($verifikator, $cuti));
+    }
+
     public function test_delete_checks_permission_and_status(): void
     {
         $policy = new CutiPolicy;
@@ -276,6 +302,20 @@ class CutiPolicyTest extends SimpegTestCase
 
         $user->revokePermissionTo('delete cuti');
         $this->assertFalse($policy->delete($user, $cutiPending));
+    }
+
+    public function test_delete_denies_other_users_pending_cuti(): void
+    {
+        $policy = new CutiPolicy;
+        $owner = $this->createUserWithRole('user');
+        $owner->givePermissionTo('delete cuti');
+        $other = $this->createUserWithRole('user');
+        $other->givePermissionTo('delete cuti');
+
+        $cuti = $this->createCutiForUser($owner, ['status' => 'Pending']);
+
+        $this->assertTrue($policy->delete($owner, $cuti));
+        $this->assertFalse($policy->delete($other, $cuti));
     }
 
     public function test_verify_checks_permission_and_status(): void
@@ -361,14 +401,15 @@ class CutiPolicyTest extends SimpegTestCase
         $this->assertFalse($policy->cetak($user, $cutiStatus));
     }
 
-    public function test_update_all_balances_checks_permission(): void
+    public function test_update_all_balances_admin_only(): void
     {
         $policy = new CutiPolicy;
-        $user = $this->createUserWithRole('pegawai');
+        $user = $this->createUserWithRole('user');
+        $user->givePermissionTo('update cuti');
+        $admin = $this->createUserWithRole('admin');
 
         $this->assertFalse($policy->updateAllBalances($user));
-        $user->givePermissionTo('update cuti');
-        $this->assertTrue($policy->updateAllBalances($user));
+        $this->assertTrue($policy->updateAllBalances($admin));
     }
 
     public function test_restore_and_force_delete_allow_admin_only(): void

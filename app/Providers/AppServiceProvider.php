@@ -2,10 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Database\Query\Grammars\MySqlGrammar;
-use Illuminate\Events\Dispatcher;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,11 +22,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if (config('app.env') === 'production') {
-            DB::connection()->setQueryGrammar(new MySqlGrammar);
-            DB::connection()->setEventDispatcher(new Dispatcher);
+            URL::forceScheme('https');
         }
 
-        // Add this line to use Bootstrap pagination styling
         Paginator::useBootstrap();
     }
 }

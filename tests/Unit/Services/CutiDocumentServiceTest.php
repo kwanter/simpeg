@@ -3,51 +3,42 @@
 namespace Tests\Unit\Services;
 
 use App\Services\CutiDocumentService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Tests\SimpegTestCase;
+use Tests\TestCase;
 
-class CutiDocumentServiceTest extends SimpegTestCase
+class CutiDocumentServiceTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private CutiDocumentService $service;
-
-    protected function setUp(): void
+    public function test_store_document_uses_mime_extension_on_private_disk(): void
     {
-        parent::setUp();
-        Storage::fake('public');
-        $this->service = new CutiDocumentService;
+        Storage::fake('local');
+
+        $service = new CutiDocumentService;
+        $file = UploadedFile::fake()->create('payload.exe.pdf', 100, 'application/pdf');
+
+        $filename = $service->storeDocument($file);
+
+        $this->assertStringEndsWith('.pdf', $filename);
+        Storage::disk('local')->assertExists('dokumen/cuti/'.$filename);
     }
 
-    public function test_store_document_saves_file(): void
+    public function test_store_failure_throws_instead_of_returning_missing_file(): void
     {
-        $file = UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf');
-        $filename = $this->service->storeDocument($file);
+        $service = new CutiDocumentService;
+        $file = \Mockery::mock(UploadedFile::class);
+        $file->shouldReceive('getMimeType')->once()->andReturn('application/pdf');
+        $file->shouldReceive('storeAs')->once()->andReturnFalse();
 
-        $this->assertNotNull($filename);
-        $this->assertTrue(str_ends_with($filename, '.pdf'));
-        $disk = Storage::disk('local');
-        $this->assertTrue($disk->exists('public/dokumen/cuti/'.$filename), 'File should be stored at public/dokumen/cuti/'.$filename);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+
+        $service->storeDocument($file);
     }
 
-    public function test_store_document_preserves_extension(): void
+    public function test_exists_rejects_path_traversal(): void
     {
-        $file = UploadedFile::fake()->create('scan.jpg', 50, 'image/jpeg');
-        $filename = $this->service->storeDocument($file);
+        $service = new CutiDocumentService;
 
-        $this->assertTrue(str_ends_with($filename, '.jpg'));
-    }
-
-    public function test_store_document_generates_unique_names(): void
-    {
-        $file1 = UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf');
-        $file2 = UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf');
-
-        $name1 = $this->service->storeDocument($file1);
-        $name2 = $this->service->storeDocument($file2);
-
-        $this->assertNotSame($name1, $name2);
+        $this->assertFalse($service->exists('../secret.pdf'));
+        $this->assertFalse($service->exists('foo/bar.pdf'));
     }
 }

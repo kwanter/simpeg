@@ -20,7 +20,6 @@ use App\Services\WorkdayService;
 use App\Support\CutiType;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CutiController extends Controller
@@ -44,18 +43,27 @@ class CutiController extends Controller
 
     public function index()
     {
-        if (auth()->user()->can('verifikasi cuti') || auth()->user()->can('pimpinan cuti')) {
-            $cuti = Cuti::with(['pegawai', 'verifikator', 'pimpinan'])->latest()->paginate(10);
-        } else {
-            $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
-            if (! $pegawai) {
+        $user = Auth::user();
+        $query = Cuti::with(['pegawai', 'verifikator', 'pimpinan']);
+
+        if (! $user->hasAnyRole(['super-admin', 'admin', 'verifikator'])) {
+            $pegawaiUuid = Pegawai::where('nip', $user->nip)->value('uuid');
+            if (! $pegawaiUuid) {
                 return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
             }
-            $cuti = Cuti::with(['pegawai', 'verifikator', 'pimpinan'])
-                ->where('pegawai_uuid', $pegawai->uuid)
-                ->latest()
-                ->paginate(10);
+
+            $query->where(function ($query) use ($pegawaiUuid, $user): void {
+                $query->where('pegawai_uuid', $pegawaiUuid);
+                if ($user->hasRole('pimpinan')) {
+                    $query->orWhere('pimpinan_uuid', $pegawaiUuid);
+                }
+                if ($user->hasRole('atasan-pimpinan')) {
+                    $query->orWhere('atasan_pimpinan_uuid', $pegawaiUuid);
+                }
+            });
         }
+
+        $cuti = $query->latest()->paginate(10);
 
         return view('cuti.index', compact('cuti'));
     }
@@ -101,13 +109,14 @@ class CutiController extends Controller
 
         $validated['uuid'] = Str::uuid();
         $validated['lama_cuti'] = WorkdayService::countWorkdays($start, $end);
-        $validated['status'] = 'Pending';
 
         if ($request->hasFile('dokumen')) {
             $validated['dokumen'] = $this->cutiDocuments->storeDocument($request->file('dokumen'));
         }
 
-        Cuti::create($validated);
+        $cuti = new Cuti($validated);
+        $cuti->status = 'Pending';
+        $cuti->save();
 
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diajukan');
     }
@@ -181,14 +190,23 @@ class CutiController extends Controller
 
         $validated['lama_cuti'] = WorkdayService::countWorkdays($start, $end);
 
+        $oldDocument = $cuti->dokumen;
         if ($request->hasFile('dokumen')) {
-            if ($cuti->dokumen) {
-                Storage::delete('public/dokumen/cuti/'.$cuti->dokumen);
-            }
             $validated['dokumen'] = $this->cutiDocuments->storeDocument($request->file('dokumen'));
         }
 
-        $cuti->update($validated);
+        try {
+            $cuti->update($validated);
+        } catch (\Throwable $e) {
+            if (isset($validated['dokumen'])) {
+                $this->cutiDocuments->delete($validated['dokumen']);
+            }
+            throw $e;
+        }
+
+        if (isset($validated['dokumen']) && $oldDocument) {
+            $this->cutiDocuments->delete($oldDocument);
+        }
 
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil diperbarui');
     }
@@ -202,11 +220,13 @@ class CutiController extends Controller
             return redirect()->route('cuti.index')->with('error', 'Permohonan cuti yang sudah diverifikasi tidak dapat dihapus');
         }
 
-        if ($cuti->dokumen) {
-            Storage::delete('public/dokumen/cuti/'.$cuti->dokumen);
+        $document = $cuti->dokumen;
+        if (! $cuti->delete()) {
+            abort(500, 'Permohonan cuti gagal dihapus.');
         }
-
-        $cuti->delete();
+        if ($document) {
+            $this->cutiDocuments->delete($document);
+        }
 
         return redirect()->route('cuti.index')->with('success', 'Permohonan cuti berhasil dihapus');
     }
@@ -354,15 +374,25 @@ class CutiController extends Controller
 
     public function updateAllBalances()
     {
-        if (! auth()->user()->can('update cuti')) {
-            return redirect()->route('dashboard')->with('error', 'Anda tidak memiliki izin untuk melakukan tindakan ini');
-        }
+        $this->authorize('updateAllBalances', Cuti::class);
 
         $uuids = Pegawai::pluck('uuid')->toArray();
         $this->cutiBalances->refreshAll($uuids, date('Y'));
         $count = count($uuids);
 
         return redirect()->route('cuti.index')->with('success', "Saldo cuti untuk $count pegawai berhasil diperbarui");
+    }
+
+    public function downloadDocument(string $uuid)
+    {
+        $cuti = Cuti::where('uuid', $uuid)->firstOrFail();
+        $this->authorize('view', $cuti);
+
+        if (! $cuti->dokumen || ! $this->cutiDocuments->exists($cuti->dokumen)) {
+            abort(404);
+        }
+
+        return $this->cutiDocuments->download($cuti->dokumen);
     }
 
     public function generatePdf($uuid)

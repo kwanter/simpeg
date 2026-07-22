@@ -30,7 +30,7 @@ class CutiApprovalServiceTest extends SimpegTestCase
         $start = $attrs['tanggal_mulai'] ?? Carbon::create($year, 5, 1);
         $end = $attrs['tanggal_selesai'] ?? Carbon::create($year, 5, 5);
 
-        return Cuti::create(array_merge([
+        $values = array_merge([
             'uuid' => fake()->uuid(),
             'pegawai_uuid' => $pegawai->uuid,
             'jenis_cuti' => 'Cuti Tahunan',
@@ -43,7 +43,13 @@ class CutiApprovalServiceTest extends SimpegTestCase
             'pimpinan_uuid' => null,
             'atasan_pimpinan_uuid' => null,
             'status' => 'Pending',
-        ], $attrs));
+        ], $attrs);
+
+        $cuti = new Cuti($values);
+        $cuti->status = $values['status'];
+        $cuti->save();
+
+        return $cuti;
     }
 
     public function test_apply_verifikator_approval_moves_status(): void
@@ -99,6 +105,32 @@ class CutiApprovalServiceTest extends SimpegTestCase
 
         $balance = CutiBalance::where('pegawai_uuid', $pegawai->uuid)->where('year', $year)->first();
         $this->assertSame($cuti->lama_cuti, $balance->used_days);
+    }
+
+    public function test_duplicate_pimpinan_approval_is_rejected_without_double_deduct(): void
+    {
+        $pegawai = Pegawai::factory()->create();
+        $year = now()->year;
+        CutiBalance::create([
+            'uuid' => fake()->uuid(),
+            'pegawai_uuid' => $pegawai->uuid,
+            'year' => $year,
+            'total_days' => 12,
+            'used_days' => 0,
+            'carried_over' => 0,
+        ]);
+        $cuti = $this->makeCuti($pegawai, ['status' => 'Disetujui Verifikator']);
+        $pimpinans = Pegawai::factory()->create();
+
+        $this->service->applyPimpinan($cuti, $pimpinans, 'Disetujui', 'ok');
+
+        try {
+            $this->service->applyPimpinan($cuti, $pimpinans, 'Disetujui', 'again');
+            $this->fail('Duplicate approval must fail.');
+        } catch (\Illuminate\Validation\ValidationException) {
+            $balance = CutiBalance::where('pegawai_uuid', $pegawai->uuid)->where('year', $year)->firstOrFail();
+            $this->assertSame($cuti->lama_cuti, $balance->used_days);
+        }
     }
 
     public function test_pimpinan_approval_does_not_deduct_non_annual_leave(): void

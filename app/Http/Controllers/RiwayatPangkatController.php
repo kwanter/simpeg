@@ -12,10 +12,10 @@ class RiwayatPangkatController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('permission:view riwayat pangkat', ['only' => ['index']]);
-        $this->middleware('permission:create riwayat pangkat', ['only' => ['create', 'store']]);
-        $this->middleware('permission:update riwayat pangkat', ['only' => ['update', 'edit']]);
-        $this->middleware('permission:delete riwayat pangkat', ['only' => ['destroy']]);
+        $this->middleware('permission:view riwayat_pangkat', ['only' => ['index']]);
+        $this->middleware('permission:create riwayat_pangkat', ['only' => ['create', 'store']]);
+        $this->middleware('permission:update riwayat_pangkat', ['only' => ['update', 'edit']]);
+        $this->middleware('permission:delete riwayat_pangkat', ['only' => ['destroy']]);
     }
 
     public function index($uuid)

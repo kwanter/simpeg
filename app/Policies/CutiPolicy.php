@@ -65,18 +65,30 @@ class CutiPolicy
 
     /**
      * Determine whether the user can update the model.
+     * Owner may edit own pending cuti; staff roles may edit any pending cuti.
      */
     public function update(User $user, Cuti $cuti): bool
     {
-        return $user->can('update cuti') && $cuti->status == 'Pending';
+        if (! $user->can('update cuti') || $cuti->status !== 'Pending') {
+            return false;
+        }
+
+        return $this->isOwner($user, $cuti)
+            || $user->hasAnyRole(['super-admin', 'admin', 'verifikator']);
     }
 
     /**
      * Determine whether the user can delete the model.
+     * Owner may delete own pending cuti; staff roles may delete any pending cuti.
      */
     public function delete(User $user, Cuti $cuti): bool
     {
-        return $user->can('delete cuti') && $cuti->status == 'Pending';
+        if (! $user->can('delete cuti') || $cuti->status !== 'Pending') {
+            return false;
+        }
+
+        return $this->isOwner($user, $cuti)
+            || $user->hasAnyRole(['super-admin', 'admin', 'verifikator']);
     }
 
     /**
@@ -131,7 +143,7 @@ class CutiPolicy
      */
     public function updateAllBalances(User $user): bool
     {
-        return $user->can('update cuti');
+        return $user->hasAnyRole(['super-admin', 'admin']);
     }
 
     /**

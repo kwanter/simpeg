@@ -50,8 +50,7 @@ class Cuti extends Model
         });
     }
 
-    // Update the fillable array to include the new fields
-    // Add these fields to your $fillable array
+    // Request boundaries whitelist fields; approval metadata remains non-fillable.
     protected $fillable = [
         'uuid',
         'pegawai_uuid',
@@ -65,18 +64,8 @@ class Cuti extends Model
         'no_hp_selama_cuti',
         'dokumen',
         'status',
-        'verifikator_uuid',
-        'status_verifikator',
-        'catatan_verifikator',
-        'tanggal_verifikasi',
         'pimpinan_uuid',
-        'status_pimpinan',
-        'catatan_pimpinan',
-        'tanggal_verifikasi_pimpinan',
         'atasan_pimpinan_uuid',
-        'status_atasan_pimpinan',
-        'catatan_atasan_pimpinan',
-        'tanggal_verifikasi_atasan_pimpinan',
     ];
 
     public function pegawai()

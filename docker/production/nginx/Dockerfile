@@ -1,21 +1,13 @@
-# Stage 1: Build assets
-FROM debian AS builder
+# Stage 1: Build assets with the Node version required by Vite 8.
+FROM node:22-bookworm-slim AS builder
 
-# Install Node.js and build tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    nodejs \
-    npm \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Set working directory
 WORKDIR /var/www
 
-# Copy Laravel application code
-COPY . /var/www
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Install Node.js dependencies and build assets
-RUN npm install && npm run build
+COPY . /var/www
+RUN npm run build
 
 # Stage 2: Nginx production image
 FROM nginx:alpine
@@ -27,11 +19,12 @@ FROM nginx:alpine
 # -----------------------------------------------------------
 COPY ./docker/production/nginx/nginx.conf /etc/nginx/nginx.conf
 
-# Copy Laravel's public assets from the builder stage
-# -----------------------------------------------------------
-# We only need the 'public' directory from our Laravel app.
-# -----------------------------------------------------------
+# Copy Laravel's public assets from the builder stage.
 COPY --from=builder /var/www/public /var/www/public
+
+# Expose public profile assets from the mounted storage volume.
+# Nginx separately denies /storage/dokumen/, which remains policy-gated in Laravel.
+RUN ln -s /var/www/storage/app/public /var/www/public/storage
 
 # Set the working directory to the public folder
 WORKDIR /var/www/public

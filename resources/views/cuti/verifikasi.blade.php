@@ -151,7 +151,7 @@
                                     @if($cuti->dokumen)
                                         <div class="mt-3">
                                             <h6 class="fw-bold mb-2">Dokumen Pendukung:</h6>
-                                            <a href="{{ asset('storage/dokumen/cuti/' . $cuti->dokumen) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <a href="{{ route('cuti.dokumen', $cuti->uuid) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-file-download me-1"></i> Lihat Dokumen
                                             </a>
                                         </div>

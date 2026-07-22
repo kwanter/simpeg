@@ -27,6 +27,7 @@ class CutiBalanceService
     public function deductWorkdays(string $pegawaiUuid, int|string $year, int $workdays): CutiBalance
     {
         $balance = $this->getOrCreateBalance($pegawaiUuid, $year);
+        $balance = CutiBalance::where('uuid', $balance->uuid)->lockForUpdate()->firstOrFail();
         $balance->used_days += $workdays;
         $balance->save();
 
@@ -36,6 +37,7 @@ class CutiBalanceService
     public function refundWorkdays(string $pegawaiUuid, int|string $year, int $workdays): CutiBalance
     {
         $balance = $this->getOrCreateBalance($pegawaiUuid, $year);
+        $balance = CutiBalance::where('uuid', $balance->uuid)->lockForUpdate()->firstOrFail();
         $balance->used_days = max(0, $balance->used_days - $workdays);
         $balance->save();
 

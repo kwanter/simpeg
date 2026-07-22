@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pegawai;
 use App\Models\Role;
 use App\Models\User;
+use App\Rules\SafeEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -61,20 +62,23 @@ class UserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => ['required', 'string', 'lowercase', new SafeEmail, 'unique:users,email'],
+            'nip' => ['required', 'string', 'max:255', 'exists:pegawai,nip', 'unique:users,nip'],
             'password' => ['required', Password::min(12)->mixedCase()->numbers()->symbols()],
             'roles' => ['required', 'array'],
             'roles.*' => [Rule::in($allowedRoles)],
         ]);
 
         $user = User::create([
-            'uid' => Str::uuid(),
+            'uuid' => Str::uuid(),
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'nip' => $request->nip,
         ]);
-
+        // Accounts are provisioned by trusted admins, not public self-registration.
+        $user->email_verified_at = now();
+        $user->save();
         $user->syncRoles($request->roles);
 
         return redirect('/users')->with('status', 'Data User Berhasil Ditambahkan');
@@ -82,6 +86,8 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
+        $this->denyAdminAccessToSuperAdmin($user);
+
         if (auth()->user()->hasRole('super-admin')) {
             $roles = Role::pluck('name', 'name')->all();
         } elseif (auth()->user()->hasRole('admin')) {
@@ -103,16 +109,20 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->denyAdminAccessToSuperAdmin($user);
+
         $allowedRoles = auth()->user()->hasRole('super-admin')
             ? Role::pluck('name')->toArray()
             : Role::where('name', '!=', 'super-admin')->pluck('name')->toArray();
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'email' => ['required', 'string', 'lowercase', new SafeEmail, Rule::unique(User::class)->ignore($user)],
+            'nip' => ['required', 'string', 'max:255', Rule::unique(User::class)->ignore($user)],
             'password' => ['nullable', Password::min(12)->mixedCase()->numbers()->symbols()],
             'roles' => ['required', 'array'],
             'roles.*' => [Rule::in($allowedRoles)],
-            'status' => 'required',
+            'status' => ['required', Rule::in(['0', '1', 0, 1])],
         ]);
 
         $data = [
@@ -134,12 +144,17 @@ class UserController extends Controller
         return redirect('/users')->with('status', 'Data User Berhasil Diubah');
     }
 
-    public function destroy($userId)
+    public function destroy(User $user)
     {
-        $user = User::findOrFail($userId);
+        $this->denyAdminAccessToSuperAdmin($user);
         $user->delete();
 
         return redirect('/users')->with('status', 'User Delete Successfully');
+    }
+
+    private function denyAdminAccessToSuperAdmin(User $target): void
+    {
+        abort_if(! auth()->user()->hasRole('super-admin') && $target->hasRole('super-admin'), 403);
     }
 
     public function search(Request $request)

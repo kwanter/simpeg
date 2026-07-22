@@ -57,6 +57,12 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    'seeder_default_password' => env('SEEDER_DEFAULT_PASSWORD'),
+
+    'seeder_superadmin_email' => env('SEEDER_SUPERADMIN_EMAIL', 'superadmin@simpeg.local'),
+
     'asset_url' => env('ASSET_URL'),
 
     /*
@@ -70,7 +76,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------

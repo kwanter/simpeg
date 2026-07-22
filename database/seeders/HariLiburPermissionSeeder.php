@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
-use Spatie\Permission\Models\Permission;
 
 class HariLiburPermissionSeeder extends Seeder
 {
@@ -23,11 +23,8 @@ class HariLiburPermissionSeeder extends Seeder
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(
-                ['name' => $permission],
-                [
-                    'uuid' => Str::uuid()->toString(),
-                    'guard_name' => 'web',
-                ]
+                ['name' => $permission, 'guard_name' => 'web'],
+                ['uuid' => Str::uuid()->toString()]
             );
         }
     }

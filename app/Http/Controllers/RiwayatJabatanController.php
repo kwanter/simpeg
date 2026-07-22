@@ -16,10 +16,10 @@ class RiwayatJabatanController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('permission:view riwayat jabatan', ['only' => ['index']]);
-        $this->middleware('permission:create riwayat jabatan', ['only' => ['create', 'store']]);
-        $this->middleware('permission:update riwayat jabatan', ['only' => ['update', 'edit']]);
-        $this->middleware('permission:delete riwayat jabatan', ['only' => ['destroy']]);
+        $this->middleware('permission:view riwayat_jabatan', ['only' => ['index']]);
+        $this->middleware('permission:create riwayat_jabatan', ['only' => ['create', 'store']]);
+        $this->middleware('permission:update riwayat_jabatan', ['only' => ['update', 'edit']]);
+        $this->middleware('permission:delete riwayat_jabatan', ['only' => ['destroy']]);
     }
 
     public function index($uuid)

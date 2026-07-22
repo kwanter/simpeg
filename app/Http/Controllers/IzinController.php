@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Izin;
 use App\Models\Pegawai;
 use App\Services\ApproverDirectoryService;
+use App\Services\IzinDocumentService;
 use App\Services\IzinQueryService;
 use App\Services\WorkdayService;
 use App\Support\IzinType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class IzinController extends Controller
@@ -19,6 +20,7 @@ class IzinController extends Controller
     public function __construct(
         private readonly ApproverDirectoryService $approvers,
         private readonly IzinQueryService $izinQuery,
+        private readonly IzinDocumentService $izinDocuments,
     ) {
         $this->middleware('auth');
     }
@@ -139,11 +141,7 @@ class IzinController extends Controller
             $validated['pegawai_uuid'] = Pegawai::where('nip', Auth::user()->nip)->firstOrFail()->uuid;
         }
 
-        // Generate UUID for the new record
         $validated['uuid'] = Str::uuid();
-        $validated['status'] = 'Diajukan';
-        $validated['verifikasi_atasan'] = 'Belum Diverifikasi';
-        $validated['verifikasi_pimpinan'] = 'Belum Diverifikasi';
 
         // Calculate jumlah_hari
         $jumlahHari = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
@@ -170,15 +168,15 @@ class IzinController extends Controller
             }
         }
 
-        // Handle file upload
         if ($request->hasFile('dokumen')) {
-            $file = $request->file('dokumen');
-            $fileName = Str::uuid().'.'.$file->getClientOriginalExtension();
-            $file->storeAs('public/dokumen/izin', $fileName);
-            $validated['dokumen'] = $fileName;
+            $validated['dokumen'] = $this->izinDocuments->storeDocument($request->file('dokumen'));
         }
 
-        Izin::create($validated);
+        $izin = new Izin($validated);
+        $izin->status = 'Diajukan';
+        $izin->verifikasi_atasan = 'Belum Diverifikasi';
+        $izin->verifikasi_pimpinan = 'Belum Diverifikasi';
+        $izin->save();
 
         return redirect()->route('izin.index')->with('success', 'Pengajuan izin berhasil dibuat');
     }
@@ -212,7 +210,7 @@ class IzinController extends Controller
         if ($isNoSuratUpdate) {
             // Only validate and update no_surat_izin
             $validated = $request->validate([
-                'no_surat_izin' => 'required|string|unique:izin,no_surat_izin,'.$izin->id,
+                'no_surat_izin' => ['required', 'string', Rule::unique('izin', 'no_surat_izin')->ignore($izin->uuid, 'uuid')],
             ]);
 
             $izin->update(['no_surat_izin' => $validated['no_surat_izin']]);
@@ -239,20 +237,39 @@ class IzinController extends Controller
             $validated['tanggal_selesai']
         );
 
-        // Handle file upload
-        if ($request->hasFile('dokumen')) {
-            // Delete old file if exists
-            if ($izin->dokumen) {
-                Storage::delete('public/dokumen/izin/'.$izin->dokumen);
+        if (IzinType::isSingleLevel($validated['jenis_izin'])) {
+            [$rules, $messages] = $this->validateIzinKeluarKantor($request);
+            $request->validate($rules, $messages);
+            $validated['jumlah_hari'] = 0;
+            $validated['tanggal_mulai'] = now()->toDateString();
+            $validated['tanggal_selesai'] = now()->toDateString();
+        } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
+            [$rules, $messages] = $this->validateIzinTidakMasukKerja($request);
+            $request->validate($rules, $messages);
+            if ($validated['jumlah_hari'] > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
+                throw ValidationException::withMessages([
+                    'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],
+                ]);
             }
-
-            $file = $request->file('dokumen');
-            $fileName = Str::uuid().'.'.$file->getClientOriginalExtension();
-            $file->storeAs('public/dokumen/izin', $fileName);
-            $validated['dokumen'] = $fileName;
         }
 
-        $izin->update($validated);
+        $oldDocument = $izin->dokumen;
+        if ($request->hasFile('dokumen')) {
+            $validated['dokumen'] = $this->izinDocuments->storeDocument($request->file('dokumen'));
+        }
+
+        try {
+            $izin->update($validated);
+        } catch (\Throwable $e) {
+            if (isset($validated['dokumen'])) {
+                $this->izinDocuments->delete($validated['dokumen']);
+            }
+            throw $e;
+        }
+
+        if (isset($validated['dokumen']) && $oldDocument) {
+            $this->izinDocuments->delete($oldDocument);
+        }
 
         return redirect()->route('izin.index')->with('success', 'Pengajuan izin berhasil diperbarui');
     }
@@ -262,12 +279,13 @@ class IzinController extends Controller
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('delete', $izin);
 
-        // Delete file if exists
-        if ($izin->dokumen) {
-            Storage::delete('public/dokumen/izin/'.$izin->dokumen);
+        $document = $izin->dokumen;
+        if (! $izin->delete()) {
+            abort(500, 'Pengajuan izin gagal dihapus.');
         }
-
-        $izin->delete();
+        if ($document) {
+            $this->izinDocuments->delete($document);
+        }
 
         return redirect()->route('izin.index')->with('success', 'Pengajuan izin berhasil dihapus');
     }
@@ -342,7 +360,6 @@ class IzinController extends Controller
         return redirect()->route('izin.index')->with('success', 'Verifikasi pimpinan berhasil dilakukan');
     }
 
-    // Add this method to generate PDF
     public function generatePdf($uuid)
     {
         $izin = Izin::with(['pegawai', 'atasan_pimpinan', 'pimpinan'])->where('uuid', $uuid)->firstOrFail();
@@ -352,10 +369,21 @@ class IzinController extends Controller
 
         $pdf = \PDF::loadView($template, ['izin' => $izin]);
 
-        // Generate filename
         $filename = 'Surat_Izin_'.$izin->pegawai->nama.'_'.($izin->no_surat_izin ?? $izin->uuid).'.pdf';
 
         return $pdf->download($filename);
+    }
+
+    public function downloadDocument(string $uuid)
+    {
+        $izin = Izin::where('uuid', $uuid)->firstOrFail();
+        $this->authorize('view', $izin);
+
+        if (! $izin->dokumen || ! $this->izinDocuments->exists($izin->dokumen)) {
+            abort(404);
+        }
+
+        return $this->izinDocuments->download($izin->dokumen);
     }
 
     /**

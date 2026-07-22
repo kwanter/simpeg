@@ -12,6 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Fresh installs create both history tables in later canonical migrations.
+        if (! Schema::hasTable('riwayat_pangkat') && ! Schema::hasTable('riwayat_jabatan')) {
+            return;
+        }
+
         try {
             // Disable foreign key checks for MySQL only (skip for SQLite)
             if (DB::getDriverName() === 'mysql') {
