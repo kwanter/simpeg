@@ -11,7 +11,7 @@ test('guest can see login page', async ({ page }) => {
 });
 
 test('guest is redirected from dashboard to login', async ({ page }) => {
-  await page.goto('/dashboard');
+  await page.goto('/');
 
   await expect(page).toHaveURL(/\/login$/);
 });

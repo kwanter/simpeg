@@ -1,16 +1,25 @@
 name: PHP Tests
+
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
-        php: ['8.2', '8.3']
+        php: ['8.2', '8.3', '8.4']
     steps:
       - uses: actions/checkout@v4
 
@@ -18,8 +27,20 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, xml, sqlite3
-          coverage: xdebug
+          extensions: mbstring, xml, sqlite3, pdo, pdo_sqlite, gd, intl, zip, dom, curl
+          coverage: none
+          tools: pint
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -29,5 +50,23 @@ jobs:
           cp .env.example .env
           php artisan key:generate --ansi
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Run Pint (lint)
+        run: vendor/bin/pint --test
+
       - name: Run PHP tests
-        run: php artisan test --parallel
+        run: php artisan test
+
+      - name: Composer audit
+        run: composer audit --no-interaction || true
