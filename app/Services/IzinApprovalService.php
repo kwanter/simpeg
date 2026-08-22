@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Izin;
-use App\Models\Pegawai;
 use App\Support\IzinType;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -15,9 +14,9 @@ class IzinApprovalService
 
     public const REJECT = 'Ditolak';
 
-    public function applyAtasan(Izin $izin, ?Pegawai $atasan, string $decision, ?string $catatan): Izin
+    public function applyAtasan(Izin $izin, string $decision, ?string $catatan): Izin
     {
-        return DB::transaction(function () use ($izin, $atasan, $decision, $catatan) {
+        return DB::transaction(function () use ($izin, $decision, $catatan) {
             $izin = $this->lockAtStatus($izin, 'Diajukan');
             $izin->verifikasi_atasan = $decision;
             $izin->catatan_atasan = $catatan;
@@ -36,9 +35,9 @@ class IzinApprovalService
         });
     }
 
-    public function applyPimpinan(Izin $izin, ?Pegawai $pimpinan, string $decision, ?string $catatan): Izin
+    public function applyPimpinan(Izin $izin, string $decision, ?string $catatan): Izin
     {
-        return DB::transaction(function () use ($izin, $pimpinan, $decision, $catatan) {
+        return DB::transaction(function () use ($izin, $decision, $catatan) {
             $izin = $this->lockAtStatus($izin, 'Disetujui Atasan');
             $izin->verifikasi_pimpinan = $decision;
             $izin->catatan_pimpinan = $catatan;

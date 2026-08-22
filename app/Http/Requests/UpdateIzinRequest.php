@@ -11,7 +11,9 @@ class UpdateIzinRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // policy checks stay in controller via $this->authorize()
+        $izin = Izin::where('uuid', $this->route('izin'))->firstOrFail();
+
+        return $this->user()->can('update', $izin);
     }
 
     public function rules(): array
@@ -19,7 +21,7 @@ class UpdateIzinRequest extends FormRequest
         // Check if this is just a no_surat_izin update for an approved izin
         if ($this->isNoSuratUpdate()) {
             return [
-                'no_surat_izin' => ['required', 'string', Rule::unique('izin', 'no_surat_izin')->ignore($this->route('uuid'), 'uuid')],
+                'no_surat_izin' => ['required', 'string', Rule::unique('izin', 'no_surat_izin')->ignore($this->route('izin'), 'uuid')],
             ];
         }
 
@@ -63,9 +65,9 @@ class UpdateIzinRequest extends FormRequest
      * Check if this is just a no_surat_izin update for an approved izin
      * (csrf, method, and no_surat_izin only).
      */
-    private function isNoSuratUpdate(): bool
+    public function isNoSuratUpdate(): bool
     {
-        $izin = Izin::where('uuid', $this->route('uuid'))->first();
+        $izin = Izin::where('uuid', $this->route('izin'))->first();
 
         return $izin !== null
             && $izin->verifikasi_atasan == 'Disetujui'

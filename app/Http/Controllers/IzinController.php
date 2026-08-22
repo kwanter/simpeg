@@ -145,9 +145,7 @@ class IzinController extends Controller
         $user = Auth::user();
 
         // Check if this is just a no_surat_izin update for an approved izin
-        $isNoSuratUpdate = $izin->verifikasi_atasan == 'Disetujui' &&
-                       $request->has('no_surat_izin') &&
-                       count($request->all()) <= 3; // csrf, method, and no_surat_izin
+        $isNoSuratUpdate = $request->isNoSuratUpdate();
 
         // Don't allow full updating if already verified by pimpinan or atasan
         if (! $isNoSuratUpdate &&
@@ -244,11 +242,8 @@ class IzinController extends Controller
 
         $validated = $request->validated();
 
-        $atasan = Auth::user()->pegawai;
-
         $this->izinApproval->applyAtasan(
             $izin,
-            $atasan,
             $validated['verifikasi_atasan'],
             $validated['catatan_atasan']
         );
@@ -263,11 +258,8 @@ class IzinController extends Controller
 
         $validated = $request->validated();
 
-        $pimpinan = Auth::user()->pegawai;
-
         $this->izinApproval->applyPimpinan(
             $izin,
-            $pimpinan,
             $validated['verifikasi_pimpinan'],
             $validated['catatan_pimpinan']
         );

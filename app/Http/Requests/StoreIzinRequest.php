@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Izin;
 use App\Support\IzinType;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -9,7 +10,7 @@ class StoreIzinRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // policy checks stay in controller via $this->authorize()
+        return $this->user()->can('create', Izin::class);
     }
 
     public function rules(): array
