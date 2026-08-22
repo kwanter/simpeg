@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreIzinRequest;
+use App\Http\Requests\UpdateIzinRequest;
+use App\Http\Requests\VerifyAtasanIzinRequest;
+use App\Http\Requests\VerifyPimpinanIzinRequest;
 use App\Models\Izin;
 use App\Models\Pegawai;
 use App\Services\ApproverDirectoryService;
@@ -10,10 +14,8 @@ use App\Services\IzinDocumentService;
 use App\Services\IzinQueryService;
 use App\Services\WorkdayService;
 use App\Support\IzinType;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class IzinController extends Controller
@@ -25,46 +27,6 @@ class IzinController extends Controller
         private readonly IzinApprovalService $izinApproval,
     ) {
         $this->middleware('auth');
-    }
-
-    /**
-     * Validasi khusus untuk Izin Keluar Kantor dan Izin Pulang Cepat.
-     * Pasal 5 PERMA No. 7 Tahun 2016 — Lampiran II
-     */
-    private function validateIzinKeluarKantor(Request $request): array
-    {
-        $rules = [
-            'tanggal_mulai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
-            'tanggal_selesai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
-            'jam_mulai' => ['required', 'date_format:H:i'],
-            'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
-            'alasan' => ['required', 'string', 'max:500'],
-        ];
-        $messages = [
-            'tanggal_mulai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
-            'tanggal_selesai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
-            'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
-        ];
-
-        return [$rules, $messages];
-    }
-
-    /**
-     * Validasi khusus untuk Izin Tidak Masuk Kerja.
-     * Pasal 8 PERMA No. 7 Tahun 2016 — Lampiran III — Maks 2 hari kerja
-     */
-    private function validateIzinTidakMasukKerja(Request $request): array
-    {
-        $rules = [
-            'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
-            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
-            'alasan' => ['required', 'string', 'max:500'],
-        ];
-        $messages = [
-            'tanggal_selesai.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai.',
-        ];
-
-        return [$rules, $messages];
     }
 
     public function index()
@@ -123,21 +85,10 @@ class IzinController extends Controller
     }
 
     // In the store method, remove no_surat_izin from validation and don't set it initially
-    public function store(Request $request)
+    public function store(StoreIzinRequest $request)
     {
         $this->authorize('create', Izin::class);
-        $validated = $request->validate([
-            'pegawai_uuid' => 'nullable|exists:pegawai,uuid',
-            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'jam_mulai' => 'nullable|date_format:H:i',
-            'jam_selesai' => 'nullable|date_format:H:i',
-            'alasan' => 'required|string',
-            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
-            'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
-            'pimpinan_uuid' => 'required|exists:pegawai,uuid',
-        ]);
+        $validated = $request->validated();
 
         if (! Auth::user()->hasAnyRole(['super-admin', 'admin']) || empty($validated['pegawai_uuid'])) {
             $validated['pegawai_uuid'] = Pegawai::where('nip', Auth::user()->nip)->firstOrFail()->uuid;
@@ -149,18 +100,14 @@ class IzinController extends Controller
         $jumlahHari = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
         $validated['jumlah_hari'] = $jumlahHari;
 
-        // Jenis-specific validation for new izin types
+        // Jenis-specific PERMA validation runs in StoreIzinRequest::rules()
         if (IzinType::isSingleLevel($validated['jenis_izin'])) {
-            [$rules, $messages] = $this->validateIzinKeluarKantor($request);
-            $request->validate($rules, $messages);
             // Same-day time-range, jumlah_hari = 0
             $validated['jumlah_hari'] = 0;
             $validated['tanggal_mulai'] = now()->toDateString();
             $validated['tanggal_selesai'] = now()->toDateString();
             // Single-level jenis — keep pimpinan_uuid value but it is unused in verification flow.
         } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
-            [$rules, $messages] = $this->validateIzinTidakMasukKerja($request);
-            $request->validate($rules, $messages);
             // Maks 2 hari kerja (Pasal 8 ayat 4 PERMA No. 7 Tahun 2016)
             $workDays = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
             if ($workDays > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
@@ -191,7 +138,7 @@ class IzinController extends Controller
         return view('izin.show', compact('izin'));
     }
 
-    public function update(Request $request, $uuid)
+    public function update(UpdateIzinRequest $request, $uuid)
     {
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('update', $izin);
@@ -211,43 +158,25 @@ class IzinController extends Controller
 
         if ($isNoSuratUpdate) {
             // Only validate and update no_surat_izin
-            $validated = $request->validate([
-                'no_surat_izin' => ['required', 'string', Rule::unique('izin', 'no_surat_izin')->ignore($izin->uuid, 'uuid')],
-            ]);
+            $validated = $request->validated();
 
             $izin->update(['no_surat_izin' => $validated['no_surat_izin']]);
 
             return redirect()->route('izin.index')->with('success', 'Nomor surat izin berhasil diperbarui');
         }
 
-        // Full update for non-verified izin
-        $validationRules = [
-            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'jam_mulai' => 'nullable|date_format:H:i',
-            'jam_selesai' => 'nullable|date_format:H:i',
-            'alasan' => 'required|string',
-            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
-            'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
-            'pimpinan_uuid' => 'required|exists:pegawai,uuid',
-        ];
-
-        $validated = $request->validate($validationRules);
+        // Full update for non-verified izin; jenis-specific PERMA validation runs in UpdateIzinRequest::rules()
+        $validated = $request->validated();
         $validated['jumlah_hari'] = WorkdayService::countWorkdays(
             $validated['tanggal_mulai'],
             $validated['tanggal_selesai']
         );
 
         if (IzinType::isSingleLevel($validated['jenis_izin'])) {
-            [$rules, $messages] = $this->validateIzinKeluarKantor($request);
-            $request->validate($rules, $messages);
             $validated['jumlah_hari'] = 0;
             $validated['tanggal_mulai'] = now()->toDateString();
             $validated['tanggal_selesai'] = now()->toDateString();
         } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
-            [$rules, $messages] = $this->validateIzinTidakMasukKerja($request);
-            $request->validate($rules, $messages);
             if ($validated['jumlah_hari'] > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
                 throw ValidationException::withMessages([
                     'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],
@@ -308,15 +237,12 @@ class IzinController extends Controller
         return view('izin.verifikasi-pimpinan', compact('izin'));
     }
 
-    public function prosesVerifikasiAtasan(Request $request, $uuid)
+    public function prosesVerifikasiAtasan(VerifyAtasanIzinRequest $request, $uuid)
     {
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyAtasan', $izin);
 
-        $validated = $request->validate([
-            'verifikasi_atasan' => 'required|in:Disetujui,Ditolak',
-            'catatan_atasan' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $atasan = Pegawai::where('nip', Auth::user()->nip)->first();
 
@@ -330,15 +256,12 @@ class IzinController extends Controller
         return redirect()->route('izin.index')->with('success', 'Verifikasi atasan berhasil dilakukan');
     }
 
-    public function prosesVerifikasiPimpinan(Request $request, $uuid)
+    public function prosesVerifikasiPimpinan(VerifyPimpinanIzinRequest $request, $uuid)
     {
         $izin = Izin::where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyPimpinan', $izin);
 
-        $validated = $request->validate([
-            'verifikasi_pimpinan' => 'required|in:Disetujui,Ditolak',
-            'catatan_pimpinan' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $pimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
 
