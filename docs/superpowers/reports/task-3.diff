@@ -1,0 +1,446 @@
+ app/Http/Controllers/CutiController.php            | 18 +++---
+ app/Http/Controllers/IzinController.php            | 12 ++--
+ app/Http/Controllers/PegawaiController.php         |  3 +-
+ app/Http/Controllers/UserController.php            |  4 ++
+ app/Models/Pegawai.php                             |  3 +-
+ app/Models/User.php                                |  5 ++
+ app/Policies/CutiPolicy.php                        |  5 +-
+ app/Policies/IzinPolicy.php                        |  7 +--
+ app/Services/IzinQueryService.php                  |  3 +-
+ ...08_23_000000_add_user_uuid_to_pegawai_table.php | 45 +++++++++++++++
+ tests/Feature/UserPegawaiRelationTest.php          | 65 ++++++++++++++++++++++
+ tests/SimpegTestCase.php                           |  1 +
+ 12 files changed, 144 insertions(+), 27 deletions(-)
+
+diff --git a/app/Http/Controllers/CutiController.php b/app/Http/Controllers/CutiController.php
+index cc7a1c5..04f6de0 100644
+--- a/app/Http/Controllers/CutiController.php
++++ b/app/Http/Controllers/CutiController.php
+@@ -47,7 +47,7 @@ public function index()
+         $query = Cuti::with(['pegawai', 'verifikator', 'pimpinan']);
+ 
+         if (! $user->hasAnyRole(['super-admin', 'admin', 'verifikator'])) {
+-            $pegawaiUuid = Pegawai::where('nip', $user->nip)->value('uuid');
++            $pegawaiUuid = $user->pegawai?->uuid;
+             if (! $pegawaiUuid) {
+                 return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
+             }
+@@ -72,7 +72,7 @@ public function create()
+     {
+         $this->authorize('create', Cuti::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
+@@ -94,7 +94,7 @@ public function store(StoreCutiRequest $request)
+     {
+         $this->authorize('create', Cuti::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->firstOrFail();
++        $pegawai = $user->pegawai()->firstOrFail();
+ 
+         $validated = $request->validated();
+         $validated['pegawai_uuid'] = $pegawai->uuid;
+@@ -251,7 +251,7 @@ public function verifikasiPimpinan($uuid)
+         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
+         $this->authorize('verifyPimpinan', $cuti);
+ 
+-        $currentPimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
++        $currentPimpinan = Auth::user()->pegawai;
+         if ($currentPimpinan->uuid !== $cuti->pimpinan_uuid) {
+             return redirect()->route('cuti.index')->with('error', 'Anda bukan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
+         }
+@@ -271,7 +271,7 @@ public function verifikasiAtasanPimpinan($uuid)
+         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
+         $this->authorize('verifyAtasanPimpinan', $cuti);
+ 
+-        $currentAtasanPimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
++        $currentAtasanPimpinan = Auth::user()->pegawai;
+         if ($currentAtasanPimpinan->uuid !== $cuti->atasan_pimpinan_uuid) {
+             return redirect()->route('cuti.index')->with('error', 'Anda bukan atasan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
+         }
+@@ -307,7 +307,7 @@ public function prosesVerifikasiPimpinan(VerifyPimpinanCutiRequest $request, $uu
+         }
+ 
+         $validated = $request->validated();
+-        $pimpinans = Pegawai::where('nip', auth()->user()->nip)->first();
++        $pimpinans = auth()->user()->pegawai;
+         if (! $pimpinans) {
+             return redirect()->route('cuti.index')->with('error', 'Data pimpinan tidak ditemukan');
+         }
+@@ -331,7 +331,7 @@ public function prosesVerifikasiAtasanPimpinan(VerifyAtasanPimpinanCutiRequest $
+         }
+ 
+         $validated = $request->validated();
+-        $atasanPimpinan = Pegawai::where('nip', auth()->user()->nip)->first();
++        $atasanPimpinan = auth()->user()->pegawai;
+         if (! $atasanPimpinan) {
+             return redirect()->route('cuti.index')->with('error', 'Data atasan pimpinan tidak ditemukan');
+         }
+@@ -348,7 +348,7 @@ public function prosesVerifikasiAtasanPimpinan(VerifyAtasanPimpinanCutiRequest $
+     public function showBalance()
+     {
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('cuti')->with('error', 'Data pegawai tidak ditemukan');
+@@ -361,7 +361,7 @@ public function showBalance()
+ 
+     public function updateBalance()
+     {
+-        $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
++        $pegawai = auth()->user()->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
+diff --git a/app/Http/Controllers/IzinController.php b/app/Http/Controllers/IzinController.php
+index ca16d3a..e2d72c5 100644
+--- a/app/Http/Controllers/IzinController.php
++++ b/app/Http/Controllers/IzinController.php
+@@ -41,7 +41,7 @@ public function create()
+     {
+         $this->authorize('create', Izin::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+@@ -91,7 +91,7 @@ public function store(StoreIzinRequest $request)
+         $validated = $request->validated();
+ 
+         if (! Auth::user()->hasAnyRole(['super-admin', 'admin']) || empty($validated['pegawai_uuid'])) {
+-            $validated['pegawai_uuid'] = Pegawai::where('nip', Auth::user()->nip)->firstOrFail()->uuid;
++            $validated['pegawai_uuid'] = Auth::user()->pegawai()->firstOrFail()->uuid;
+         }
+ 
+         $validated['uuid'] = Str::uuid();
+@@ -244,7 +244,7 @@ public function prosesVerifikasiAtasan(VerifyAtasanIzinRequest $request, $uuid)
+ 
+         $validated = $request->validated();
+ 
+-        $atasan = Pegawai::where('nip', Auth::user()->nip)->first();
++        $atasan = Auth::user()->pegawai;
+ 
+         $this->izinApproval->applyAtasan(
+             $izin,
+@@ -263,7 +263,7 @@ public function prosesVerifikasiPimpinan(VerifyPimpinanIzinRequest $request, $uu
+ 
+         $validated = $request->validated();
+ 
+-        $pimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
++        $pimpinan = Auth::user()->pegawai;
+ 
+         $this->izinApproval->applyPimpinan(
+             $izin,
+@@ -308,7 +308,7 @@ public function createKeluarKantor()
+     {
+         $this->authorize('create', Izin::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+@@ -327,7 +327,7 @@ public function createTidakMasuk()
+     {
+         $this->authorize('create', Izin::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+diff --git a/app/Http/Controllers/PegawaiController.php b/app/Http/Controllers/PegawaiController.php
+index 1c0f95d..c26a6f1 100644
+--- a/app/Http/Controllers/PegawaiController.php
++++ b/app/Http/Controllers/PegawaiController.php
+@@ -3,7 +3,6 @@
+ namespace App\Http\Controllers;
+ 
+ use App\Models\Pegawai;
+-use App\Models\User;
+ use Illuminate\Http\Request;
+ use Illuminate\Support\Facades\Storage;
+ use Illuminate\Support\Str;
+@@ -139,7 +138,7 @@ public function detail($uuid)
+         if (! $pegawai) {
+             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai tidak ditemukan');
+         }
+-        $user = User::where('nip', $pegawai->nip)->first();
++        $user = $pegawai->user;
+         if (! $user) {
+             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai Belum Dihubungkan Dengan Akun');
+         }
+diff --git a/app/Http/Controllers/UserController.php b/app/Http/Controllers/UserController.php
+index 2334d96..f07651a 100644
+--- a/app/Http/Controllers/UserController.php
++++ b/app/Http/Controllers/UserController.php
+@@ -81,6 +81,10 @@ public function store(Request $request)
+         $user->save();
+         $user->syncRoles($request->roles);
+ 
++        // Establish the pegawai.user_uuid link at provisioning time (nip is the
++        // admin-entered business identifier; everything else joins via the FK).
++        Pegawai::where('nip', $user->nip)->update(['user_uuid' => $user->uuid]);
++
+         return redirect('/users')->with('status', 'Data User Berhasil Ditambahkan');
+     }
+ 
+diff --git a/app/Models/Pegawai.php b/app/Models/Pegawai.php
+index cb772ba..7cdb07d 100644
+--- a/app/Models/Pegawai.php
++++ b/app/Models/Pegawai.php
+@@ -38,6 +38,7 @@ class Pegawai extends Model
+     protected $fillable = [
+         'uuid',
+         'nip',
++        'user_uuid',
+         'nama',
+         'tempat_lahir',
+         'tanggal_lahir',
+@@ -52,6 +53,6 @@ class Pegawai extends Model
+ 
+     public function user()
+     {
+-        return $this->belongsTo(User::class, 'nip', 'nip');
++        return $this->belongsTo(User::class, 'user_uuid', 'uuid');
+     }
+ }
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 087acf8..8938174 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -71,6 +71,11 @@ class User extends Authenticatable implements MustVerifyEmail
+         'password' => 'hashed',
+     ];
+ 
++    public function pegawai()
++    {
++        return $this->hasOne(Pegawai::class, 'user_uuid', 'uuid');
++    }
++
+     /*
+     public function getLoginField($loginValue)
+     {
+diff --git a/app/Policies/CutiPolicy.php b/app/Policies/CutiPolicy.php
+index 127425d..b5c088c 100644
+--- a/app/Policies/CutiPolicy.php
++++ b/app/Policies/CutiPolicy.php
+@@ -3,19 +3,18 @@
+ namespace App\Policies;
+ 
+ use App\Models\Cuti;
+-use App\Models\Pegawai;
+ use App\Models\User;
+ 
+ class CutiPolicy
+ {
+     private function pegawaiUuidFor(User $user): ?string
+     {
+-        return Pegawai::where('nip', $user->nip)->value('uuid');
++        return $user->pegawai?->uuid;
+     }
+ 
+     private function isOwner(User $user, Cuti $cuti): bool
+     {
+-        return $user->nip === $cuti->pegawai?->nip;
++        return $user->pegawai?->uuid === $cuti->pegawai_uuid;
+     }
+ 
+     private function isAssignedPimpinan(User $user, Cuti $cuti): bool
+diff --git a/app/Policies/IzinPolicy.php b/app/Policies/IzinPolicy.php
+index e849cbc..ac97ecf 100644
+--- a/app/Policies/IzinPolicy.php
++++ b/app/Policies/IzinPolicy.php
+@@ -3,7 +3,6 @@
+ namespace App\Policies;
+ 
+ use App\Models\Izin;
+-use App\Models\Pegawai;
+ use App\Models\User;
+ use App\Support\IzinType;
+ 
+@@ -11,12 +10,12 @@ class IzinPolicy
+ {
+     private function pegawaiUuidFor(User $user): ?string
+     {
+-        return Pegawai::where('nip', $user->nip)->value('uuid');
++        return $user->pegawai?->uuid;
+     }
+ 
+     private function isOwner(User $user, Izin $izin): bool
+     {
+-        return $user->nip === $izin->pegawai?->nip;
++        return $user->pegawai?->uuid === $izin->pegawai_uuid;
+     }
+ 
+     private function isAssignedAtasan(User $user, Izin $izin): bool
+@@ -70,7 +69,7 @@ public function create(User $user): bool
+     public function update(User $user, Izin $izin): bool
+     {
+         return $user->hasAnyRole(['super-admin', 'admin']) ||
+-            ($user->nip === $izin->pegawai?->nip &&
++            ($user->pegawai?->uuid === $izin->pegawai_uuid &&
+              $izin->verifikasi_atasan == 'Belum Diverifikasi' &&
+              $izin->verifikasi_pimpinan == 'Belum Diverifikasi');
+     }
+diff --git a/app/Services/IzinQueryService.php b/app/Services/IzinQueryService.php
+index 61dd280..42f1437 100644
+--- a/app/Services/IzinQueryService.php
++++ b/app/Services/IzinQueryService.php
+@@ -3,7 +3,6 @@
+ namespace App\Services;
+ 
+ use App\Models\Izin;
+-use App\Models\Pegawai;
+ use App\Models\User;
+ use Illuminate\Database\Eloquent\Builder;
+ 
+@@ -31,7 +30,7 @@ public function forUser(User $user, ?array $jenis = null): Builder
+             return $query;
+         }
+ 
+-        $pegawaiUuid = Pegawai::where('nip', $user->nip)->value('uuid');
++        $pegawaiUuid = $user->pegawai?->uuid;
+ 
+         if (! $pegawaiUuid) {
+             return $query->whereRaw('1 = 0');
+diff --git a/database/migrations/2026_08_23_000000_add_user_uuid_to_pegawai_table.php b/database/migrations/2026_08_23_000000_add_user_uuid_to_pegawai_table.php
+new file mode 100644
+index 0000000..9ab1889
+--- /dev/null
++++ b/database/migrations/2026_08_23_000000_add_user_uuid_to_pegawai_table.php
+@@ -0,0 +1,45 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::table('pegawai', function (Blueprint $table) {
++            $table->foreignUuid('user_uuid')->nullable()->after('nip');
++        });
++
++        // Backfill by nip join (correlated subquery: portable across MySQL and SQLite,
++        // idempotent via WHERE user_uuid IS NULL; nip is unique on pegawai and
++        // app-validated unique on users, so at most one user matches).
++        DB::update('UPDATE pegawai SET user_uuid = (SELECT u.uuid FROM users u WHERE u.nip = pegawai.nip LIMIT 1) WHERE user_uuid IS NULL');
++
++        Schema::table('pegawai', function (Blueprint $table) {
++            $table->unique('user_uuid');
++            $table->foreign('user_uuid')
++                ->references('uuid')
++                ->on('users')
++                ->nullOnDelete();
++        });
++    }
++
++    public function down(): void
++    {
++        // SQLite cannot drop foreign keys (Blueprint throws); column drop
++        // rebuilds the table without them anyway.
++        if (DB::getDriverName() !== 'sqlite') {
++            Schema::table('pegawai', function (Blueprint $table) {
++                $table->dropForeign(['user_uuid']);
++            });
++        }
++
++        Schema::table('pegawai', function (Blueprint $table) {
++            $table->dropUnique(['user_uuid']);
++            $table->dropColumn('user_uuid');
++        });
++    }
++};
+diff --git a/tests/Feature/UserPegawaiRelationTest.php b/tests/Feature/UserPegawaiRelationTest.php
+new file mode 100644
+index 0000000..8c570da
+--- /dev/null
++++ b/tests/Feature/UserPegawaiRelationTest.php
+@@ -0,0 +1,65 @@
++<?php
++
++namespace Tests\Feature;
++
++use App\Models\Pegawai;
++use App\Models\User;
++use Illuminate\Support\Facades\Auth;
++use Tests\SimpegTestCase;
++
++class UserPegawaiRelationTest extends SimpegTestCase
++{
++    public function test_auth_user_pegawai_returns_linked_pegawai(): void
++    {
++        $user = User::factory()->create();
++        $pegawai = Pegawai::factory()->create([
++            'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
++        ]);
++
++        $this->actingAs($user);
++
++        $this->assertTrue(Auth::user()->pegawai->is($pegawai));
++    }
++
++    public function test_user_without_pegawai_has_null_relation(): void
++    {
++        $user = User::factory()->create();
++
++        $this->actingAs($user);
++
++        $this->assertNull(Auth::user()->pegawai);
++    }
++
++    public function test_renaming_pegawai_nip_keeps_link(): void
++    {
++        $user = User::factory()->create();
++        $pegawai = Pegawai::factory()->create([
++            'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
++        ]);
++
++        $pegawai->update(['nip' => '999999999999999999']);
++
++        $this->actingAs($user);
++        $this->assertTrue($user->pegawai()->first()->is($pegawai));
++    }
++
++    public function test_pegawai_user_inverse_returns_linked_user(): void
++    {
++        $user = User::factory()->create();
++        $pegawai = Pegawai::factory()->create([
++            'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
++        ]);
++
++        $this->assertTrue($pegawai->user->is($user));
++    }
++
++    public function test_pegawai_without_user_has_null_inverse(): void
++    {
++        $pegawai = Pegawai::factory()->create();
++
++        $this->assertNull($pegawai->user);
++    }
++}
+diff --git a/tests/SimpegTestCase.php b/tests/SimpegTestCase.php
+index afea146..9feb10b 100644
+--- a/tests/SimpegTestCase.php
++++ b/tests/SimpegTestCase.php
+@@ -39,6 +39,7 @@ protected function createUserWithRole(string $role, array $userAttributes = [],
+ 
+         Pegawai::factory()->create(array_merge([
+             'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
+         ], $pegawaiAttributes));
+ 
+         return $user;

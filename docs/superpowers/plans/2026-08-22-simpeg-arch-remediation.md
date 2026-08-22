@@ -39,13 +39,13 @@
 - Produces: `IzinApprovalService::applyAtasan(Izin $izin, Pegawai $atasan, string $decision, ?string $catatan): Izin` and `applyPimpinan(Izin $izin, Pegawai $pimpinan, string $decision, ?string $catatan): Izin`. Throws `Illuminate\Validation\ValidationException` when status is not the expected prior state.
 
 **Steps:**
-- [ ] Write `tests/Feature/IzinApprovalRaceTest.php` modeled on the Cuti duplicate-approval regression test (find it via `grep -rl 'duplicate' tests/Feature` or the SEC-012 test). Cover: (a) atasan approve on status `Diajukan` succeeds and sets `status='Disetujui Atasan'` (two-level) / `'Disetujui'` (single-level); (b) calling `applyAtasan` twice → second throws ValidationException; (c) `applyPimpinan` on `'Diajukan'` (skipped atasan) throws; on `'Disetujui Atasan'` succeeds → `'Disetujui'`; (d) reject paths set `'Ditolak Atasan'` / `'Ditolak'`.
-- [ ] Run it; confirm it fails (service doesn't exist).
-- [ ] Create `app/Services/IzinApprovalService.php`: copy `CutiApprovalService` structure. Constants `APPROVE='Disetujui'`, `REJECT='Ditolak'`. `applyAtasan`: transaction + `lockAtStatus($izin, 'Diajukan')`; set `verifikasi_atasan`, `catatan_atasan`, `tanggal_verifikasi_atasan=now()`, approver uuid column if the izin table has one (check migration; if none, skip); status per `IzinType::isSingleLevel`. `applyPimpinan`: lock at `'Disetujui Atasan'`. No balance logic — Izin has no balances.
-- [ ] Run the new test; green.
-- [ ] Rewire `IzinController::prosesVerifikasiAtasan`/`prosesVerifikasiPimpinan` to call the service (resolve current approver Pegawai as today). Keep `authorize()` calls.
-- [ ] `php artisan test` — full suite green.
-- [ ] Commit: `fix(izin): race-safe approval service (port SEC-012 pattern)`.
+- [x] Write `tests/Feature/IzinApprovalRaceTest.php` modeled on the Cuti duplicate-approval regression test (find it via `grep -rl 'duplicate' tests/Feature` or the SEC-012 test). Cover: (a) atasan approve on status `Diajukan` succeeds and sets `status='Disetujui Atasan'` (two-level) / `'Disetujui'` (single-level); (b) calling `applyAtasan` twice → second throws ValidationException; (c) `applyPimpinan` on `'Diajukan'` (skipped atasan) throws; on `'Disetujui Atasan'` succeeds → `'Disetujui'`; (d) reject paths set `'Ditolak Atasan'` / `'Ditolak'`.
+- [x] Run it; confirm it fails (service doesn't exist).
+- [x] Create `app/Services/IzinApprovalService.php`: copy `CutiApprovalService` structure. Constants `APPROVE='Disetujui'`, `REJECT='Ditolak'`. `applyAtasan`: transaction + `lockAtStatus($izin, 'Diajukan')`; set `verifikasi_atasan`, `catatan_atasan`, `tanggal_verifikasi_atasan=now()`, approver uuid column if the izin table has one (check migration; if none, skip); status per `IzinType::isSingleLevel`. `applyPimpinan`: lock at `'Disetujui Atasan'`. No balance logic — Izin has no balances.
+- [x] Run the new test; green.
+- [x] Rewire `IzinController::prosesVerifikasiAtasan`/`prosesVerifikasiPimpinan` to call the service (resolve current approver Pegawai as today). Keep `authorize()` calls.
+- [x] `php artisan test` — full suite green.
+- [x] Commit: `fix(izin): race-safe approval service (port SEC-012 pattern)`.
 
 ### Task 2: Izin FormRequests
 
@@ -58,11 +58,11 @@
 - Produces: typed request objects; controller signatures become `store(StoreIzinRequest $request)` etc.
 
 **Steps:**
-- [ ] Move rules verbatim from controller privates/inline blocks into the four request classes (`authorize(): true` — policy checks stay in controller).
-- [ ] Run `php artisan test --filter IzinPermaValidationTest` — green.
-- [ ] Swap controller method signatures; delete the two private validate methods.
-- [ ] `php artisan test` — green.
-- [ ] Commit: `refactor(izin): extract FormRequests from inline validation`.
+- [x] Move rules verbatim from controller privates/inline blocks into the four request classes (`authorize(): true` — policy checks stay in controller).
+- [x] Run `php artisan test --filter IzinPermaValidationTest` — green.
+- [x] Swap controller method signatures; delete the two private validate methods.
+- [x] `php artisan test` — green.
+- [x] Commit: `refactor(izin): extract FormRequests from inline validation`.
 
 ### Task 3: pegawai.user_uuid FK (replace nip join)
 
@@ -75,12 +75,12 @@
 - Produces: `User::pegawai(): HasOne` (`Auth::user()->pegawai`), FK `pegawai.user_uuid → users.uuid`, unique index.
 
 **Steps:**
-- [ ] Write failing test: user with linked pegawai → `Auth::user()->pegawai` returns it; nip rename does not break the link (the point of the FK).
-- [ ] Migration: `$table->foreignUuid('user_uuid')->nullable()->after('nip')`; backfill `DB::update('UPDATE pegawai p JOIN users u ON u.nip = p.nip SET p.user_uuid = u.uuid')`; `->unique()`; FK `references('uuid')->on('users')->nullOnDelete()`. Down: drop FK, index, column.
-- [ ] Swap both model relations; replace the three controller lookups with `Auth::user()->pegawai` — preserve failure behavior: where code used `->firstOrFail()`, throw the same 404-ish response if relation is null (check each site; IzinController:141 uses `firstOrFail()->uuid`).
-- [ ] `grep -rn "where('nip'" app/` — no auth-driven lookups remain (report any others found).
-- [ ] `php artisan migrate && php artisan test` — green.
-- [ ] Commit: `fix(models): pegawai↔user FK via user_uuid, replace nip join`.
+- [x] Write failing test: user with linked pegawai → `Auth::user()->pegawai` returns it; nip rename does not break the link (the point of the FK).
+- [x] Migration: `$table->foreignUuid('user_uuid')->nullable()->after('nip')`; backfill `DB::update('UPDATE pegawai p JOIN users u ON u.nip = p.nip SET p.user_uuid = u.uuid')`; `->unique()`; FK `references('uuid')->on('users')->nullOnDelete()`. Down: drop FK, index, column.
+- [x] Swap both model relations; replace the three controller lookups with `Auth::user()->pegawai` — preserve failure behavior: where code used `->firstOrFail()`, throw the same 404-ish response if relation is null (check each site; IzinController:141 uses `firstOrFail()->uuid`).
+- [x] `grep -rn "where('nip'" app/` — no auth-driven lookups remain (report any others found).
+- [x] `php artisan migrate && php artisan test` — green.
+- [x] Commit: `fix(models): pegawai↔user FK via user_uuid, replace nip join`.
 
 ### Task 4: routes/web.php cleanup
 
@@ -88,12 +88,12 @@
 - Modify: `routes/web.php:8,36-40,85`
 
 **Steps:**
-- [ ] `php artisan route:list > /tmp/routes-before.txt`
-- [ ] Delete lines 36–40 (unnamed `riwayat_jabatan` block shadowed by the named block at 51–58).
-- [ ] Delete the outer `Route::group(['middleware' => ['role:...|user']], ...)` wrapper (line 8 + its closing brace line 85), unindenting children — every inner group already carries its own role+auth+verified middleware (verified: all five inner groups list `role:` + `auth` + `verified`).
-- [ ] `php artisan route:list > /tmp/routes-after.txt`; diff — expect only the 5 duplicate rows gone, nothing else.
-- [ ] `php artisan test` (RouteMiddlewareTest + MiddlewareMatrixTest guard the matrix) — green.
-- [ ] Commit: `refactor(routes): drop duplicate riwayat_jabatan block and no-op outer role group`.
+- [x] `php artisan route:list > /tmp/routes-before.txt`
+- [x] Delete lines 36–40 (unnamed `riwayat_jabatan` block shadowed by the named block at 51–58).
+- [x] Delete the outer `Route::group(['middleware' => ['role:...|user']], ...)` wrapper (line 8 + its closing brace line 85), unindenting children — every inner group already carries its own role+auth+verified middleware (verified: all five inner groups list `role:` + `auth` + `verified`).
+- [x] `php artisan route:list > /tmp/routes-after.txt`; diff — expect only the 5 duplicate rows gone, nothing else.
+- [x] `php artisan test` (RouteMiddlewareTest + MiddlewareMatrixTest guard the matrix) — green.
+- [x] Commit: `refactor(routes): drop duplicate riwayat_jabatan block and no-op outer role group`.
 
 ### Task 5: dependency hygiene
 
@@ -101,12 +101,12 @@
 - Modify: `composer.json`, `app/Models/User.php` (remove `HasApiTokens`), `routes/api.php` (delete sanctum route)
 
 **Steps:**
-- [ ] `grep -rn 'Intervention\|Image::make\|Redis\|redis_\|auth:sanctum\|createToken\|HasApiTokens\|Sanctum' app/ routes/ config/ --include='*.php'` — record hits; expected: only User.php trait + routes/api.php:17.
-- [ ] composer.json: remove `intervention/image`, `predis/predis`, `laravel/sanctum`, dev `laravel/breeze`, and the `illuminate/database: "*"` line.
-- [ ] Remove `HasApiTokens` import+trait from User; empty `routes/api.php` route block (keep file, RouteServiceProvider loads it).
-- [ ] `composer update intervention/image predis/predis laravel/sanctum laravel/breeze --with-all-dependencies` then `composer audit` — clean.
-- [ ] `php artisan test` + `php artisan config:cache && php artisan route:cache` — both succeed.
-- [ ] Commit: `chore(deps): remove unused intervention/predis/sanctum/breeze, drop database wildcard`.
+- [x] `grep -rn 'Intervention\|Image::make\|Redis\|redis_\|auth:sanctum\|createToken\|HasApiTokens\|Sanctum' app/ routes/ config/ --include='*.php'` — record hits; expected: only User.php trait + routes/api.php:17.
+- [x] composer.json: remove `intervention/image`, `predis/predis`, `laravel/sanctum`, dev `laravel/breeze`, and the `illuminate/database: "*"` line.
+- [x] Remove `HasApiTokens` import+trait from User; empty `routes/api.php` route block (keep file, RouteServiceProvider loads it).
+- [x] `composer update intervention/image predis/predis laravel/sanctum laravel/breeze --with-all-dependencies` then `composer audit` — clean.
+- [x] `php artisan test` + `php artisan config:cache && php artisan route:cache` — both succeed.
+- [x] Commit: `chore(deps): remove unused intervention/predis/sanctum/breeze, drop database wildcard`.
 
 ---
 
