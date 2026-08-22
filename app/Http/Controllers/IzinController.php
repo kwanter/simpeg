@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Izin;
 use App\Models\Pegawai;
 use App\Services\ApproverDirectoryService;
+use App\Services\IzinApprovalService;
 use App\Services\IzinDocumentService;
 use App\Services\IzinQueryService;
 use App\Services\WorkdayService;
@@ -21,6 +22,7 @@ class IzinController extends Controller
         private readonly ApproverDirectoryService $approvers,
         private readonly IzinQueryService $izinQuery,
         private readonly IzinDocumentService $izinDocuments,
+        private readonly IzinApprovalService $izinApproval,
     ) {
         $this->middleware('auth');
     }
@@ -316,21 +318,14 @@ class IzinController extends Controller
             'catatan_atasan' => 'nullable|string',
         ]);
 
-        $izin->verifikasi_atasan = $validated['verifikasi_atasan'];
-        $izin->catatan_atasan = $validated['catatan_atasan'];
-        $izin->tanggal_verifikasi_atasan = now();
+        $atasan = Pegawai::where('nip', Auth::user()->nip)->first();
 
-        if ($validated['verifikasi_atasan'] === 'Disetujui') {
-            // Single-level approval for Izin Keluar Kantor and Izin Pulang Cepat
-            // Pasal 5 PERMA No. 7 Tahun 2016 — atasan langsung only
-            $izin->status = IzinType::isSingleLevel($izin->jenis_izin)
-                ? 'Disetujui'
-                : 'Disetujui Atasan';
-        } else {
-            $izin->status = 'Ditolak Atasan';
-        }
-
-        $izin->save();
+        $this->izinApproval->applyAtasan(
+            $izin,
+            $atasan,
+            $validated['verifikasi_atasan'],
+            $validated['catatan_atasan']
+        );
 
         return redirect()->route('izin.index')->with('success', 'Verifikasi atasan berhasil dilakukan');
     }
@@ -345,17 +340,14 @@ class IzinController extends Controller
             'catatan_pimpinan' => 'nullable|string',
         ]);
 
-        $izin->verifikasi_pimpinan = $validated['verifikasi_pimpinan'];
-        $izin->catatan_pimpinan = $validated['catatan_pimpinan'];
-        $izin->tanggal_verifikasi_pimpinan = now();
+        $pimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
 
-        if ($validated['verifikasi_pimpinan'] === 'Disetujui') {
-            $izin->status = 'Disetujui';
-        } else {
-            $izin->status = 'Ditolak';
-        }
-
-        $izin->save();
+        $this->izinApproval->applyPimpinan(
+            $izin,
+            $pimpinan,
+            $validated['verifikasi_pimpinan'],
+            $validated['catatan_pimpinan']
+        );
 
         return redirect()->route('izin.index')->with('success', 'Verifikasi pimpinan berhasil dilakukan');
     }
