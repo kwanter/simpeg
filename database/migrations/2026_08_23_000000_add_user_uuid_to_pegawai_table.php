@@ -16,7 +16,7 @@ return new class extends Migration
         // Backfill by nip join (correlated subquery: portable across MySQL and SQLite,
         // idempotent via WHERE user_uuid IS NULL; nip is unique on pegawai and
         // app-validated unique on users, so at most one user matches).
-        DB::update('UPDATE pegawai SET user_uuid = (SELECT u.uuid FROM users u WHERE u.nip = pegawai.nip LIMIT 1) WHERE user_uuid IS NULL');
+        DB::update('UPDATE pegawai SET user_uuid = (SELECT u.uuid FROM users u WHERE u.nip = pegawai.nip ORDER BY u.uuid LIMIT 1) WHERE user_uuid IS NULL');
 
         Schema::table('pegawai', function (Blueprint $table) {
             $table->unique('user_uuid');
