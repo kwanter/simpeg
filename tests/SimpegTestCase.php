@@ -39,6 +39,7 @@ abstract class SimpegTestCase extends TestCase
 
         Pegawai::factory()->create(array_merge([
             'nip' => $user->nip,
+            'user_uuid' => $user->uuid,
         ], $pegawaiAttributes));
 
         return $user;

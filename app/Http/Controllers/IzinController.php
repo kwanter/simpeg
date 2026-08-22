@@ -41,7 +41,7 @@ class IzinController extends Controller
     {
         $this->authorize('create', Izin::class);
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
+        $pegawai = $user->pegawai;
 
         if (! $pegawai) {
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
@@ -91,7 +91,7 @@ class IzinController extends Controller
         $validated = $request->validated();
 
         if (! Auth::user()->hasAnyRole(['super-admin', 'admin']) || empty($validated['pegawai_uuid'])) {
-            $validated['pegawai_uuid'] = Pegawai::where('nip', Auth::user()->nip)->firstOrFail()->uuid;
+            $validated['pegawai_uuid'] = Auth::user()->pegawai()->firstOrFail()->uuid;
         }
 
         $validated['uuid'] = Str::uuid();
@@ -244,7 +244,7 @@ class IzinController extends Controller
 
         $validated = $request->validated();
 
-        $atasan = Pegawai::where('nip', Auth::user()->nip)->first();
+        $atasan = Auth::user()->pegawai;
 
         $this->izinApproval->applyAtasan(
             $izin,
@@ -263,7 +263,7 @@ class IzinController extends Controller
 
         $validated = $request->validated();
 
-        $pimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
+        $pimpinan = Auth::user()->pegawai;
 
         $this->izinApproval->applyPimpinan(
             $izin,
@@ -308,7 +308,7 @@ class IzinController extends Controller
     {
         $this->authorize('create', Izin::class);
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
+        $pegawai = $user->pegawai;
 
         if (! $pegawai) {
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
@@ -327,7 +327,7 @@ class IzinController extends Controller
     {
         $this->authorize('create', Izin::class);
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
+        $pegawai = $user->pegawai;
 
         if (! $pegawai) {
             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');

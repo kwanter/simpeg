@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pegawai;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -139,7 +138,7 @@ class PegawaiController extends Controller
         if (! $pegawai) {
             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai tidak ditemukan');
         }
-        $user = User::where('nip', $pegawai->nip)->first();
+        $user = $pegawai->user;
         if (! $user) {
             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai Belum Dihubungkan Dengan Akun');
         }

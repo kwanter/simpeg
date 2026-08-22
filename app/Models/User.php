@@ -71,6 +71,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'password' => 'hashed',
     ];
 
+    public function pegawai()
+    {
+        return $this->hasOne(Pegawai::class, 'user_uuid', 'uuid');
+    }
+
     /*
     public function getLoginField($loginValue)
     {

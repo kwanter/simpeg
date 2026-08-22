@@ -47,7 +47,7 @@ class CutiController extends Controller
         $query = Cuti::with(['pegawai', 'verifikator', 'pimpinan']);
 
         if (! $user->hasAnyRole(['super-admin', 'admin', 'verifikator'])) {
-            $pegawaiUuid = Pegawai::where('nip', $user->nip)->value('uuid');
+            $pegawaiUuid = $user->pegawai?->uuid;
             if (! $pegawaiUuid) {
                 return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
             }
@@ -72,7 +72,7 @@ class CutiController extends Controller
     {
         $this->authorize('create', Cuti::class);
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
+        $pegawai = $user->pegawai;
 
         if (! $pegawai) {
             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
@@ -94,7 +94,7 @@ class CutiController extends Controller
     {
         $this->authorize('create', Cuti::class);
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->firstOrFail();
+        $pegawai = $user->pegawai()->firstOrFail();
 
         $validated = $request->validated();
         $validated['pegawai_uuid'] = $pegawai->uuid;
@@ -251,7 +251,7 @@ class CutiController extends Controller
         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyPimpinan', $cuti);
 
-        $currentPimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
+        $currentPimpinan = Auth::user()->pegawai;
         if ($currentPimpinan->uuid !== $cuti->pimpinan_uuid) {
             return redirect()->route('cuti.index')->with('error', 'Anda bukan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
         }
@@ -271,7 +271,7 @@ class CutiController extends Controller
         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
         $this->authorize('verifyAtasanPimpinan', $cuti);
 
-        $currentAtasanPimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
+        $currentAtasanPimpinan = Auth::user()->pegawai;
         if ($currentAtasanPimpinan->uuid !== $cuti->atasan_pimpinan_uuid) {
             return redirect()->route('cuti.index')->with('error', 'Anda bukan atasan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
         }
@@ -307,7 +307,7 @@ class CutiController extends Controller
         }
 
         $validated = $request->validated();
-        $pimpinans = Pegawai::where('nip', auth()->user()->nip)->first();
+        $pimpinans = auth()->user()->pegawai;
         if (! $pimpinans) {
             return redirect()->route('cuti.index')->with('error', 'Data pimpinan tidak ditemukan');
         }
@@ -331,7 +331,7 @@ class CutiController extends Controller
         }
 
         $validated = $request->validated();
-        $atasanPimpinan = Pegawai::where('nip', auth()->user()->nip)->first();
+        $atasanPimpinan = auth()->user()->pegawai;
         if (! $atasanPimpinan) {
             return redirect()->route('cuti.index')->with('error', 'Data atasan pimpinan tidak ditemukan');
         }
@@ -348,7 +348,7 @@ class CutiController extends Controller
     public function showBalance()
     {
         $user = Auth::user();
-        $pegawai = Pegawai::where('nip', $user->nip)->first();
+        $pegawai = $user->pegawai;
 
         if (! $pegawai) {
             return redirect()->route('cuti')->with('error', 'Data pegawai tidak ditemukan');
@@ -361,7 +361,7 @@ class CutiController extends Controller
 
     public function updateBalance()
     {
-        $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
+        $pegawai = auth()->user()->pegawai;
 
         if (! $pegawai) {
             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');

@@ -38,6 +38,7 @@ class Pegawai extends Model
     protected $fillable = [
         'uuid',
         'nip',
+        'user_uuid',
         'nama',
         'tempat_lahir',
         'tanggal_lahir',
@@ -52,6 +53,6 @@ class Pegawai extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'nip', 'nip');
+        return $this->belongsTo(User::class, 'user_uuid', 'uuid');
     }
 }
