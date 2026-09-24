@@ -1,6 +1,6 @@
 ---
 title: Izin Controller Refactor (Behavior-Preserving)
-version: 1.2
+version: 1.3
 date_created: 2026-09-24
 last_updated: 2026-09-24
 status: Approved
@@ -18,6 +18,8 @@ target_plan: plan/plan-izin-controller-refactor.md
 > **Approved on 2026-09-24** (version 1.0 → 1.1). This closes plan assumption `ASSUMPTION-007`, which required the frozen baseline to be an approved specification rather than a draft. Execution has started: Phase 1 of `plan/plan-izin-controller-refactor.md` (Tickets 001, 002, and 012) is complete and committed, so AC-017 through AC-020, AC-034 through AC-037, AC-039, and AC-042 through AC-045 are now pinned by dedicated tests rather than by oracle claims alone.
 >
 > **Remediated a third time on 2026-09-24** (version 1.1 → 1.2) in response to `docs/audit/consistency-audit-izin-controller-refactor-phase3-2026-09-24.md`. **MC-3** is closed on the specification side: §1.1 no longer exempts `docs/ARCHITECTURE.md`, and the map has been updated. Execution has also advanced past Phase 1 — Tickets 003, 004, 005, and 006 are complete and committed, with `IzinSubmissionService` now the only implementation of the PERMA submission rules.
+>
+> **Remediated a fourth time on 2026-09-24** (version 1.2 → 1.3), closing TASK-205 and TASK-206 of `plan-refactor-izin-submission-v1.0.md`. **AC-001** and **CON-006** now define the boundary precisely instead of relying on the undefined word "pre-existing": an **inherited oracle file** is one tracked at the characterization baseline `27c1467` and must never be touched, while a **refactor-owned file** introduced by §6.4 may grow as tickets add assertions. That distinction was not academic — during execution it twice decided whether a task was legal, and in both cases the task as written would have breached the boundary. §6.4 and §7 were also brought in line with reality: `IzinPermaCapTest` added, the `phpunit.xml` test-isolation hardening recorded with its justification (audit ORPH-01), and the phase-3 audit report listed (ORPH-02).
 
 ## 1. Purpose & Scope
 
@@ -112,7 +114,7 @@ No `CONTEXT-MAP.md` exists, so this project uses a single root `CONTEXT.md`. The
 - **CON-003**: No suppression annotations, no skipped/`markTestSkipped` tests, no removed or weakened assertions, and no lowered thresholds (per `CONSTRAINTS.md §3`).
 - **CON-004**: No migration and no schema change of any kind.
 - **CON-005**: `npx playwright test --project=chromium` MUST NOT regress. Because no Blade markup changes, this is expected to be unaffected; it is still part of the verification gate.
-- **CON-006**: The refactor MUST NOT modify any file matching `tests/**/*Izin*`. The existing characterization suite is the regression oracle and MUST be consumed as-is.
+- **CON-006**: The refactor MUST NOT modify or delete an **inherited oracle file** — any `tests/**/*Izin*` file that was already tracked at the characterization baseline commit `27c1467`. Files introduced by §6.4 are **refactor-owned** and may be extended as tickets add assertions. The inherited suite is the regression oracle and MUST be consumed as-is. AC-001 defines the same boundary; a change that touches an inherited file requires an explicit amendment to this specification first, not a judgement call during implementation.
 
 ## 4. Interfaces & Data Contracts
 
@@ -310,7 +312,7 @@ Every criterion below is stated so that it can be verified by an automated test 
 
 ### 5.1 Structure
 
-- **AC-001 (oracle)**: No **pre-existing** file matching `tests/**/*Izin*` is modified or deleted. Creating the new Izin test files required by §6.4 is explicitly allowed. Verified by `git status --short tests/` showing no `M` or `D` status for any Izin test file that existed before the refactor.
+- **AC-001 (oracle)**: No **inherited oracle file** may be modified or deleted. An inherited oracle file is any file matching `tests/**/*Izin*` that was already tracked at the characterization baseline commit `27c1467`. A **refactor-owned file** is one introduced by §6.4; those MAY grow as later tickets add assertions to them, because growing them is how this specification pins its own structural goals. Verified by `git diff --stat 27c1467 -- tests/`, which must list refactor-owned files only.
 - **AC-002**: `IzinController.php` satisfies every structural assertion enumerated in §4.3, including the deduplicated missing-pegawai guard and the retained A4 and A6 branches.
 - **AC-003**: `App\Services\IzinSubmissionService` is a non-`final` class exposing exactly the three public methods of §4.1, and is resolvable from the container without construction arguments.
 - **AC-004**: `IzinSubmissionService` has dedicated unit coverage that exercises §4.1.1–§4.1.3 without issuing an HTTP request.
@@ -453,6 +455,7 @@ Verified baseline: `php artisan test --filter=Izin` reports 139 passing tests wi
 | `tests/Feature/IzinContractPinTest.php` | AC-035, AC-036, AC-037, AC-039 (404-versus-403 ordering, guest behaviour, persisted UUID shape) |
 | `tests/Unit/IzinStructureTest.php` | AC-002, AC-038, AC-040, AC-041 (source-level pins over the controller and both Request classes) |
 | `tests/Feature/IzinCreateFormTest.php` | AC-042, AC-043, AC-044, AC-045 (create-form render contract, the scalar `jenisIzin` override, and the deduplicated missing-pegawai guard) |
+| `tests/Feature/IzinPermaCapTest.php` | AC-006 and AC-007 — the "no `izin` row is created" and "the stored row is unchanged" halves, added by Phase 1 of `plan-refactor-izin-submission-v1.0.md`. It lives in a refactor-owned file because the inherited `IzinPermaValidationTest` may not be extended (AC-001, CON-006). |
 
 > [!IMPORTANT]
 > **No dedicated test for the shared trait.** The trait introduced by REQ-011 has no behaviour of its own — it is a relocation of the PERMA rules. Demanding dedicated coverage for it would produce a test that merely restates the implementation, which `CONSTRAINTS.md §3.4` prohibits as tautological. Its behaviour is pinned **only** at the HTTP seam, by the 23 PERMA tests listed in §6.3.
@@ -464,8 +467,9 @@ Verified baseline: `php artisan test --filter=Izin` reports 139 passing tests wi
 - **Modified file:** `app/Http/Requests/UpdateIzinRequest.php` (consumes the shared trait; gains memoization and `resolvedIzin()`; its own `rules()` stays in place)
 - **New file:** `app/Services/IzinSubmissionService.php`
 - **New file:** `app/Traits/JenisIzinRulesTrait.php` — the shared PERMA rule trait required by REQ-011, declared as `namespace App\Traits;` with the trait name `JenisIzinRulesTrait`. The path and name are **resolved and fixed**, derived from the repository's only trait precedent (`app/Traits/UserTrackingTrait.php`, which uses `namespace App\Traits;` and the `XxxTrait` suffix). See decision D-004; no longer deferred to implementation.
-- **New files:** the six test files listed in §6.4
-- **New documentation:** `CONTEXT.md` (root glossary), `docs/adr/0001-izin-no-surat-update-discrimination.md`, `docs/audit/clarification-report-izin-controller-refactor-2026-09-24.md`, and `docs/audit/consistency-audit-izin-controller-refactor-2026-09-24.md`
+- **New files:** the seven test files listed in §6.4
+- **Modified test infrastructure:** `phpunit.xml` — its `<env>` entries become `<server … force="true"/>` so that an inherited shell variable (for example `DB_CONNECTION=mysql`) cannot override the SQLite `:memory:` configuration the security-relevant tests depend on. This is test-isolation hardening rather than a requirement of the refactor, and it is recorded here because audit finding ORPH-01 correctly observed that it appeared in the change set with no requirement behind it.
+- **New documentation:** `CONTEXT.md` (root glossary), `docs/adr/0001-izin-no-surat-update-discrimination.md`, `docs/audit/clarification-report-izin-controller-refactor-2026-09-24.md`, `docs/audit/consistency-audit-izin-controller-refactor-2026-09-24.md`, `docs/audit/consistency-audit-izin-controller-refactor-phase3-2026-09-24.md`, and `plan/plan-izin-controller-refactor.md`
 - **Untouched production files:** `app/Policies/IzinPolicy.php`, `app/Support/IzinType.php`, `app/Services/IzinApprovalService.php`, `IzinDocumentService.php`, `IzinQueryService.php`, `ApproverDirectoryService.php`, `WorkdayService.php`, `app/Models/Izin.php`, `routes/web.php`, `StoreIzinRequest::rules()`, `UpdateIzinRequest::rules()`, all Verify request classes, and all Blade views.
 - **Verification commands** (run in this order; report a failure rather than masking it):
 
