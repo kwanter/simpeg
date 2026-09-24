@@ -1,0 +1,23 @@
+tests/Feature/IzinCategoryRoutesTest.php
+  s_d79749604f85c8::t_d2ec0f218572f3 1-66
+tests/Feature/IzinPdfEndpointTest.php
+  s_d79749604f85c8::t_978daa2db561d3 1-109
+tests/Feature/IzinValidationRulesTest.php
+  s_d79749604f85c8::t_6742cde5273fd9 1-336
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "27c1467ebc2837b1c1b08fa97b13ccac9d62b4a0",
+  "prompts": {},
+  "sessions": {
+    "s_d79749604f85c8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f32a4bec3ffeaDd6uYJSfsXgef",
+        "model": "unknown"
+      },
+      "human_author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
