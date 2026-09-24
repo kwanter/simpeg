@@ -14,6 +14,7 @@ use App\Services\IzinDocumentService;
 use App\Services\IzinQueryService;
 use App\Services\IzinSubmissionService;
 use App\Support\IzinType;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -40,11 +41,11 @@ class IzinController extends Controller
     public function create()
     {
         $this->authorize('create', Izin::class);
-        $user = Auth::user();
-        $pegawai = $user->pegawai;
 
-        if (! $pegawai) {
-            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+        $pegawai = $this->resolvePegawaiOrRedirect();
+
+        if ($pegawai instanceof RedirectResponse) {
+            return $pegawai;
         }
 
         return view('izin.create', $this->formData($pegawai));
@@ -52,18 +53,8 @@ class IzinController extends Controller
 
     public function edit($uuid)
     {
-        $user = Auth::user();
         $izin = Izin::with('pegawai')->where('uuid', $uuid)->firstOrFail();
         $this->authorize('update', $izin);
-
-        // Allow editing if it's an admin or if the izin is approved by atasan but needs no_surat_izin
-        $allowEdit = $user->hasRole('super-admin') || $user->hasRole('admin') ||
-                     ($izin->verifikasi_atasan == 'Disetujui' && empty($izin->no_surat_izin)) ||
-                     ($izin->verifikasi_atasan == 'Belum Diverifikasi' && $izin->verifikasi_pimpinan == 'Belum Diverifikasi');
-
-        if (! $allowEdit) {
-            return redirect()->route('izin.index')->with('error', 'Pengajuan izin yang sudah diverifikasi tidak dapat diedit');
-        }
 
         return view('izin.edit', array_merge(
             $this->formData($izin->pegawai),
@@ -82,6 +73,22 @@ class IzinController extends Controller
             'pimpinanList' => $this->approvers->pimpinanList(),
             'atasanList' => $this->approvers->atasanList(),
         ];
+    }
+
+    /**
+     * Resolve the acting user's Pegawai, or the redirect the caller must return
+     * when the user has no linked record. Shared by the three create actions so
+     * the guard exists once (REQ-011).
+     */
+    private function resolvePegawaiOrRedirect(): Pegawai|RedirectResponse
+    {
+        $pegawai = Auth::user()->pegawai;
+
+        if (! $pegawai) {
+            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+        }
+
+        return $pegawai;
     }
 
     public function store(StoreIzinRequest $request)
@@ -255,11 +262,11 @@ class IzinController extends Controller
     public function createKeluarKantor()
     {
         $this->authorize('create', Izin::class);
-        $user = Auth::user();
-        $pegawai = $user->pegawai;
 
-        if (! $pegawai) {
-            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+        $pegawai = $this->resolvePegawaiOrRedirect();
+
+        if ($pegawai instanceof RedirectResponse) {
+            return $pegawai;
         }
 
         $data = $this->formData($pegawai);
@@ -274,11 +281,11 @@ class IzinController extends Controller
     public function createTidakMasuk()
     {
         $this->authorize('create', Izin::class);
-        $user = Auth::user();
-        $pegawai = $user->pegawai;
 
-        if (! $pegawai) {
-            return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+        $pegawai = $this->resolvePegawaiOrRedirect();
+
+        if ($pegawai instanceof RedirectResponse) {
+            return $pegawai;
         }
 
         return view('izin.create-tidak-masuk', $this->formData($pegawai));

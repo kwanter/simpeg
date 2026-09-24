@@ -99,4 +99,43 @@ class IzinStructureTest extends TestCase
             );
         }
     }
+
+    public function test_controller_holds_no_local_edit_authorization_decision(): void
+    {
+        $source = (string) file_get_contents(app_path('Http/Controllers/IzinController.php'));
+
+        $this->assertStringNotContainsString(
+            '$allowEdit',
+            $source,
+            'IzinController must not recompute an edit decision; IzinPolicy::update() is the single authority (REQ-004).'
+        );
+    }
+
+    public function test_controller_holds_exactly_one_missing_pegawai_guard(): void
+    {
+        $source = (string) file_get_contents(app_path('Http/Controllers/IzinController.php'));
+
+        $this->assertSame(
+            1,
+            substr_count($source, 'Data pegawai tidak ditemukan'),
+            'The three create actions must share one missing-pegawai guard rather than repeating the message (REQ-011).'
+        );
+    }
+
+    public function test_controller_retains_the_deliberately_kept_branches(): void
+    {
+        $source = (string) file_get_contents(app_path('Http/Controllers/IzinController.php'));
+
+        $this->assertStringContainsString(
+            'Pengajuan izin gagal dihapus.',
+            $source,
+            'The defensive delete guard is retained on purpose. Removing it would turn a future model-level veto into a silent success (AC-038).'
+        );
+
+        $this->assertStringContainsString(
+            '$izin->no_surat_izin ?? $izin->uuid',
+            $source,
+            'The unreachable PDF filename fallback is retained on purpose (AC-040).'
+        );
+    }
 }
