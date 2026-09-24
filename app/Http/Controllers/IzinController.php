@@ -12,11 +12,10 @@ use App\Services\ApproverDirectoryService;
 use App\Services\IzinApprovalService;
 use App\Services\IzinDocumentService;
 use App\Services\IzinQueryService;
-use App\Services\WorkdayService;
+use App\Services\IzinSubmissionService;
 use App\Support\IzinType;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class IzinController extends Controller
 {
@@ -25,6 +24,7 @@ class IzinController extends Controller
         private readonly IzinQueryService $izinQuery,
         private readonly IzinDocumentService $izinDocuments,
         private readonly IzinApprovalService $izinApproval,
+        private readonly IzinSubmissionService $submission,
     ) {
         $this->middleware('auth');
     }
@@ -84,47 +84,20 @@ class IzinController extends Controller
         ];
     }
 
-    // In the store method, remove no_surat_izin from validation and don't set it initially
     public function store(StoreIzinRequest $request)
     {
         $this->authorize('create', Izin::class);
         $validated = $request->validated();
 
-        if (! Auth::user()->hasAnyRole(['super-admin', 'admin']) || empty($validated['pegawai_uuid'])) {
-            $validated['pegawai_uuid'] = Auth::user()->pegawai()->firstOrFail()->uuid;
-        }
-
+        $validated['pegawai_uuid'] = $this->submission->resolveOwnerUuid(Auth::user(), $validated['pegawai_uuid'] ?? null);
         $validated['uuid'] = Str::uuid();
-
-        // Calculate jumlah_hari
-        $jumlahHari = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
-        $validated['jumlah_hari'] = $jumlahHari;
-
-        // Jenis-specific PERMA validation runs in StoreIzinRequest::rules()
-        if (IzinType::isSingleLevel($validated['jenis_izin'])) {
-            // Same-day time-range, jumlah_hari = 0
-            $validated['jumlah_hari'] = 0;
-            $validated['tanggal_mulai'] = now()->toDateString();
-            $validated['tanggal_selesai'] = now()->toDateString();
-            // Single-level jenis — keep pimpinan_uuid value but it is unused in verification flow.
-        } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
-            // Maks 2 hari kerja (Pasal 8 ayat 4 PERMA No. 7 Tahun 2016)
-            $workDays = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
-            if ($workDays > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
-                throw ValidationException::withMessages([
-                    'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],
-                ]);
-            }
-        }
+        $validated = $this->submission->prepareForCreate($validated);
 
         if ($request->hasFile('dokumen')) {
             $validated['dokumen'] = $this->izinDocuments->storeDocument($request->file('dokumen'));
         }
 
         $izin = new Izin($validated);
-        $izin->status = 'Diajukan';
-        $izin->verifikasi_atasan = 'Belum Diverifikasi';
-        $izin->verifikasi_pimpinan = 'Belum Diverifikasi';
         $izin->save();
 
         return redirect()->route('izin.index')->with('success', 'Pengajuan izin berhasil dibuat');
@@ -163,24 +136,7 @@ class IzinController extends Controller
             return redirect()->route('izin.index')->with('success', 'Nomor surat izin berhasil diperbarui');
         }
 
-        // Full update for non-verified izin; jenis-specific PERMA validation runs in UpdateIzinRequest::rules()
-        $validated = $request->validated();
-        $validated['jumlah_hari'] = WorkdayService::countWorkdays(
-            $validated['tanggal_mulai'],
-            $validated['tanggal_selesai']
-        );
-
-        if (IzinType::isSingleLevel($validated['jenis_izin'])) {
-            $validated['jumlah_hari'] = 0;
-            $validated['tanggal_mulai'] = now()->toDateString();
-            $validated['tanggal_selesai'] = now()->toDateString();
-        } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
-            if ($validated['jumlah_hari'] > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
-                throw ValidationException::withMessages([
-                    'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],
-                ]);
-            }
-        }
+        $validated = $this->submission->prepareForFullUpdate($request->validated());
 
         $oldDocument = $izin->dokumen;
         if ($request->hasFile('dokumen')) {
