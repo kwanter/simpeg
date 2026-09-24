@@ -1,0 +1,16 @@
+plan/plan-refactor-izin-submission-v1.0.md
+  h_00672522f4dbdd 59
+spec/spec-feature-izin-controller-refactor.md
+  h_00672522f4dbdd 3,21-22,117,315,458,470-472
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b946ae3caef118e54a34358352f33d65c69fa401",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
