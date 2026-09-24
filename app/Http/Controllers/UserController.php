@@ -81,6 +81,10 @@ class UserController extends Controller
         $user->save();
         $user->syncRoles($request->roles);
 
+        // Establish the pegawai.user_uuid link at provisioning time (nip is the
+        // admin-entered business identifier; everything else joins via the FK).
+        Pegawai::where('nip', $user->nip)->update(['user_uuid' => $user->uuid]);
+
         return redirect('/users')->with('status', 'Data User Berhasil Ditambahkan');
     }
 

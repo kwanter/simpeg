@@ -1,0 +1,268 @@
+ app/Http/Controllers/IzinController.php |  40 +++++------
+ app/Services/IzinApprovalService.php    |  64 ++++++++++++++++++
+ tests/Feature/IzinApprovalRaceTest.php  | 113 ++++++++++++++++++++++++++++++++
+ 3 files changed, 193 insertions(+), 24 deletions(-)
+
+diff --git a/app/Http/Controllers/IzinController.php b/app/Http/Controllers/IzinController.php
+index 2222390..fc49deb 100644
+--- a/app/Http/Controllers/IzinController.php
++++ b/app/Http/Controllers/IzinController.php
+@@ -5,6 +5,7 @@
+ use App\Models\Izin;
+ use App\Models\Pegawai;
+ use App\Services\ApproverDirectoryService;
++use App\Services\IzinApprovalService;
+ use App\Services\IzinDocumentService;
+ use App\Services\IzinQueryService;
+ use App\Services\WorkdayService;
+@@ -21,6 +22,7 @@ public function __construct(
+         private readonly ApproverDirectoryService $approvers,
+         private readonly IzinQueryService $izinQuery,
+         private readonly IzinDocumentService $izinDocuments,
++        private readonly IzinApprovalService $izinApproval,
+     ) {
+         $this->middleware('auth');
+     }
+@@ -316,21 +318,14 @@ public function prosesVerifikasiAtasan(Request $request, $uuid)
+             'catatan_atasan' => 'nullable|string',
+         ]);
+ 
+-        $izin->verifikasi_atasan = $validated['verifikasi_atasan'];
+-        $izin->catatan_atasan = $validated['catatan_atasan'];
+-        $izin->tanggal_verifikasi_atasan = now();
+-
+-        if ($validated['verifikasi_atasan'] === 'Disetujui') {
+-            // Single-level approval for Izin Keluar Kantor and Izin Pulang Cepat
+-            // Pasal 5 PERMA No. 7 Tahun 2016 — atasan langsung only
+-            $izin->status = IzinType::isSingleLevel($izin->jenis_izin)
+-                ? 'Disetujui'
+-                : 'Disetujui Atasan';
+-        } else {
+-            $izin->status = 'Ditolak Atasan';
+-        }
++        $atasan = Pegawai::where('nip', Auth::user()->nip)->first();
+ 
+-        $izin->save();
++        $this->izinApproval->applyAtasan(
++            $izin,
++            $atasan,
++            $validated['verifikasi_atasan'],
++            $validated['catatan_atasan']
++        );
+ 
+         return redirect()->route('izin.index')->with('success', 'Verifikasi atasan berhasil dilakukan');
+     }
+@@ -345,17 +340,14 @@ public function prosesVerifikasiPimpinan(Request $request, $uuid)
+             'catatan_pimpinan' => 'nullable|string',
+         ]);
+ 
+-        $izin->verifikasi_pimpinan = $validated['verifikasi_pimpinan'];
+-        $izin->catatan_pimpinan = $validated['catatan_pimpinan'];
+-        $izin->tanggal_verifikasi_pimpinan = now();
++        $pimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
+ 
+-        if ($validated['verifikasi_pimpinan'] === 'Disetujui') {
+-            $izin->status = 'Disetujui';
+-        } else {
+-            $izin->status = 'Ditolak';
+-        }
+-
+-        $izin->save();
++        $this->izinApproval->applyPimpinan(
++            $izin,
++            $pimpinan,
++            $validated['verifikasi_pimpinan'],
++            $validated['catatan_pimpinan']
++        );
+ 
+         return redirect()->route('izin.index')->with('success', 'Verifikasi pimpinan berhasil dilakukan');
+     }
+diff --git a/app/Services/IzinApprovalService.php b/app/Services/IzinApprovalService.php
+new file mode 100644
+index 0000000..87139d5
+--- /dev/null
++++ b/app/Services/IzinApprovalService.php
+@@ -0,0 +1,64 @@
++<?php
++
++namespace App\Services;
++
++use App\Models\Izin;
++use App\Models\Pegawai;
++use App\Support\IzinType;
++use Carbon\Carbon;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Validation\ValidationException;
++
++class IzinApprovalService
++{
++    public const APPROVE = 'Disetujui';
++
++    public const REJECT = 'Ditolak';
++
++    public function applyAtasan(Izin $izin, ?Pegawai $atasan, string $decision, ?string $catatan): Izin
++    {
++        return DB::transaction(function () use ($izin, $atasan, $decision, $catatan) {
++            $izin = $this->lockAtStatus($izin, 'Diajukan');
++            $izin->verifikasi_atasan = $decision;
++            $izin->catatan_atasan = $catatan;
++            $izin->tanggal_verifikasi_atasan = Carbon::now();
++
++            if ($decision === self::APPROVE) {
++                // Single-level jenis (Pasal 5 PERMA No. 7/2016): atasan approval is final.
++                $izin->status = IzinType::isSingleLevel($izin->jenis_izin) ? 'Disetujui' : 'Disetujui Atasan';
++            } else {
++                $izin->status = 'Ditolak Atasan';
++            }
++
++            $izin->save();
++
++            return $izin;
++        });
++    }
++
++    public function applyPimpinan(Izin $izin, ?Pegawai $pimpinan, string $decision, ?string $catatan): Izin
++    {
++        return DB::transaction(function () use ($izin, $pimpinan, $decision, $catatan) {
++            $izin = $this->lockAtStatus($izin, 'Disetujui Atasan');
++            $izin->verifikasi_pimpinan = $decision;
++            $izin->catatan_pimpinan = $catatan;
++            $izin->tanggal_verifikasi_pimpinan = Carbon::now();
++            $izin->status = $decision === self::APPROVE ? 'Disetujui' : 'Ditolak';
++            $izin->save();
++
++            return $izin;
++        });
++    }
++
++    private function lockAtStatus(Izin $izin, string $expected): Izin
++    {
++        $locked = Izin::where('uuid', $izin->uuid)->lockForUpdate()->firstOrFail();
++        if ($locked->status !== $expected) {
++            throw ValidationException::withMessages([
++                'status' => ['Permohonan izin sudah diproses atau berada pada status yang tidak valid.'],
++            ]);
++        }
++
++        return $locked;
++    }
++}
+diff --git a/tests/Feature/IzinApprovalRaceTest.php b/tests/Feature/IzinApprovalRaceTest.php
+new file mode 100644
+index 0000000..051c001
+--- /dev/null
++++ b/tests/Feature/IzinApprovalRaceTest.php
+@@ -0,0 +1,113 @@
++<?php
++
++namespace Tests\Feature;
++
++use App\Models\Izin;
++use App\Models\Pegawai;
++use App\Services\IzinApprovalService;
++use Illuminate\Validation\ValidationException;
++use Tests\SimpegTestCase;
++
++class IzinApprovalRaceTest extends SimpegTestCase
++{
++    private IzinApprovalService $service;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++        $this->service = new IzinApprovalService;
++    }
++
++    private function makeIzin(array $attrs = []): Izin
++    {
++        return Izin::factory()->create(array_merge([
++            'jenis_izin' => 'Izin Keperluan Pribadi', // two-level
++            'status' => 'Diajukan',
++        ], $attrs));
++    }
++
++    public function test_atasan_approval_on_diajukan_two_level_sets_disetujui_atasan(): void
++    {
++        $izin = $this->makeIzin();
++        $atasan = Pegawai::factory()->create();
++
++        $result = $this->service->applyAtasan($izin, $atasan, 'Disetujui', 'ok');
++
++        $this->assertSame('Disetujui Atasan', $result->status);
++        $this->assertSame('Disetujui', $result->verifikasi_atasan);
++        $this->assertSame('ok', $result->catatan_atasan);
++        $this->assertNotNull($result->tanggal_verifikasi_atasan);
++    }
++
++    public function test_atasan_approval_on_single_level_jenis_is_final(): void
++    {
++        $izin = $this->makeIzin(['jenis_izin' => 'Izin Keluar Kantor']);
++        $atasan = Pegawai::factory()->create();
++
++        $result = $this->service->applyAtasan($izin, $atasan, 'Disetujui', 'ok');
++
++        $this->assertSame('Disetujui', $result->status);
++    }
++
++    public function test_duplicate_atasan_approval_throws_and_keeps_state(): void
++    {
++        $izin = $this->makeIzin();
++        $atasan = Pegawai::factory()->create();
++
++        $this->service->applyAtasan($izin, $atasan, 'Disetujui', 'ok');
++
++        try {
++            $this->service->applyAtasan($izin, $atasan, 'Ditolak', 'again');
++            $this->fail('Duplicate approval must fail.');
++        } catch (ValidationException) {
++            $fresh = Izin::where('uuid', $izin->uuid)->firstOrFail();
++            $this->assertSame('Disetujui Atasan', $fresh->status);
++            $this->assertSame('Disetujui', $fresh->verifikasi_atasan);
++            $this->assertSame('ok', $fresh->catatan_atasan);
++        }
++    }
++
++    public function test_pimpinan_approval_on_diajukan_throws(): void
++    {
++        $izin = $this->makeIzin(['status' => 'Diajukan']);
++        $pimpinan = Pegawai::factory()->create();
++
++        $this->expectException(ValidationException::class);
++        $this->service->applyPimpinan($izin, $pimpinan, 'Disetujui', 'skip');
++    }
++
++    public function test_pimpinan_approval_on_disetujui_atasan_succeeds(): void
++    {
++        $izin = $this->makeIzin(['status' => 'Disetujui Atasan']);
++        $pimpinan = Pegawai::factory()->create();
++
++        $result = $this->service->applyPimpinan($izin, $pimpinan, 'Disetujui', 'lgtm');
++
++        $this->assertSame('Disetujui', $result->status);
++        $this->assertSame('Disetujui', $result->verifikasi_pimpinan);
++        $this->assertSame('lgtm', $result->catatan_pimpinan);
++        $this->assertNotNull($result->tanggal_verifikasi_pimpinan);
++    }
++
++    public function test_atasan_rejection_sets_ditolak_atasan(): void
++    {
++        $izin = $this->makeIzin();
++        $atasan = Pegawai::factory()->create();
++
++        $result = $this->service->applyAtasan($izin, $atasan, 'Ditolak', 'no');
++
++        $this->assertSame('Ditolak Atasan', $result->status);
++        $this->assertSame('Ditolak', $result->verifikasi_atasan);
++    }
++
++    public function test_pimpinan_rejection_sets_ditolak(): void
++    {
++        $izin = $this->makeIzin(['status' => 'Disetujui Atasan']);
++        $pimpinan = Pegawai::factory()->create();
++
++        $result = $this->service->applyPimpinan($izin, $pimpinan, 'Ditolak', 'no');
++
++        $this->assertSame('Ditolak', $result->status);
++        $this->assertSame('Ditolak', $result->verifikasi_pimpinan);
++    }
++}

@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Models\Izin;
-use App\Models\Pegawai;
 use App\Models\User;
 use App\Support\IzinType;
 
@@ -11,12 +10,12 @@ class IzinPolicy
 {
     private function pegawaiUuidFor(User $user): ?string
     {
-        return Pegawai::where('nip', $user->nip)->value('uuid');
+        return $user->pegawai?->uuid;
     }
 
     private function isOwner(User $user, Izin $izin): bool
     {
-        return $user->nip === $izin->pegawai?->nip;
+        return $user->pegawai?->uuid === $izin->pegawai_uuid;
     }
 
     private function isAssignedAtasan(User $user, Izin $izin): bool
@@ -70,7 +69,7 @@ class IzinPolicy
     public function update(User $user, Izin $izin): bool
     {
         return $user->hasAnyRole(['super-admin', 'admin']) ||
-            ($user->nip === $izin->pegawai?->nip &&
+            ($user->pegawai?->uuid === $izin->pegawai_uuid &&
              $izin->verifikasi_atasan == 'Belum Diverifikasi' &&
              $izin->verifikasi_pimpinan == 'Belum Diverifikasi');
     }

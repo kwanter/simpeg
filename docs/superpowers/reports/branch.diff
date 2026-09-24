@@ -1,0 +1,1937 @@
+ app/Http/Controllers/CutiController.php            |  18 +-
+ app/Http/Controllers/IzinController.php            | 157 +++---------
+ app/Http/Controllers/PegawaiController.php         |   3 +-
+ app/Http/Controllers/UserController.php            |   4 +
+ app/Http/Kernel.php                                |   1 -
+ app/Http/Requests/StoreIzinRequest.php             |  91 +++++++
+ app/Http/Requests/UpdateIzinRequest.php            | 113 +++++++++
+ app/Http/Requests/VerifyAtasanIzinRequest.php      |  21 ++
+ app/Http/Requests/VerifyPimpinanIzinRequest.php    |  21 ++
+ app/Models/Pegawai.php                             |   3 +-
+ app/Models/User.php                                |   8 +-
+ app/Policies/CutiPolicy.php                        |   5 +-
+ app/Policies/IzinPolicy.php                        |   7 +-
+ app/Services/ApproverDirectoryService.php          |   4 +-
+ app/Services/IzinApprovalService.php               |  64 +++++
+ app/Services/IzinQueryService.php                  |   3 +-
+ composer.json                                      |   5 -
+ composer.lock                                      | 276 +--------------------
+ config/app.php                                     |   2 -
+ config/sanctum.php                                 |  83 -------
+ ...08_23_000000_add_user_uuid_to_pegawai_table.php |  45 ++++
+ .../plans/2026-08-22-simpeg-arch-remediation.md    | 116 +++++++++
+ routes/api.php                                     |   7 -
+ routes/web.php                                     | 128 +++++-----
+ tests/Feature/IzinApprovalRaceTest.php             | 113 +++++++++
+ tests/Feature/UserPegawaiRelationTest.php          |  65 +++++
+ tests/SimpegTestCase.php                           |   1 +
+ 27 files changed, 777 insertions(+), 587 deletions(-)
+
+diff --git a/app/Http/Controllers/CutiController.php b/app/Http/Controllers/CutiController.php
+index cc7a1c5..04f6de0 100644
+--- a/app/Http/Controllers/CutiController.php
++++ b/app/Http/Controllers/CutiController.php
+@@ -47,7 +47,7 @@ public function index()
+         $query = Cuti::with(['pegawai', 'verifikator', 'pimpinan']);
+ 
+         if (! $user->hasAnyRole(['super-admin', 'admin', 'verifikator'])) {
+-            $pegawaiUuid = Pegawai::where('nip', $user->nip)->value('uuid');
++            $pegawaiUuid = $user->pegawai?->uuid;
+             if (! $pegawaiUuid) {
+                 return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
+             }
+@@ -72,7 +72,7 @@ public function create()
+     {
+         $this->authorize('create', Cuti::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
+@@ -94,7 +94,7 @@ public function store(StoreCutiRequest $request)
+     {
+         $this->authorize('create', Cuti::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->firstOrFail();
++        $pegawai = $user->pegawai()->firstOrFail();
+ 
+         $validated = $request->validated();
+         $validated['pegawai_uuid'] = $pegawai->uuid;
+@@ -251,7 +251,7 @@ public function verifikasiPimpinan($uuid)
+         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
+         $this->authorize('verifyPimpinan', $cuti);
+ 
+-        $currentPimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
++        $currentPimpinan = Auth::user()->pegawai;
+         if ($currentPimpinan->uuid !== $cuti->pimpinan_uuid) {
+             return redirect()->route('cuti.index')->with('error', 'Anda bukan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
+         }
+@@ -271,7 +271,7 @@ public function verifikasiAtasanPimpinan($uuid)
+         $cuti = Cuti::with(['pegawai', 'verifikator'])->where('uuid', $uuid)->firstOrFail();
+         $this->authorize('verifyAtasanPimpinan', $cuti);
+ 
+-        $currentAtasanPimpinan = Pegawai::where('nip', Auth::user()->nip)->first();
++        $currentAtasanPimpinan = Auth::user()->pegawai;
+         if ($currentAtasanPimpinan->uuid !== $cuti->atasan_pimpinan_uuid) {
+             return redirect()->route('cuti.index')->with('error', 'Anda bukan atasan pimpinan yang ditunjuk untuk menyetujui permohonan cuti ini');
+         }
+@@ -307,7 +307,7 @@ public function prosesVerifikasiPimpinan(VerifyPimpinanCutiRequest $request, $uu
+         }
+ 
+         $validated = $request->validated();
+-        $pimpinans = Pegawai::where('nip', auth()->user()->nip)->first();
++        $pimpinans = auth()->user()->pegawai;
+         if (! $pimpinans) {
+             return redirect()->route('cuti.index')->with('error', 'Data pimpinan tidak ditemukan');
+         }
+@@ -331,7 +331,7 @@ public function prosesVerifikasiAtasanPimpinan(VerifyAtasanPimpinanCutiRequest $
+         }
+ 
+         $validated = $request->validated();
+-        $atasanPimpinan = Pegawai::where('nip', auth()->user()->nip)->first();
++        $atasanPimpinan = auth()->user()->pegawai;
+         if (! $atasanPimpinan) {
+             return redirect()->route('cuti.index')->with('error', 'Data atasan pimpinan tidak ditemukan');
+         }
+@@ -348,7 +348,7 @@ public function prosesVerifikasiAtasanPimpinan(VerifyAtasanPimpinanCutiRequest $
+     public function showBalance()
+     {
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('cuti')->with('error', 'Data pegawai tidak ditemukan');
+@@ -361,7 +361,7 @@ public function showBalance()
+ 
+     public function updateBalance()
+     {
+-        $pegawai = Pegawai::where('nip', auth()->user()->nip)->first();
++        $pegawai = auth()->user()->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('dashboard')->with('error', 'Data pegawai tidak ditemukan');
+diff --git a/app/Http/Controllers/IzinController.php b/app/Http/Controllers/IzinController.php
+index 2222390..e2d72c5 100644
+--- a/app/Http/Controllers/IzinController.php
++++ b/app/Http/Controllers/IzinController.php
+@@ -2,17 +2,20 @@
+ 
+ namespace App\Http\Controllers;
+ 
++use App\Http\Requests\StoreIzinRequest;
++use App\Http\Requests\UpdateIzinRequest;
++use App\Http\Requests\VerifyAtasanIzinRequest;
++use App\Http\Requests\VerifyPimpinanIzinRequest;
+ use App\Models\Izin;
+ use App\Models\Pegawai;
+ use App\Services\ApproverDirectoryService;
++use App\Services\IzinApprovalService;
+ use App\Services\IzinDocumentService;
+ use App\Services\IzinQueryService;
+ use App\Services\WorkdayService;
+ use App\Support\IzinType;
+-use Illuminate\Http\Request;
+ use Illuminate\Support\Facades\Auth;
+ use Illuminate\Support\Str;
+-use Illuminate\Validation\Rule;
+ use Illuminate\Validation\ValidationException;
+ 
+ class IzinController extends Controller
+@@ -21,50 +24,11 @@ public function __construct(
+         private readonly ApproverDirectoryService $approvers,
+         private readonly IzinQueryService $izinQuery,
+         private readonly IzinDocumentService $izinDocuments,
++        private readonly IzinApprovalService $izinApproval,
+     ) {
+         $this->middleware('auth');
+     }
+ 
+-    /**
+-     * Validasi khusus untuk Izin Keluar Kantor dan Izin Pulang Cepat.
+-     * Pasal 5 PERMA No. 7 Tahun 2016 — Lampiran II
+-     */
+-    private function validateIzinKeluarKantor(Request $request): array
+-    {
+-        $rules = [
+-            'tanggal_mulai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
+-            'tanggal_selesai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
+-            'jam_mulai' => ['required', 'date_format:H:i'],
+-            'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
+-            'alasan' => ['required', 'string', 'max:500'],
+-        ];
+-        $messages = [
+-            'tanggal_mulai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
+-            'tanggal_selesai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
+-            'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
+-        ];
+-
+-        return [$rules, $messages];
+-    }
+-
+-    /**
+-     * Validasi khusus untuk Izin Tidak Masuk Kerja.
+-     * Pasal 8 PERMA No. 7 Tahun 2016 — Lampiran III — Maks 2 hari kerja
+-     */
+-    private function validateIzinTidakMasukKerja(Request $request): array
+-    {
+-        $rules = [
+-            'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
+-            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
+-            'alasan' => ['required', 'string', 'max:500'],
+-        ];
+-        $messages = [
+-            'tanggal_selesai.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai.',
+-        ];
+-
+-        return [$rules, $messages];
+-    }
+-
+     public function index()
+     {
+         $this->authorize('viewAny', Izin::class);
+@@ -77,7 +41,7 @@ public function create()
+     {
+         $this->authorize('create', Izin::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+@@ -121,24 +85,13 @@ private function formData(Pegawai $pegawai): array
+     }
+ 
+     // In the store method, remove no_surat_izin from validation and don't set it initially
+-    public function store(Request $request)
++    public function store(StoreIzinRequest $request)
+     {
+         $this->authorize('create', Izin::class);
+-        $validated = $request->validate([
+-            'pegawai_uuid' => 'nullable|exists:pegawai,uuid',
+-            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
+-            'tanggal_mulai' => 'required|date',
+-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+-            'jam_mulai' => 'nullable|date_format:H:i',
+-            'jam_selesai' => 'nullable|date_format:H:i',
+-            'alasan' => 'required|string',
+-            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
+-            'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
+-            'pimpinan_uuid' => 'required|exists:pegawai,uuid',
+-        ]);
++        $validated = $request->validated();
+ 
+         if (! Auth::user()->hasAnyRole(['super-admin', 'admin']) || empty($validated['pegawai_uuid'])) {
+-            $validated['pegawai_uuid'] = Pegawai::where('nip', Auth::user()->nip)->firstOrFail()->uuid;
++            $validated['pegawai_uuid'] = Auth::user()->pegawai()->firstOrFail()->uuid;
+         }
+ 
+         $validated['uuid'] = Str::uuid();
+@@ -147,18 +100,14 @@ public function store(Request $request)
+         $jumlahHari = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
+         $validated['jumlah_hari'] = $jumlahHari;
+ 
+-        // Jenis-specific validation for new izin types
++        // Jenis-specific PERMA validation runs in StoreIzinRequest::rules()
+         if (IzinType::isSingleLevel($validated['jenis_izin'])) {
+-            [$rules, $messages] = $this->validateIzinKeluarKantor($request);
+-            $request->validate($rules, $messages);
+             // Same-day time-range, jumlah_hari = 0
+             $validated['jumlah_hari'] = 0;
+             $validated['tanggal_mulai'] = now()->toDateString();
+             $validated['tanggal_selesai'] = now()->toDateString();
+             // Single-level jenis — keep pimpinan_uuid value but it is unused in verification flow.
+         } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
+-            [$rules, $messages] = $this->validateIzinTidakMasukKerja($request);
+-            $request->validate($rules, $messages);
+             // Maks 2 hari kerja (Pasal 8 ayat 4 PERMA No. 7 Tahun 2016)
+             $workDays = WorkdayService::countWorkdays($validated['tanggal_mulai'], $validated['tanggal_selesai']);
+             if ($workDays > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
+@@ -189,7 +138,7 @@ public function show($uuid)
+         return view('izin.show', compact('izin'));
+     }
+ 
+-    public function update(Request $request, $uuid)
++    public function update(UpdateIzinRequest $request, $uuid)
+     {
+         $izin = Izin::where('uuid', $uuid)->firstOrFail();
+         $this->authorize('update', $izin);
+@@ -209,43 +158,25 @@ public function update(Request $request, $uuid)
+ 
+         if ($isNoSuratUpdate) {
+             // Only validate and update no_surat_izin
+-            $validated = $request->validate([
+-                'no_surat_izin' => ['required', 'string', Rule::unique('izin', 'no_surat_izin')->ignore($izin->uuid, 'uuid')],
+-            ]);
++            $validated = $request->validated();
+ 
+             $izin->update(['no_surat_izin' => $validated['no_surat_izin']]);
+ 
+             return redirect()->route('izin.index')->with('success', 'Nomor surat izin berhasil diperbarui');
+         }
+ 
+-        // Full update for non-verified izin
+-        $validationRules = [
+-            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
+-            'tanggal_mulai' => 'required|date',
+-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+-            'jam_mulai' => 'nullable|date_format:H:i',
+-            'jam_selesai' => 'nullable|date_format:H:i',
+-            'alasan' => 'required|string',
+-            'dokumen' => 'nullable|file|mimes:pdf,jpg,jpeg,png|mimetypes:application/pdf,image/jpeg,image/png|max:2048',
+-            'atasan_pimpinan_uuid' => 'required|exists:pegawai,uuid',
+-            'pimpinan_uuid' => 'required|exists:pegawai,uuid',
+-        ];
+-
+-        $validated = $request->validate($validationRules);
++        // Full update for non-verified izin; jenis-specific PERMA validation runs in UpdateIzinRequest::rules()
++        $validated = $request->validated();
+         $validated['jumlah_hari'] = WorkdayService::countWorkdays(
+             $validated['tanggal_mulai'],
+             $validated['tanggal_selesai']
+         );
+ 
+         if (IzinType::isSingleLevel($validated['jenis_izin'])) {
+-            [$rules, $messages] = $this->validateIzinKeluarKantor($request);
+-            $request->validate($rules, $messages);
+             $validated['jumlah_hari'] = 0;
+             $validated['tanggal_mulai'] = now()->toDateString();
+             $validated['tanggal_selesai'] = now()->toDateString();
+         } elseif ($validated['jenis_izin'] === IzinType::TIDAK_MASUK) {
+-            [$rules, $messages] = $this->validateIzinTidakMasukKerja($request);
+-            $request->validate($rules, $messages);
+             if ($validated['jumlah_hari'] > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
+                 throw ValidationException::withMessages([
+                     'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],
+@@ -306,56 +237,40 @@ public function verifikasiPimpinan($uuid)
+         return view('izin.verifikasi-pimpinan', compact('izin'));
+     }
+ 
+-    public function prosesVerifikasiAtasan(Request $request, $uuid)
++    public function prosesVerifikasiAtasan(VerifyAtasanIzinRequest $request, $uuid)
+     {
+         $izin = Izin::where('uuid', $uuid)->firstOrFail();
+         $this->authorize('verifyAtasan', $izin);
+ 
+-        $validated = $request->validate([
+-            'verifikasi_atasan' => 'required|in:Disetujui,Ditolak',
+-            'catatan_atasan' => 'nullable|string',
+-        ]);
+-
+-        $izin->verifikasi_atasan = $validated['verifikasi_atasan'];
+-        $izin->catatan_atasan = $validated['catatan_atasan'];
+-        $izin->tanggal_verifikasi_atasan = now();
+-
+-        if ($validated['verifikasi_atasan'] === 'Disetujui') {
+-            // Single-level approval for Izin Keluar Kantor and Izin Pulang Cepat
+-            // Pasal 5 PERMA No. 7 Tahun 2016 — atasan langsung only
+-            $izin->status = IzinType::isSingleLevel($izin->jenis_izin)
+-                ? 'Disetujui'
+-                : 'Disetujui Atasan';
+-        } else {
+-            $izin->status = 'Ditolak Atasan';
+-        }
++        $validated = $request->validated();
+ 
+-        $izin->save();
++        $atasan = Auth::user()->pegawai;
++
++        $this->izinApproval->applyAtasan(
++            $izin,
++            $atasan,
++            $validated['verifikasi_atasan'],
++            $validated['catatan_atasan']
++        );
+ 
+         return redirect()->route('izin.index')->with('success', 'Verifikasi atasan berhasil dilakukan');
+     }
+ 
+-    public function prosesVerifikasiPimpinan(Request $request, $uuid)
++    public function prosesVerifikasiPimpinan(VerifyPimpinanIzinRequest $request, $uuid)
+     {
+         $izin = Izin::where('uuid', $uuid)->firstOrFail();
+         $this->authorize('verifyPimpinan', $izin);
+ 
+-        $validated = $request->validate([
+-            'verifikasi_pimpinan' => 'required|in:Disetujui,Ditolak',
+-            'catatan_pimpinan' => 'nullable|string',
+-        ]);
+-
+-        $izin->verifikasi_pimpinan = $validated['verifikasi_pimpinan'];
+-        $izin->catatan_pimpinan = $validated['catatan_pimpinan'];
+-        $izin->tanggal_verifikasi_pimpinan = now();
++        $validated = $request->validated();
+ 
+-        if ($validated['verifikasi_pimpinan'] === 'Disetujui') {
+-            $izin->status = 'Disetujui';
+-        } else {
+-            $izin->status = 'Ditolak';
+-        }
++        $pimpinan = Auth::user()->pegawai;
+ 
+-        $izin->save();
++        $this->izinApproval->applyPimpinan(
++            $izin,
++            $pimpinan,
++            $validated['verifikasi_pimpinan'],
++            $validated['catatan_pimpinan']
++        );
+ 
+         return redirect()->route('izin.index')->with('success', 'Verifikasi pimpinan berhasil dilakukan');
+     }
+@@ -393,7 +308,7 @@ public function createKeluarKantor()
+     {
+         $this->authorize('create', Izin::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+@@ -412,7 +327,7 @@ public function createTidakMasuk()
+     {
+         $this->authorize('create', Izin::class);
+         $user = Auth::user();
+-        $pegawai = Pegawai::where('nip', $user->nip)->first();
++        $pegawai = $user->pegawai;
+ 
+         if (! $pegawai) {
+             return redirect()->route('izin.index')->with('error', 'Data pegawai tidak ditemukan');
+diff --git a/app/Http/Controllers/PegawaiController.php b/app/Http/Controllers/PegawaiController.php
+index 1c0f95d..c26a6f1 100644
+--- a/app/Http/Controllers/PegawaiController.php
++++ b/app/Http/Controllers/PegawaiController.php
+@@ -3,7 +3,6 @@
+ namespace App\Http\Controllers;
+ 
+ use App\Models\Pegawai;
+-use App\Models\User;
+ use Illuminate\Http\Request;
+ use Illuminate\Support\Facades\Storage;
+ use Illuminate\Support\Str;
+@@ -139,7 +138,7 @@ public function detail($uuid)
+         if (! $pegawai) {
+             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai tidak ditemukan');
+         }
+-        $user = User::where('nip', $pegawai->nip)->first();
++        $user = $pegawai->user;
+         if (! $user) {
+             return redirect()->route('pegawai.index')->with('error', 'Data Pegawai Belum Dihubungkan Dengan Akun');
+         }
+diff --git a/app/Http/Controllers/UserController.php b/app/Http/Controllers/UserController.php
+index 2334d96..f07651a 100644
+--- a/app/Http/Controllers/UserController.php
++++ b/app/Http/Controllers/UserController.php
+@@ -81,6 +81,10 @@ public function store(Request $request)
+         $user->save();
+         $user->syncRoles($request->roles);
+ 
++        // Establish the pegawai.user_uuid link at provisioning time (nip is the
++        // admin-entered business identifier; everything else joins via the FK).
++        Pegawai::where('nip', $user->nip)->update(['user_uuid' => $user->uuid]);
++
+         return redirect('/users')->with('status', 'Data User Berhasil Ditambahkan');
+     }
+ 
+diff --git a/app/Http/Kernel.php b/app/Http/Kernel.php
+index a777acf..f21dc6d 100644
+--- a/app/Http/Kernel.php
++++ b/app/Http/Kernel.php
+@@ -41,7 +41,6 @@ class Kernel extends HttpKernel
+         ],
+ 
+         'api' => [
+-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+         ],
+diff --git a/app/Http/Requests/StoreIzinRequest.php b/app/Http/Requests/StoreIzinRequest.php
+new file mode 100644
+index 0000000..d8edf2e
+--- /dev/null
++++ b/app/Http/Requests/StoreIzinRequest.php
+@@ -0,0 +1,91 @@
++<?php
++
++namespace App\Http\Requests;
++
++use App\Support\IzinType;
++use Illuminate\Foundation\Http\FormRequest;
++
++class StoreIzinRequest extends FormRequest
++{
++    public function authorize(): bool
++    {
++        return true; // policy checks stay in controller via $this->authorize()
++    }
++
++    public function rules(): array
++    {
++        $rules = [
++            'pegawai_uuid' => ['nullable', 'exists:pegawai,uuid'],
++            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
++            'tanggal_mulai' => ['required', 'date'],
++            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
++            'jam_mulai' => ['nullable', 'date_format:H:i'],
++            'jam_selesai' => ['nullable', 'date_format:H:i'],
++            'alasan' => ['required', 'string'],
++            'dokumen' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'mimetypes:application/pdf,image/jpeg,image/png', 'max:2048'],
++            'atasan_pimpinan_uuid' => ['required', 'exists:pegawai,uuid'],
++            'pimpinan_uuid' => ['required', 'exists:pegawai,uuid'],
++        ];
++
++        return array_merge($rules, $this->jenisRules());
++    }
++
++    public function messages(): array
++    {
++        $jenis = $this->jenis();
++
++        if ($jenis !== null && IzinType::isSingleLevel($jenis)) {
++            return [
++                'tanggal_mulai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
++                'tanggal_selesai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
++                'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
++            ];
++        }
++
++        if ($jenis === IzinType::TIDAK_MASUK) {
++            return [
++                'tanggal_selesai.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai.',
++            ];
++        }
++
++        return [];
++    }
++
++    /**
++     * Validasi khusus untuk Izin Keluar Kantor dan Izin Pulang Cepat.
++     * Pasal 5 PERMA No. 7 Tahun 2016 - Lampiran II
++     * Validasi khusus untuk Izin Tidak Masuk Kerja.
++     * Pasal 8 PERMA No. 7 Tahun 2016 - Lampiran III - Maks 2 hari kerja
++     */
++    private function jenisRules(): array
++    {
++        $jenis = $this->jenis();
++
++        if ($jenis !== null && IzinType::isSingleLevel($jenis)) {
++            return [
++                'tanggal_mulai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
++                'tanggal_selesai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
++                'jam_mulai' => ['required', 'date_format:H:i'],
++                'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
++                'alasan' => ['required', 'string', 'max:500'],
++            ];
++        }
++
++        if ($jenis === IzinType::TIDAK_MASUK) {
++            return [
++                'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
++                'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
++                'alasan' => ['required', 'string', 'max:500'],
++            ];
++        }
++
++        return [];
++    }
++
++    private function jenis(): ?string
++    {
++        $jenis = $this->input('jenis_izin');
++
++        return is_string($jenis) ? $jenis : null;
++    }
++}
+diff --git a/app/Http/Requests/UpdateIzinRequest.php b/app/Http/Requests/UpdateIzinRequest.php
+new file mode 100644
+index 0000000..46f9391
+--- /dev/null
++++ b/app/Http/Requests/UpdateIzinRequest.php
+@@ -0,0 +1,113 @@
++<?php
++
++namespace App\Http\Requests;
++
++use App\Models\Izin;
++use App\Support\IzinType;
++use Illuminate\Foundation\Http\FormRequest;
++use Illuminate\Validation\Rule;
++
++class UpdateIzinRequest extends FormRequest
++{
++    public function authorize(): bool
++    {
++        return true; // policy checks stay in controller via $this->authorize()
++    }
++
++    public function rules(): array
++    {
++        // Check if this is just a no_surat_izin update for an approved izin
++        if ($this->isNoSuratUpdate()) {
++            return [
++                'no_surat_izin' => ['required', 'string', Rule::unique('izin', 'no_surat_izin')->ignore($this->route('uuid'), 'uuid')],
++            ];
++        }
++
++        $rules = [
++            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
++            'tanggal_mulai' => ['required', 'date'],
++            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
++            'jam_mulai' => ['nullable', 'date_format:H:i'],
++            'jam_selesai' => ['nullable', 'date_format:H:i'],
++            'alasan' => ['required', 'string'],
++            'dokumen' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'mimetypes:application/pdf,image/jpeg,image/png', 'max:2048'],
++            'atasan_pimpinan_uuid' => ['required', 'exists:pegawai,uuid'],
++            'pimpinan_uuid' => ['required', 'exists:pegawai,uuid'],
++        ];
++
++        return array_merge($rules, $this->jenisRules());
++    }
++
++    public function messages(): array
++    {
++        $jenis = $this->jenis();
++
++        if ($jenis !== null && IzinType::isSingleLevel($jenis)) {
++            return [
++                'tanggal_mulai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
++                'tanggal_selesai.date_equals' => 'Izin keluar kantor hanya dapat diajukan pada hari ini.',
++                'jam_selesai.after' => 'Jam selesai harus setelah jam mulai.',
++            ];
++        }
++
++        if ($jenis === IzinType::TIDAK_MASUK) {
++            return [
++                'tanggal_selesai.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai.',
++            ];
++        }
++
++        return [];
++    }
++
++    /**
++     * Check if this is just a no_surat_izin update for an approved izin
++     * (csrf, method, and no_surat_izin only).
++     */
++    private function isNoSuratUpdate(): bool
++    {
++        $izin = Izin::where('uuid', $this->route('uuid'))->first();
++
++        return $izin !== null
++            && $izin->verifikasi_atasan == 'Disetujui'
++            && $this->has('no_surat_izin')
++            && count($this->all()) <= 3;
++    }
++
++    /**
++     * Validasi khusus untuk Izin Keluar Kantor dan Izin Pulang Cepat.
++     * Pasal 5 PERMA No. 7 Tahun 2016 - Lampiran II
++     * Validasi khusus untuk Izin Tidak Masuk Kerja.
++     * Pasal 8 PERMA No. 7 Tahun 2016 - Lampiran III - Maks 2 hari kerja
++     */
++    private function jenisRules(): array
++    {
++        $jenis = $this->jenis();
++
++        if ($jenis !== null && IzinType::isSingleLevel($jenis)) {
++            return [
++                'tanggal_mulai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
++                'tanggal_selesai' => ['required', 'date', 'date_equals:'.now()->toDateString()],
++                'jam_mulai' => ['required', 'date_format:H:i'],
++                'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
++                'alasan' => ['required', 'string', 'max:500'],
++            ];
++        }
++
++        if ($jenis === IzinType::TIDAK_MASUK) {
++            return [
++                'tanggal_mulai' => ['required', 'date', 'after_or_equal:today'],
++                'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
++                'alasan' => ['required', 'string', 'max:500'],
++            ];
++        }
++
++        return [];
++    }
++
++    private function jenis(): ?string
++    {
++        $jenis = $this->input('jenis_izin');
++
++        return is_string($jenis) ? $jenis : null;
++    }
++}
+diff --git a/app/Http/Requests/VerifyAtasanIzinRequest.php b/app/Http/Requests/VerifyAtasanIzinRequest.php
+new file mode 100644
+index 0000000..1c6a139
+--- /dev/null
++++ b/app/Http/Requests/VerifyAtasanIzinRequest.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace App\Http\Requests;
++
++use Illuminate\Foundation\Http\FormRequest;
++
++class VerifyAtasanIzinRequest extends FormRequest
++{
++    public function authorize(): bool
++    {
++        return true; // policy checks stay in controller via $this->authorize()
++    }
++
++    public function rules(): array
++    {
++        return [
++            'verifikasi_atasan' => ['required', 'in:Disetujui,Ditolak'],
++            'catatan_atasan' => ['nullable', 'string'],
++        ];
++    }
++}
+diff --git a/app/Http/Requests/VerifyPimpinanIzinRequest.php b/app/Http/Requests/VerifyPimpinanIzinRequest.php
+new file mode 100644
+index 0000000..5e91d11
+--- /dev/null
++++ b/app/Http/Requests/VerifyPimpinanIzinRequest.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace App\Http\Requests;
++
++use Illuminate\Foundation\Http\FormRequest;
++
++class VerifyPimpinanIzinRequest extends FormRequest
++{
++    public function authorize(): bool
++    {
++        return true; // policy checks stay in controller via $this->authorize()
++    }
++
++    public function rules(): array
++    {
++        return [
++            'verifikasi_pimpinan' => ['required', 'in:Disetujui,Ditolak'],
++            'catatan_pimpinan' => ['nullable', 'string'],
++        ];
++    }
++}
+diff --git a/app/Models/Pegawai.php b/app/Models/Pegawai.php
+index cb772ba..7cdb07d 100644
+--- a/app/Models/Pegawai.php
++++ b/app/Models/Pegawai.php
+@@ -38,6 +38,7 @@ class Pegawai extends Model
+     protected $fillable = [
+         'uuid',
+         'nip',
++        'user_uuid',
+         'nama',
+         'tempat_lahir',
+         'tanggal_lahir',
+@@ -52,6 +53,6 @@ class Pegawai extends Model
+ 
+     public function user()
+     {
+-        return $this->belongsTo(User::class, 'nip', 'nip');
++        return $this->belongsTo(User::class, 'user_uuid', 'uuid');
+     }
+ }
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 087acf8..031d83c 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -8,13 +8,12 @@
+ use Illuminate\Database\Eloquent\SoftDeletes;
+ use Illuminate\Foundation\Auth\User as Authenticatable;
+ use Illuminate\Notifications\Notifiable;
+-use Laravel\Sanctum\HasApiTokens;
+ use Spatie\Permission\Traits\HasRoles;
+ use Venturecraft\Revisionable\RevisionableTrait;
+ 
+ class User extends Authenticatable implements MustVerifyEmail
+ {
+-    use HasApiTokens, HasFactory, HasRoles, HasUuids, Notifiable, RevisionableTrait, SoftDeletes;
++    use HasFactory, HasRoles, HasUuids, Notifiable, RevisionableTrait, SoftDeletes;
+ 
+     /**
+      * The primary key for the model.
+@@ -71,6 +70,11 @@ class User extends Authenticatable implements MustVerifyEmail
+         'password' => 'hashed',
+     ];
+ 
++    public function pegawai()
++    {
++        return $this->hasOne(Pegawai::class, 'user_uuid', 'uuid');
++    }
++
+     /*
+     public function getLoginField($loginValue)
+     {
+diff --git a/app/Policies/CutiPolicy.php b/app/Policies/CutiPolicy.php
+index 127425d..b5c088c 100644
+--- a/app/Policies/CutiPolicy.php
++++ b/app/Policies/CutiPolicy.php
+@@ -3,19 +3,18 @@
+ namespace App\Policies;
+ 
+ use App\Models\Cuti;
+-use App\Models\Pegawai;
+ use App\Models\User;
+ 
+ class CutiPolicy
+ {
+     private function pegawaiUuidFor(User $user): ?string
+     {
+-        return Pegawai::where('nip', $user->nip)->value('uuid');
++        return $user->pegawai?->uuid;
+     }
+ 
+     private function isOwner(User $user, Cuti $cuti): bool
+     {
+-        return $user->nip === $cuti->pegawai?->nip;
++        return $user->pegawai?->uuid === $cuti->pegawai_uuid;
+     }
+ 
+     private function isAssignedPimpinan(User $user, Cuti $cuti): bool
+diff --git a/app/Policies/IzinPolicy.php b/app/Policies/IzinPolicy.php
+index e849cbc..ac97ecf 100644
+--- a/app/Policies/IzinPolicy.php
++++ b/app/Policies/IzinPolicy.php
+@@ -3,7 +3,6 @@
+ namespace App\Policies;
+ 
+ use App\Models\Izin;
+-use App\Models\Pegawai;
+ use App\Models\User;
+ use App\Support\IzinType;
+ 
+@@ -11,12 +10,12 @@ class IzinPolicy
+ {
+     private function pegawaiUuidFor(User $user): ?string
+     {
+-        return Pegawai::where('nip', $user->nip)->value('uuid');
++        return $user->pegawai?->uuid;
+     }
+ 
+     private function isOwner(User $user, Izin $izin): bool
+     {
+-        return $user->nip === $izin->pegawai?->nip;
++        return $user->pegawai?->uuid === $izin->pegawai_uuid;
+     }
+ 
+     private function isAssignedAtasan(User $user, Izin $izin): bool
+@@ -70,7 +69,7 @@ public function create(User $user): bool
+     public function update(User $user, Izin $izin): bool
+     {
+         return $user->hasAnyRole(['super-admin', 'admin']) ||
+-            ($user->nip === $izin->pegawai?->nip &&
++            ($user->pegawai?->uuid === $izin->pegawai_uuid &&
+              $izin->verifikasi_atasan == 'Belum Diverifikasi' &&
+              $izin->verifikasi_pimpinan == 'Belum Diverifikasi');
+     }
+diff --git a/app/Services/ApproverDirectoryService.php b/app/Services/ApproverDirectoryService.php
+index 6c64fe2..65bc8cf 100644
+--- a/app/Services/ApproverDirectoryService.php
++++ b/app/Services/ApproverDirectoryService.php
+@@ -18,7 +18,7 @@ public function pimpinanList(): Collection
+         }
+ 
+         return User::role('pimpinan')
+-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
++            ->join('pegawai', 'pegawai.user_uuid', '=', 'users.uuid')
+             ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
+             ->get();
+     }
+@@ -33,7 +33,7 @@ public function atasanList(): Collection
+         }
+ 
+         return User::role('atasan-pimpinan')
+-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
++            ->join('pegawai', 'pegawai.user_uuid', '=', 'users.uuid')
+             ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
+             ->get();
+     }
+diff --git a/app/Services/IzinApprovalService.php b/app/Services/IzinApprovalService.php
+new file mode 100644
+index 0000000..87139d5
+--- /dev/null
++++ b/app/Services/IzinApprovalService.php
+@@ -0,0 +1,64 @@
++<?php
++
++namespace App\Services;
++
++use App\Models\Izin;
++use App\Models\Pegawai;
++use App\Support\IzinType;
++use Carbon\Carbon;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Validation\ValidationException;
++
++class IzinApprovalService
++{
++    public const APPROVE = 'Disetujui';
++
++    public const REJECT = 'Ditolak';
++
++    public function applyAtasan(Izin $izin, ?Pegawai $atasan, string $decision, ?string $catatan): Izin
++    {
++        return DB::transaction(function () use ($izin, $atasan, $decision, $catatan) {
++            $izin = $this->lockAtStatus($izin, 'Diajukan');
++            $izin->verifikasi_atasan = $decision;
++            $izin->catatan_atasan = $catatan;
++            $izin->tanggal_verifikasi_atasan = Carbon::now();
++
++            if ($decision === self::APPROVE) {
++                // Single-level jenis (Pasal 5 PERMA No. 7/2016): atasan approval is final.
++                $izin->status = IzinType::isSingleLevel($izin->jenis_izin) ? 'Disetujui' : 'Disetujui Atasan';
++            } else {
++                $izin->status = 'Ditolak Atasan';
++            }
++
++            $izin->save();
++
++            return $izin;
++        });
++    }
++
++    public function applyPimpinan(Izin $izin, ?Pegawai $pimpinan, string $decision, ?string $catatan): Izin
++    {
++        return DB::transaction(function () use ($izin, $pimpinan, $decision, $catatan) {
++            $izin = $this->lockAtStatus($izin, 'Disetujui Atasan');
++            $izin->verifikasi_pimpinan = $decision;
++            $izin->catatan_pimpinan = $catatan;
++            $izin->tanggal_verifikasi_pimpinan = Carbon::now();
++            $izin->status = $decision === self::APPROVE ? 'Disetujui' : 'Ditolak';
++            $izin->save();
++
++            return $izin;
++        });
++    }
++
++    private function lockAtStatus(Izin $izin, string $expected): Izin
++    {
++        $locked = Izin::where('uuid', $izin->uuid)->lockForUpdate()->firstOrFail();
++        if ($locked->status !== $expected) {
++            throw ValidationException::withMessages([
++                'status' => ['Permohonan izin sudah diproses atau berada pada status yang tidak valid.'],
++            ]);
++        }
++
++        return $locked;
++    }
++}
+diff --git a/app/Services/IzinQueryService.php b/app/Services/IzinQueryService.php
+index 61dd280..42f1437 100644
+--- a/app/Services/IzinQueryService.php
++++ b/app/Services/IzinQueryService.php
+@@ -3,7 +3,6 @@
+ namespace App\Services;
+ 
+ use App\Models\Izin;
+-use App\Models\Pegawai;
+ use App\Models\User;
+ use Illuminate\Database\Eloquent\Builder;
+ 
+@@ -31,7 +30,7 @@ public function forUser(User $user, ?array $jenis = null): Builder
+             return $query;
+         }
+ 
+-        $pegawaiUuid = Pegawai::where('nip', $user->nip)->value('uuid');
++        $pegawaiUuid = $user->pegawai?->uuid;
+ 
+         if (! $pegawaiUuid) {
+             return $query->whereRaw('1 = 0');
+diff --git a/composer.json b/composer.json
+index 65660c6..d863fce 100644
+--- a/composer.json
++++ b/composer.json
+@@ -8,13 +8,9 @@
+         "php": "^8.1",
+         "barryvdh/laravel-dompdf": "^3.1",
+         "guzzlehttp/guzzle": "^7.2",
+-        "illuminate/database": "*",
+-        "intervention/image": "2.7.0",
+         "laravel/framework": "^10.10",
+-        "laravel/sanctum": "^3.3",
+         "laravel/tinker": "^2.8",
+         "laravel/ui": "^4.5",
+-        "predis/predis": "^2.0",
+         "sentry/sentry-laravel": "^4.25",
+         "spatie/laravel-backup": "^8.0",
+         "spatie/laravel-permission": "^6.9",
+@@ -22,7 +18,6 @@
+     },
+     "require-dev": {
+         "fakerphp/faker": "^1.9.1",
+-        "laravel/breeze": "^1.29",
+         "laravel/pint": "^1.0",
+         "laravel/sail": "^1.43",
+         "mockery/mockery": "^1.4.4",
+diff --git a/composer.lock b/composer.lock
+index c0d42b8..2e4a396 100644
+--- a/composer.lock
++++ b/composer.lock
+@@ -4,7 +4,7 @@
+         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+         "This file is @generated automatically"
+     ],
+-    "content-hash": "a324e74656ae92594acc2050d0980025",
++    "content-hash": "8f2bb4e123a7569f0b8ab6dfbec6ee44",
+     "packages": [
+         {
+             "name": "barryvdh/laravel-dompdf",
+@@ -1290,90 +1290,6 @@
+             ],
+             "time": "2026-05-23T22:00:21+00:00"
+         },
+-        {
+-            "name": "intervention/image",
+-            "version": "2.7.0",
+-            "source": {
+-                "type": "git",
+-                "url": "https://github.com/Intervention/image.git",
+-                "reference": "9a8cc99d30415ec0b3f7649e1647d03a55698545"
+-            },
+-            "dist": {
+-                "type": "zip",
+-                "url": "https://api.github.com/repos/Intervention/image/zipball/9a8cc99d30415ec0b3f7649e1647d03a55698545",
+-                "reference": "9a8cc99d30415ec0b3f7649e1647d03a55698545",
+-                "shasum": ""
+-            },
+-            "require": {
+-                "ext-fileinfo": "*",
+-                "guzzlehttp/psr7": "~1.1 || ^2.0",
+-                "php": ">=5.4.0"
+-            },
+-            "require-dev": {
+-                "mockery/mockery": "~0.9.2",
+-                "phpunit/phpunit": "^4.8 || ^5.7 || ^7.5.15"
+-            },
+-            "suggest": {
+-                "ext-gd": "to use GD library based image processing.",
+-                "ext-imagick": "to use Imagick based image processing.",
+-                "intervention/imagecache": "Caching extension for the Intervention Image library"
+-            },
+-            "type": "library",
+-            "extra": {
+-                "laravel": {
+-                    "aliases": {
+-                        "Image": "Intervention\\Image\\Facades\\Image"
+-                    },
+-                    "providers": [
+-                        "Intervention\\Image\\ImageServiceProvider"
+-                    ]
+-                },
+-                "branch-alias": {
+-                    "dev-master": "2.4-dev"
+-                }
+-            },
+-            "autoload": {
+-                "psr-4": {
+-                    "Intervention\\Image\\": "src/Intervention/Image"
+-                }
+-            },
+-            "notification-url": "https://packagist.org/downloads/",
+-            "license": [
+-                "MIT"
+-            ],
+-            "authors": [
+-                {
+-                    "name": "Oliver Vogel",
+-                    "email": "oliver@olivervogel.com",
+-                    "homepage": "http://olivervogel.com/"
+-                }
+-            ],
+-            "description": "Image handling and manipulation library with support for Laravel integration",
+-            "homepage": "http://image.intervention.io/",
+-            "keywords": [
+-                "gd",
+-                "image",
+-                "imagick",
+-                "laravel",
+-                "thumbnail",
+-                "watermark"
+-            ],
+-            "support": {
+-                "issues": "https://github.com/Intervention/image/issues",
+-                "source": "https://github.com/Intervention/image/tree/2.7.0"
+-            },
+-            "funding": [
+-                {
+-                    "url": "https://www.paypal.me/interventionphp",
+-                    "type": "custom"
+-                },
+-                {
+-                    "url": "https://github.com/Intervention",
+-                    "type": "github"
+-                }
+-            ],
+-            "time": "2021-10-03T14:17:12+00:00"
+-        },
+         {
+             "name": "jean85/pretty-package-versions",
+             "version": "2.1.1",
+@@ -1700,72 +1616,6 @@
+             },
+             "time": "2024-08-12T22:06:33+00:00"
+         },
+-        {
+-            "name": "laravel/sanctum",
+-            "version": "v3.3.3",
+-            "source": {
+-                "type": "git",
+-                "url": "https://github.com/laravel/sanctum.git",
+-                "reference": "8c104366459739f3ada0e994bcd3e6fd681ce3d5"
+-            },
+-            "dist": {
+-                "type": "zip",
+-                "url": "https://api.github.com/repos/laravel/sanctum/zipball/8c104366459739f3ada0e994bcd3e6fd681ce3d5",
+-                "reference": "8c104366459739f3ada0e994bcd3e6fd681ce3d5",
+-                "shasum": ""
+-            },
+-            "require": {
+-                "ext-json": "*",
+-                "illuminate/console": "^9.21|^10.0",
+-                "illuminate/contracts": "^9.21|^10.0",
+-                "illuminate/database": "^9.21|^10.0",
+-                "illuminate/support": "^9.21|^10.0",
+-                "php": "^8.0.2"
+-            },
+-            "require-dev": {
+-                "mockery/mockery": "^1.0",
+-                "orchestra/testbench": "^7.28.2|^8.8.3",
+-                "phpstan/phpstan": "^1.10",
+-                "phpunit/phpunit": "^9.6"
+-            },
+-            "type": "library",
+-            "extra": {
+-                "laravel": {
+-                    "providers": [
+-                        "Laravel\\Sanctum\\SanctumServiceProvider"
+-                    ]
+-                },
+-                "branch-alias": {
+-                    "dev-master": "3.x-dev"
+-                }
+-            },
+-            "autoload": {
+-                "psr-4": {
+-                    "Laravel\\Sanctum\\": "src/"
+-                }
+-            },
+-            "notification-url": "https://packagist.org/downloads/",
+-            "license": [
+-                "MIT"
+-            ],
+-            "authors": [
+-                {
+-                    "name": "Taylor Otwell",
+-                    "email": "taylor@laravel.com"
+-                }
+-            ],
+-            "description": "Laravel Sanctum provides a featherweight authentication system for SPAs and simple APIs.",
+-            "keywords": [
+-                "auth",
+-                "laravel",
+-                "sanctum"
+-            ],
+-            "support": {
+-                "issues": "https://github.com/laravel/sanctum/issues",
+-                "source": "https://github.com/laravel/sanctum"
+-            },
+-            "time": "2023-12-19T18:44:48+00:00"
+-        },
+         {
+             "name": "laravel/serializable-closure",
+             "version": "v1.3.7",
+@@ -3064,68 +2914,6 @@
+             ],
+             "time": "2025-12-27T19:41:33+00:00"
+         },
+-        {
+-            "name": "predis/predis",
+-            "version": "v2.4.0",
+-            "source": {
+-                "type": "git",
+-                "url": "https://github.com/predis/predis.git",
+-                "reference": "f49e13ee3a2a825631562aa0223ac922ec5d058b"
+-            },
+-            "dist": {
+-                "type": "zip",
+-                "url": "https://api.github.com/repos/predis/predis/zipball/f49e13ee3a2a825631562aa0223ac922ec5d058b",
+-                "reference": "f49e13ee3a2a825631562aa0223ac922ec5d058b",
+-                "shasum": ""
+-            },
+-            "require": {
+-                "php": "^7.2 || ^8.0"
+-            },
+-            "require-dev": {
+-                "friendsofphp/php-cs-fixer": "^3.3",
+-                "phpstan/phpstan": "^1.9",
+-                "phpunit/phpcov": "^6.0 || ^8.0",
+-                "phpunit/phpunit": "^8.0 || ^9.4"
+-            },
+-            "suggest": {
+-                "ext-relay": "Faster connection with in-memory caching (>=0.6.2)"
+-            },
+-            "type": "library",
+-            "autoload": {
+-                "psr-4": {
+-                    "Predis\\": "src/"
+-                }
+-            },
+-            "notification-url": "https://packagist.org/downloads/",
+-            "license": [
+-                "MIT"
+-            ],
+-            "authors": [
+-                {
+-                    "name": "Till Krüss",
+-                    "homepage": "https://till.im",
+-                    "role": "Maintainer"
+-                }
+-            ],
+-            "description": "A flexible and feature-complete Redis/Valkey client for PHP.",
+-            "homepage": "http://github.com/predis/predis",
+-            "keywords": [
+-                "nosql",
+-                "predis",
+-                "redis"
+-            ],
+-            "support": {
+-                "issues": "https://github.com/predis/predis/issues",
+-                "source": "https://github.com/predis/predis/tree/v2.4.0"
+-            },
+-            "funding": [
+-                {
+-                    "url": "https://github.com/sponsors/tillkruss",
+-                    "type": "github"
+-                }
+-            ],
+-            "time": "2025-04-30T15:16:02+00:00"
+-        },
+         {
+             "name": "psr/clock",
+             "version": "1.0.0",
+@@ -7398,68 +7186,6 @@
+             },
+             "time": "2025-04-30T06:54:44+00:00"
+         },
+-        {
+-            "name": "laravel/breeze",
+-            "version": "v1.29.1",
+-            "source": {
+-                "type": "git",
+-                "url": "https://github.com/laravel/breeze.git",
+-                "reference": "22c53b84b7fff91b01a318d71a10dfc251e92849"
+-            },
+-            "dist": {
+-                "type": "zip",
+-                "url": "https://api.github.com/repos/laravel/breeze/zipball/22c53b84b7fff91b01a318d71a10dfc251e92849",
+-                "reference": "22c53b84b7fff91b01a318d71a10dfc251e92849",
+-                "shasum": ""
+-            },
+-            "require": {
+-                "illuminate/console": "^10.17",
+-                "illuminate/filesystem": "^10.17",
+-                "illuminate/support": "^10.17",
+-                "illuminate/validation": "^10.17",
+-                "php": "^8.1.0"
+-            },
+-            "require-dev": {
+-                "orchestra/testbench": "^8.0",
+-                "phpstan/phpstan": "^1.10"
+-            },
+-            "type": "library",
+-            "extra": {
+-                "laravel": {
+-                    "providers": [
+-                        "Laravel\\Breeze\\BreezeServiceProvider"
+-                    ]
+-                },
+-                "branch-alias": {
+-                    "dev-master": "1.x-dev"
+-                }
+-            },
+-            "autoload": {
+-                "psr-4": {
+-                    "Laravel\\Breeze\\": "src/"
+-                }
+-            },
+-            "notification-url": "https://packagist.org/downloads/",
+-            "license": [
+-                "MIT"
+-            ],
+-            "authors": [
+-                {
+-                    "name": "Taylor Otwell",
+-                    "email": "taylor@laravel.com"
+-                }
+-            ],
+-            "description": "Minimal Laravel authentication scaffolding with Blade and Tailwind.",
+-            "keywords": [
+-                "auth",
+-                "laravel"
+-            ],
+-            "support": {
+-                "issues": "https://github.com/laravel/breeze/issues",
+-                "source": "https://github.com/laravel/breeze"
+-            },
+-            "time": "2024-03-04T14:35:21+00:00"
+-        },
+         {
+             "name": "laravel/pint",
+             "version": "v1.22.1",
+diff --git a/config/app.php b/config/app.php
+index 3adf706..03afa7e 100644
+--- a/config/app.php
++++ b/config/app.php
+@@ -175,7 +175,6 @@
+         App\Providers\EventServiceProvider::class,
+         App\Providers\RouteServiceProvider::class,
+         Spatie\Permission\PermissionServiceProvider::class,
+-        Intervention\Image\ImageServiceProvider::class,
+         Barryvdh\DomPDF\ServiceProvider::class,
+         Venturecraft\Revisionable\RevisionableServiceProvider::class,
+     ])->toArray(),
+@@ -193,7 +192,6 @@
+ 
+     'aliases' => Facade::defaultAliases()->merge([
+         // 'Example' => App\Facades\Example::class,
+-        'Image' => Intervention\Image\Facades\Image::class,
+         'PDF' => Barryvdh\DomPDF\Facade::class,
+     ])->toArray(),
+ 
+diff --git a/config/sanctum.php b/config/sanctum.php
+deleted file mode 100644
+index 35d75b3..0000000
+--- a/config/sanctum.php
++++ /dev/null
+@@ -1,83 +0,0 @@
+-<?php
+-
+-use Laravel\Sanctum\Sanctum;
+-
+-return [
+-
+-    /*
+-    |--------------------------------------------------------------------------
+-    | Stateful Domains
+-    |--------------------------------------------------------------------------
+-    |
+-    | Requests from the following domains / hosts will receive stateful API
+-    | authentication cookies. Typically, these should include your local
+-    | and production domains which access your API via a frontend SPA.
+-    |
+-    */
+-
+-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
+-        '%s%s',
+-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
+-        Sanctum::currentApplicationUrlWithPort()
+-    ))),
+-
+-    /*
+-    |--------------------------------------------------------------------------
+-    | Sanctum Guards
+-    |--------------------------------------------------------------------------
+-    |
+-    | This array contains the authentication guards that will be checked when
+-    | Sanctum is trying to authenticate a request. If none of these guards
+-    | are able to authenticate the request, Sanctum will use the bearer
+-    | token that's present on an incoming request for authentication.
+-    |
+-    */
+-
+-    'guard' => ['web'],
+-
+-    /*
+-    |--------------------------------------------------------------------------
+-    | Expiration Minutes
+-    |--------------------------------------------------------------------------
+-    |
+-    | This value controls the number of minutes until an issued token will be
+-    | considered expired. This will override any values set in the token's
+-    | "expires_at" attribute, but first-party sessions are not affected.
+-    |
+-    */
+-
+-    'expiration' => null,
+-
+-    /*
+-    |--------------------------------------------------------------------------
+-    | Token Prefix
+-    |--------------------------------------------------------------------------
+-    |
+-    | Sanctum can prefix new tokens in order to take advantage of numerous
+-    | security scanning initiatives maintained by open source platforms
+-    | that notify developers if they commit tokens into repositories.
+-    |
+-    | See: https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning
+-    |
+-    */
+-
+-    'token_prefix' => env('SANCTUM_TOKEN_PREFIX', ''),
+-
+-    /*
+-    |--------------------------------------------------------------------------
+-    | Sanctum Middleware
+-    |--------------------------------------------------------------------------
+-    |
+-    | When authenticating your first-party SPA with Sanctum you may need to
+-    | customize some of the middleware Sanctum uses while processing the
+-    | request. You may change the middleware listed below as required.
+-    |
+-    */
+-
+-    'middleware' => [
+-        'authenticate_session' => Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+-        'encrypt_cookies' => App\Http\Middleware\EncryptCookies::class,
+-        'verify_csrf_token' => App\Http\Middleware\VerifyCsrfToken::class,
+-    ],
+-
+-];
+diff --git a/database/migrations/2026_08_23_000000_add_user_uuid_to_pegawai_table.php b/database/migrations/2026_08_23_000000_add_user_uuid_to_pegawai_table.php
+new file mode 100644
+index 0000000..4a435a9
+--- /dev/null
++++ b/database/migrations/2026_08_23_000000_add_user_uuid_to_pegawai_table.php
+@@ -0,0 +1,45 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::table('pegawai', function (Blueprint $table) {
++            $table->foreignUuid('user_uuid')->nullable()->after('nip');
++        });
++
++        // Backfill by nip join (correlated subquery: portable across MySQL and SQLite,
++        // idempotent via WHERE user_uuid IS NULL; nip is unique on pegawai and
++        // app-validated unique on users, so at most one user matches).
++        DB::update('UPDATE pegawai SET user_uuid = (SELECT u.uuid FROM users u WHERE u.nip = pegawai.nip ORDER BY u.uuid LIMIT 1) WHERE user_uuid IS NULL');
++
++        Schema::table('pegawai', function (Blueprint $table) {
++            $table->unique('user_uuid');
++            $table->foreign('user_uuid')
++                ->references('uuid')
++                ->on('users')
++                ->nullOnDelete();
++        });
++    }
++
++    public function down(): void
++    {
++        // SQLite cannot drop foreign keys (Blueprint throws); column drop
++        // rebuilds the table without them anyway.
++        if (DB::getDriverName() !== 'sqlite') {
++            Schema::table('pegawai', function (Blueprint $table) {
++                $table->dropForeign(['user_uuid']);
++            });
++        }
++
++        Schema::table('pegawai', function (Blueprint $table) {
++            $table->dropUnique(['user_uuid']);
++            $table->dropColumn('user_uuid');
++        });
++    }
++};
+diff --git a/docs/superpowers/plans/2026-08-22-simpeg-arch-remediation.md b/docs/superpowers/plans/2026-08-22-simpeg-arch-remediation.md
+new file mode 100644
+index 0000000..6211deb
+--- /dev/null
++++ b/docs/superpowers/plans/2026-08-22-simpeg-arch-remediation.md
+@@ -0,0 +1,116 @@
++# SIMPEG Architecture Remediation Implementation Plan
++
++> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
++
++**Goal:** Close the 4 structural gaps from the 2026-08-22 architecture audit: Izin approval race risk, User↔Pegawai nip-join, route file rot, dead dependencies.
++
++**Architecture:** Port the existing, proven CutiApprovalService pattern (DB::transaction + lockForUpdate + expected-status guard) to Izin instead of inventing a shared abstraction. Add a real FK between pegawai and users via backfill migration. Delete dead code/deps. No framework upgrade in this plan.
++
++**Tech Stack:** Laravel 10, PHP 8.1+, PHPUnit (existing tests in `tests/Feature`), MySQL.
++
++## Global Constraints
++
++- PHP >= 8.1, Laravel 10.x — do NOT upgrade the framework in this plan.
++- No new composer/npm dependencies.
++- Indonesian status strings stay as stored values (display layer unchanged). Izin `status` is an **enum column**: only `['Diajukan','Disetujui Atasan','Ditolak Atasan','Disetujui','Ditolak']` are writable.
++- Every task ends green: `php artisan test` must pass before commit.
++- Conventional commits matching repo history (`fix(izin): ...`, `refactor(routes): ...`).
++- SECURITY-AUDIT.md fixed findings (SEC-001..SEC-018) must not regress — their tests are the guard.
++
++## Reference: current behavior (verified 2026-08-22)
++
++- `app/Services/CutiApprovalService.php` — the pattern to copy: `DB::transaction`, `lockAtStatus($model, $expected)` using `->lockForUpdate()->firstOrFail()`, throw `ValidationException` on mismatch.
++- `app/Http/Controllers/IzinController.php:309-361` — `prosesVerifikasiAtasan` / `prosesVerifikasiPimpinan`: inline validate, plain `save()`, NO transaction/lock. The bug class fixed for Cuti in SEC-012.
++- `app/Models/Pegawai.php:55` — `belongsTo(User::class, 'nip', 'nip')`; no FK in DB.
++- `routes/web.php:8` outer role group lists every role (incl. `user`) = no-op; lines 36–40 duplicate the named block at 51–58.
++- Dead deps: `intervention/image` (zero usage), `predis/predis` (drivers: file/database/file), `laravel/sanctum` (one route), `laravel/breeze` (dev scaffold). `illuminate/database: "*"` wildcard.
++
++---
++
++### Task 1: IzinApprovalService (race-safe approval)
++
++**Files:**
++- Create: `app/Services/IzinApprovalService.php`
++- Modify: `app/Http/Controllers/IzinController.php:309-361`
++- Test: `tests/Feature/IzinApprovalRaceTest.php`
++
++**Interfaces:**
++- Consumes: `App\Support\IzinType::isSingleLevel(string $jenis): bool` (exists).
++- Produces: `IzinApprovalService::applyAtasan(Izin $izin, Pegawai $atasan, string $decision, ?string $catatan): Izin` and `applyPimpinan(Izin $izin, Pegawai $pimpinan, string $decision, ?string $catatan): Izin`. Throws `Illuminate\Validation\ValidationException` when status is not the expected prior state.
++
++**Steps:**
++- [ ] Write `tests/Feature/IzinApprovalRaceTest.php` modeled on the Cuti duplicate-approval regression test (find it via `grep -rl 'duplicate' tests/Feature` or the SEC-012 test). Cover: (a) atasan approve on status `Diajukan` succeeds and sets `status='Disetujui Atasan'` (two-level) / `'Disetujui'` (single-level); (b) calling `applyAtasan` twice → second throws ValidationException; (c) `applyPimpinan` on `'Diajukan'` (skipped atasan) throws; on `'Disetujui Atasan'` succeeds → `'Disetujui'`; (d) reject paths set `'Ditolak Atasan'` / `'Ditolak'`.
++- [ ] Run it; confirm it fails (service doesn't exist).
++- [ ] Create `app/Services/IzinApprovalService.php`: copy `CutiApprovalService` structure. Constants `APPROVE='Disetujui'`, `REJECT='Ditolak'`. `applyAtasan`: transaction + `lockAtStatus($izin, 'Diajukan')`; set `verifikasi_atasan`, `catatan_atasan`, `tanggal_verifikasi_atasan=now()`, approver uuid column if the izin table has one (check migration; if none, skip); status per `IzinType::isSingleLevel`. `applyPimpinan`: lock at `'Disetujui Atasan'`. No balance logic — Izin has no balances.
++- [ ] Run the new test; green.
++- [ ] Rewire `IzinController::prosesVerifikasiAtasan`/`prosesVerifikasiPimpinan` to call the service (resolve current approver Pegawai as today). Keep `authorize()` calls.
++- [ ] `php artisan test` — full suite green.
++- [ ] Commit: `fix(izin): race-safe approval service (port SEC-012 pattern)`.
++
++### Task 2: Izin FormRequests
++
++**Files:**
++- Create: `app/Http/Requests/StoreIzinRequest.php`, `UpdateIzinRequest.php`, `VerifyAtasanIzinRequest.php`, `VerifyPimpinanIzinRequest.php`
++- Modify: `app/Http/Controllers/IzinController.php` (replace inline `validateIzinKeluarKantor`/`validateIzinTidakMasukKerja` privates + `$request->validate` calls in store/update/verify methods)
++- Test: existing `tests/Feature/IzinPermaValidationTest.php` is the regression guard — do not weaken rules, only move them.
++
++**Interfaces:**
++- Produces: typed request objects; controller signatures become `store(StoreIzinRequest $request)` etc.
++
++**Steps:**
++- [ ] Move rules verbatim from controller privates/inline blocks into the four request classes (`authorize(): true` — policy checks stay in controller).
++- [ ] Run `php artisan test --filter IzinPermaValidationTest` — green.
++- [ ] Swap controller method signatures; delete the two private validate methods.
++- [ ] `php artisan test` — green.
++- [ ] Commit: `refactor(izin): extract FormRequests from inline validation`.
++
++### Task 3: pegawai.user_uuid FK (replace nip join)
++
++**Files:**
++- Create: `database/migrations/2026_08_23_000000_add_user_uuid_to_pegawai_table.php`
++- Modify: `app/Models/Pegawai.php` (`user()` → `belongsTo(User::class, 'user_uuid')`), `app/Models/User.php` (add `pegawai(): hasOne`), `app/Http/Controllers/CutiController.php:254,274`, `app/Http/Controllers/IzinController.php:141`
++- Test: `tests/Feature/UserPegawaiRelationTest.php` (new)
++
++**Interfaces:**
++- Produces: `User::pegawai(): HasOne` (`Auth::user()->pegawai`), FK `pegawai.user_uuid → users.uuid`, unique index.
++
++**Steps:**
++- [ ] Write failing test: user with linked pegawai → `Auth::user()->pegawai` returns it; nip rename does not break the link (the point of the FK).
++- [ ] Migration: `$table->foreignUuid('user_uuid')->nullable()->after('nip')`; backfill `DB::update('UPDATE pegawai p JOIN users u ON u.nip = p.nip SET p.user_uuid = u.uuid')`; `->unique()`; FK `references('uuid')->on('users')->nullOnDelete()`. Down: drop FK, index, column.
++- [ ] Swap both model relations; replace the three controller lookups with `Auth::user()->pegawai` — preserve failure behavior: where code used `->firstOrFail()`, throw the same 404-ish response if relation is null (check each site; IzinController:141 uses `firstOrFail()->uuid`).
++- [ ] `grep -rn "where('nip'" app/` — no auth-driven lookups remain (report any others found).
++- [ ] `php artisan migrate && php artisan test` — green.
++- [ ] Commit: `fix(models): pegawai↔user FK via user_uuid, replace nip join`.
++
++### Task 4: routes/web.php cleanup
++
++**Files:**
++- Modify: `routes/web.php:8,36-40,85`
++
++**Steps:**
++- [ ] `php artisan route:list > /tmp/routes-before.txt`
++- [ ] Delete lines 36–40 (unnamed `riwayat_jabatan` block shadowed by the named block at 51–58).
++- [ ] Delete the outer `Route::group(['middleware' => ['role:...|user']], ...)` wrapper (line 8 + its closing brace line 85), unindenting children — every inner group already carries its own role+auth+verified middleware (verified: all five inner groups list `role:` + `auth` + `verified`).
++- [ ] `php artisan route:list > /tmp/routes-after.txt`; diff — expect only the 5 duplicate rows gone, nothing else.
++- [ ] `php artisan test` (RouteMiddlewareTest + MiddlewareMatrixTest guard the matrix) — green.
++- [ ] Commit: `refactor(routes): drop duplicate riwayat_jabatan block and no-op outer role group`.
++
++### Task 5: dependency hygiene
++
++**Files:**
++- Modify: `composer.json`, `app/Models/User.php` (remove `HasApiTokens`), `routes/api.php` (delete sanctum route)
++
++**Steps:**
++- [ ] `grep -rn 'Intervention\|Image::make\|Redis\|redis_\|auth:sanctum\|createToken\|HasApiTokens\|Sanctum' app/ routes/ config/ --include='*.php'` — record hits; expected: only User.php trait + routes/api.php:17.
++- [ ] composer.json: remove `intervention/image`, `predis/predis`, `laravel/sanctum`, dev `laravel/breeze`, and the `illuminate/database: "*"` line.
++- [ ] Remove `HasApiTokens` import+trait from User; empty `routes/api.php` route block (keep file, RouteServiceProvider loads it).
++- [ ] `composer update intervention/image predis/predis laravel/sanctum laravel/breeze --with-all-dependencies` then `composer audit` — clean.
++- [ ] `php artisan test` + `php artisan config:cache && php artisan route:cache` — both succeed.
++- [ ] Commit: `chore(deps): remove unused intervention/predis/sanctum/breeze, drop database wildcard`.
++
++---
++
++## Explicitly deferred (separate plans)
++
++- **Laravel 12.61+ upgrade** (RISK-001 CVEs) — own milestone; do AFTER Tasks 1–5 land so the diff stays reviewable.
++- Status string enums, shared Cuti/Izin approval engine — only if a third workflow module ever appears. YAGNI now.
+diff --git a/routes/api.php b/routes/api.php
+index 889937e..a2a44f1 100644
+--- a/routes/api.php
++++ b/routes/api.php
+@@ -1,8 +1,5 @@
+ <?php
+ 
+-use Illuminate\Http\Request;
+-use Illuminate\Support\Facades\Route;
+-
+ /*
+ |--------------------------------------------------------------------------
+ | API Routes
+@@ -13,7 +10,3 @@
+ | be assigned to the "api" middleware group. Make something great!
+ |
+ */
+-
+-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+-    return $request->user();
+-});
+diff --git a/routes/web.php b/routes/web.php
+index 0cc9685..39471ec 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -5,82 +5,74 @@
+ use App\Http\Controllers\RiwayatPangkatController;
+ use Illuminate\Support\Facades\Route;
+ 
+-Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user']], function (): void {
+-    Route::group(['middleware' => ['role:super-admin', 'auth', 'verified']], function (): void {
+-        Route::resource('permissions', App\Http\Controllers\PermissionController::class);
+-        Route::post('permissions/search', [App\Http\Controllers\PermissionController::class, 'search']);
+-        Route::resource('roles', App\Http\Controllers\RoleController::class);
+-        Route::get('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'addPermissionToRole']);
+-        Route::put('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'givePermissionToRole']);
+-        Route::post('roles/search', [App\Http\Controllers\RoleController::class, 'search']);
+-    })->name('roles.');
++Route::group(['middleware' => ['role:super-admin', 'auth', 'verified']], function (): void {
++    Route::resource('permissions', App\Http\Controllers\PermissionController::class);
++    Route::post('permissions/search', [App\Http\Controllers\PermissionController::class, 'search']);
++    Route::resource('roles', App\Http\Controllers\RoleController::class);
++    Route::get('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'addPermissionToRole']);
++    Route::put('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'givePermissionToRole']);
++    Route::post('roles/search', [App\Http\Controllers\RoleController::class, 'search']);
++})->name('roles.');
+ 
+-    Route::group(['middleware' => ['role:super-admin|admin', 'auth', 'verified']], function (): void {
+-        Route::resource('users', App\Http\Controllers\UserController::class);
+-        Route::post('users/search', [App\Http\Controllers\UserController::class, 'search']);
+-    })->name('users.');
++Route::group(['middleware' => ['role:super-admin|admin', 'auth', 'verified']], function (): void {
++    Route::resource('users', App\Http\Controllers\UserController::class);
++    Route::post('users/search', [App\Http\Controllers\UserController::class, 'search']);
++})->name('users.');
+ 
+-    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator', 'auth', 'verified']], function (): void {
+-        Route::resource('hari-libur', App\Http\Controllers\HariLiburController::class);
+-    })->name('hari-libur.');
++Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator', 'auth', 'verified']], function (): void {
++    Route::resource('hari-libur', App\Http\Controllers\HariLiburController::class);
++})->name('hari-libur.');
+ 
+-    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator', 'auth', 'verified']], function (): void {
+-        Route::get('pegawai/search', [App\Http\Controllers\PegawaiController::class, 'search'])->name('pegawai.search');
+-        Route::post('jabatan/search', [App\Http\Controllers\JabatanController::class, 'search'])->name('jabatan.search');
++Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator', 'auth', 'verified']], function (): void {
++    Route::get('pegawai/search', [App\Http\Controllers\PegawaiController::class, 'search'])->name('pegawai.search');
++    Route::post('jabatan/search', [App\Http\Controllers\JabatanController::class, 'search'])->name('jabatan.search');
+ 
+-        Route::resource('pegawai', App\Http\Controllers\PegawaiController::class)->except('show');
+-        Route::get('pegawai/{pegawaiId}/detail', [App\Http\Controllers\PegawaiController::class, 'detail'])->name('pegawai.detail');
+-        // Dead give-roles / nested cuti / riwayat_* on PegawaiController removed (P0-003) — use Role/User + dedicated riwayat controllers.
+-        Route::resource('jabatan', App\Http\Controllers\JabatanController::class);
++    Route::resource('pegawai', App\Http\Controllers\PegawaiController::class)->except('show');
++    Route::get('pegawai/{pegawaiId}/detail', [App\Http\Controllers\PegawaiController::class, 'detail'])->name('pegawai.detail');
++    // Dead give-roles / nested cuti / riwayat_* on PegawaiController removed (P0-003) — use Role/User + dedicated riwayat controllers.
++    Route::resource('jabatan', App\Http\Controllers\JabatanController::class);
+ 
+-        Route::get('riwayat_jabatan/{pegawai_uuid}', [RiwayatJabatanController::class, 'index']);
+-        Route::get('riwayat_jabatan/{pegawai_uuid}/create', [RiwayatJabatanController::class, 'create']);
+-        Route::post('riwayat_jabatan', [RiwayatJabatanController::class, 'store']);
+-        Route::get('riwayat_jabatan/{riwayatJabatanId}/edit', [RiwayatJabatanController::class, 'edit']);
+-        Route::put('riwayat_jabatan/{riwayatJabatanId}', [RiwayatJabatanController::class, 'update']);
+-
+-        Route::prefix('riwayat_pangkat')->name('riwayat_pangkat.')->group(function () {
+-            Route::get('/create/{uuid}', [RiwayatPangkatController::class, 'create'])->name('create');
+-            Route::post('/', [RiwayatPangkatController::class, 'store'])->name('store');
+-            Route::get('/{uuid}', [RiwayatPangkatController::class, 'index'])->name('index');
+-            Route::get('/{uuid}/edit', [RiwayatPangkatController::class, 'edit'])->name('edit');
+-            Route::put('/{uuid}', [RiwayatPangkatController::class, 'update'])->name('update');
+-            Route::delete('/{uuid}', [RiwayatPangkatController::class, 'destroy'])->name('destroy');
+-        });
++    Route::prefix('riwayat_pangkat')->name('riwayat_pangkat.')->group(function () {
++        Route::get('/create/{uuid}', [RiwayatPangkatController::class, 'create'])->name('create');
++        Route::post('/', [RiwayatPangkatController::class, 'store'])->name('store');
++        Route::get('/{uuid}', [RiwayatPangkatController::class, 'index'])->name('index');
++        Route::get('/{uuid}/edit', [RiwayatPangkatController::class, 'edit'])->name('edit');
++        Route::put('/{uuid}', [RiwayatPangkatController::class, 'update'])->name('update');
++        Route::delete('/{uuid}', [RiwayatPangkatController::class, 'destroy'])->name('destroy');
++    });
+ 
+-        Route::prefix('riwayat_jabatan')->name('riwayat_jabatan.')->group(function () {
+-            Route::get('/create/{uuid}', [RiwayatJabatanController::class, 'create'])->name('create');
+-            Route::post('/', [RiwayatJabatanController::class, 'store'])->name('store');
+-            Route::get('/{uuid}', [RiwayatJabatanController::class, 'index'])->name('index');
+-            Route::get('/{uuid}/edit', [RiwayatJabatanController::class, 'edit'])->name('edit');
+-            Route::put('/{uuid}', [RiwayatJabatanController::class, 'update'])->name('update');
+-            Route::delete('/{uuid}', [RiwayatJabatanController::class, 'destroy'])->name('destroy');
+-        });
+-    })->name('pegawai.');
++    Route::prefix('riwayat_jabatan')->name('riwayat_jabatan.')->group(function () {
++        Route::get('/create/{uuid}', [RiwayatJabatanController::class, 'create'])->name('create');
++        Route::post('/', [RiwayatJabatanController::class, 'store'])->name('store');
++        Route::get('/{uuid}', [RiwayatJabatanController::class, 'index'])->name('index');
++        Route::get('/{uuid}/edit', [RiwayatJabatanController::class, 'edit'])->name('edit');
++        Route::put('/{uuid}', [RiwayatJabatanController::class, 'update'])->name('update');
++        Route::delete('/{uuid}', [RiwayatJabatanController::class, 'destroy'])->name('destroy');
++    });
++})->name('pegawai.');
+ 
+-    // Cuti routes
+-    Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user', 'auth', 'verified']], function (): void {
+-        Route::prefix('cuti')->name('cuti.')->group(function () {
+-            Route::get('/update-balance', [App\Http\Controllers\CutiController::class, 'updateBalance'])->name('update-balance');
+-            Route::get('/update-all-balances', [App\Http\Controllers\CutiController::class, 'updateAllBalances'])->name('update-all-balances');
+-            Route::get('/balance', [App\Http\Controllers\CutiController::class, 'showBalance'])->name('balance');
+-            Route::get('/create', [App\Http\Controllers\CutiController::class, 'create'])->name('create');
+-            Route::get('/', [App\Http\Controllers\CutiController::class, 'index'])->name('index');
+-            Route::post('/', [App\Http\Controllers\CutiController::class, 'store'])->name('store');
++// Cuti routes
++Route::group(['middleware' => ['role:super-admin|admin|atasan-pimpinan|pimpinan|verifikator|user', 'auth', 'verified']], function (): void {
++    Route::prefix('cuti')->name('cuti.')->group(function () {
++        Route::get('/update-balance', [App\Http\Controllers\CutiController::class, 'updateBalance'])->name('update-balance');
++        Route::get('/update-all-balances', [App\Http\Controllers\CutiController::class, 'updateAllBalances'])->name('update-all-balances');
++        Route::get('/balance', [App\Http\Controllers\CutiController::class, 'showBalance'])->name('balance');
++        Route::get('/create', [App\Http\Controllers\CutiController::class, 'create'])->name('create');
++        Route::get('/', [App\Http\Controllers\CutiController::class, 'index'])->name('index');
++        Route::post('/', [App\Http\Controllers\CutiController::class, 'store'])->name('store');
+ 
+-            Route::get('/{uuid}', [App\Http\Controllers\CutiController::class, 'show'])->name('show');
+-            Route::get('/{uuid}/edit', [App\Http\Controllers\CutiController::class, 'edit'])->name('edit');
+-            Route::put('/{uuid}', [App\Http\Controllers\CutiController::class, 'update'])->name('update');
+-            Route::delete('/{uuid}', [App\Http\Controllers\CutiController::class, 'destroy'])->name('destroy');
+-            Route::get('/{uuid}/verifikasi', [App\Http\Controllers\CutiController::class, 'verifikasi'])->name('verifikasi');
+-            Route::post('/{uuid}/proses-verifikasi', [App\Http\Controllers\CutiController::class, 'prosesVerifikasi'])->name('proses-verifikasi');
+-            Route::get('/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiPimpinan'])->name('verifikasi-pimpinan');
+-            Route::post('/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiPimpinan'])->name('proses-verifikasi-pimpinan');
+-            Route::get('/{uuid}/verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiAtasanPimpinan'])->name('verifikasi-atasan-pimpinan');
+-            Route::post('/{uuid}/proses-verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiAtasanPimpinan'])->name('proses-verifikasi-atasan-pimpinan');
+-            Route::get('/{uuid}/pdf', [App\Http\Controllers\CutiController::class, 'generatePdf'])->name('pdf');
+-            Route::get('/{uuid}/dokumen', [App\Http\Controllers\CutiController::class, 'downloadDocument'])->name('dokumen');
+-        });
++        Route::get('/{uuid}', [App\Http\Controllers\CutiController::class, 'show'])->name('show');
++        Route::get('/{uuid}/edit', [App\Http\Controllers\CutiController::class, 'edit'])->name('edit');
++        Route::put('/{uuid}', [App\Http\Controllers\CutiController::class, 'update'])->name('update');
++        Route::delete('/{uuid}', [App\Http\Controllers\CutiController::class, 'destroy'])->name('destroy');
++        Route::get('/{uuid}/verifikasi', [App\Http\Controllers\CutiController::class, 'verifikasi'])->name('verifikasi');
++        Route::post('/{uuid}/proses-verifikasi', [App\Http\Controllers\CutiController::class, 'prosesVerifikasi'])->name('proses-verifikasi');
++        Route::get('/{uuid}/verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiPimpinan'])->name('verifikasi-pimpinan');
++        Route::post('/{uuid}/proses-verifikasi-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiPimpinan'])->name('proses-verifikasi-pimpinan');
++        Route::get('/{uuid}/verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'verifikasiAtasanPimpinan'])->name('verifikasi-atasan-pimpinan');
++        Route::post('/{uuid}/proses-verifikasi-atasan-pimpinan', [App\Http\Controllers\CutiController::class, 'prosesVerifikasiAtasanPimpinan'])->name('proses-verifikasi-atasan-pimpinan');
++        Route::get('/{uuid}/pdf', [App\Http\Controllers\CutiController::class, 'generatePdf'])->name('pdf');
++        Route::get('/{uuid}/dokumen', [App\Http\Controllers\CutiController::class, 'downloadDocument'])->name('dokumen');
+     });
+ });
+ 
+diff --git a/tests/Feature/IzinApprovalRaceTest.php b/tests/Feature/IzinApprovalRaceTest.php
+new file mode 100644
+index 0000000..051c001
+--- /dev/null
++++ b/tests/Feature/IzinApprovalRaceTest.php
+@@ -0,0 +1,113 @@
++<?php
++
++namespace Tests\Feature;
++
++use App\Models\Izin;
++use App\Models\Pegawai;
++use App\Services\IzinApprovalService;
++use Illuminate\Validation\ValidationException;
++use Tests\SimpegTestCase;
++
++class IzinApprovalRaceTest extends SimpegTestCase
++{
++    private IzinApprovalService $service;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++        $this->service = new IzinApprovalService;
++    }
++
++    private function makeIzin(array $attrs = []): Izin
++    {
++        return Izin::factory()->create(array_merge([
++            'jenis_izin' => 'Izin Keperluan Pribadi', // two-level
++            'status' => 'Diajukan',
++        ], $attrs));
++    }
++
++    public function test_atasan_approval_on_diajukan_two_level_sets_disetujui_atasan(): void
++    {
++        $izin = $this->makeIzin();
++        $atasan = Pegawai::factory()->create();
++
++        $result = $this->service->applyAtasan($izin, $atasan, 'Disetujui', 'ok');
++
++        $this->assertSame('Disetujui Atasan', $result->status);
++        $this->assertSame('Disetujui', $result->verifikasi_atasan);
++        $this->assertSame('ok', $result->catatan_atasan);
++        $this->assertNotNull($result->tanggal_verifikasi_atasan);
++    }
++
++    public function test_atasan_approval_on_single_level_jenis_is_final(): void
++    {
++        $izin = $this->makeIzin(['jenis_izin' => 'Izin Keluar Kantor']);
++        $atasan = Pegawai::factory()->create();
++
++        $result = $this->service->applyAtasan($izin, $atasan, 'Disetujui', 'ok');
++
++        $this->assertSame('Disetujui', $result->status);
++    }
++
++    public function test_duplicate_atasan_approval_throws_and_keeps_state(): void
++    {
++        $izin = $this->makeIzin();
++        $atasan = Pegawai::factory()->create();
++
++        $this->service->applyAtasan($izin, $atasan, 'Disetujui', 'ok');
++
++        try {
++            $this->service->applyAtasan($izin, $atasan, 'Ditolak', 'again');
++            $this->fail('Duplicate approval must fail.');
++        } catch (ValidationException) {
++            $fresh = Izin::where('uuid', $izin->uuid)->firstOrFail();
++            $this->assertSame('Disetujui Atasan', $fresh->status);
++            $this->assertSame('Disetujui', $fresh->verifikasi_atasan);
++            $this->assertSame('ok', $fresh->catatan_atasan);
++        }
++    }
++
++    public function test_pimpinan_approval_on_diajukan_throws(): void
++    {
++        $izin = $this->makeIzin(['status' => 'Diajukan']);
++        $pimpinan = Pegawai::factory()->create();
++
++        $this->expectException(ValidationException::class);
++        $this->service->applyPimpinan($izin, $pimpinan, 'Disetujui', 'skip');
++    }
++
++    public function test_pimpinan_approval_on_disetujui_atasan_succeeds(): void
++    {
++        $izin = $this->makeIzin(['status' => 'Disetujui Atasan']);
++        $pimpinan = Pegawai::factory()->create();
++
++        $result = $this->service->applyPimpinan($izin, $pimpinan, 'Disetujui', 'lgtm');
++
++        $this->assertSame('Disetujui', $result->status);
++        $this->assertSame('Disetujui', $result->verifikasi_pimpinan);
++        $this->assertSame('lgtm', $result->catatan_pimpinan);
++        $this->assertNotNull($result->tanggal_verifikasi_pimpinan);
++    }
++
++    public function test_atasan_rejection_sets_ditolak_atasan(): void
++    {
++        $izin = $this->makeIzin();
++        $atasan = Pegawai::factory()->create();
++
++        $result = $this->service->applyAtasan($izin, $atasan, 'Ditolak', 'no');
++
++        $this->assertSame('Ditolak Atasan', $result->status);
++        $this->assertSame('Ditolak', $result->verifikasi_atasan);
++    }
++
++    public function test_pimpinan_rejection_sets_ditolak(): void
++    {
++        $izin = $this->makeIzin(['status' => 'Disetujui Atasan']);
++        $pimpinan = Pegawai::factory()->create();
++
++        $result = $this->service->applyPimpinan($izin, $pimpinan, 'Ditolak', 'no');
++
++        $this->assertSame('Ditolak', $result->status);
++        $this->assertSame('Ditolak', $result->verifikasi_pimpinan);
++    }
++}
+diff --git a/tests/Feature/UserPegawaiRelationTest.php b/tests/Feature/UserPegawaiRelationTest.php
+new file mode 100644
+index 0000000..8c570da
+--- /dev/null
++++ b/tests/Feature/UserPegawaiRelationTest.php
+@@ -0,0 +1,65 @@
++<?php
++
++namespace Tests\Feature;
++
++use App\Models\Pegawai;
++use App\Models\User;
++use Illuminate\Support\Facades\Auth;
++use Tests\SimpegTestCase;
++
++class UserPegawaiRelationTest extends SimpegTestCase
++{
++    public function test_auth_user_pegawai_returns_linked_pegawai(): void
++    {
++        $user = User::factory()->create();
++        $pegawai = Pegawai::factory()->create([
++            'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
++        ]);
++
++        $this->actingAs($user);
++
++        $this->assertTrue(Auth::user()->pegawai->is($pegawai));
++    }
++
++    public function test_user_without_pegawai_has_null_relation(): void
++    {
++        $user = User::factory()->create();
++
++        $this->actingAs($user);
++
++        $this->assertNull(Auth::user()->pegawai);
++    }
++
++    public function test_renaming_pegawai_nip_keeps_link(): void
++    {
++        $user = User::factory()->create();
++        $pegawai = Pegawai::factory()->create([
++            'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
++        ]);
++
++        $pegawai->update(['nip' => '999999999999999999']);
++
++        $this->actingAs($user);
++        $this->assertTrue($user->pegawai()->first()->is($pegawai));
++    }
++
++    public function test_pegawai_user_inverse_returns_linked_user(): void
++    {
++        $user = User::factory()->create();
++        $pegawai = Pegawai::factory()->create([
++            'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
++        ]);
++
++        $this->assertTrue($pegawai->user->is($user));
++    }
++
++    public function test_pegawai_without_user_has_null_inverse(): void
++    {
++        $pegawai = Pegawai::factory()->create();
++
++        $this->assertNull($pegawai->user);
++    }
++}
+diff --git a/tests/SimpegTestCase.php b/tests/SimpegTestCase.php
+index afea146..9feb10b 100644
+--- a/tests/SimpegTestCase.php
++++ b/tests/SimpegTestCase.php
+@@ -39,6 +39,7 @@ protected function createUserWithRole(string $role, array $userAttributes = [],
+ 
+         Pegawai::factory()->create(array_merge([
+             'nip' => $user->nip,
++            'user_uuid' => $user->uuid,
+         ], $pegawaiAttributes));
+ 
+         return $user;

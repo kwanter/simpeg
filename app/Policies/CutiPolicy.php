@@ -3,19 +3,18 @@
 namespace App\Policies;
 
 use App\Models\Cuti;
-use App\Models\Pegawai;
 use App\Models\User;
 
 class CutiPolicy
 {
     private function pegawaiUuidFor(User $user): ?string
     {
-        return Pegawai::where('nip', $user->nip)->value('uuid');
+        return $user->pegawai?->uuid;
     }
 
     private function isOwner(User $user, Cuti $cuti): bool
     {
-        return $user->nip === $cuti->pegawai?->nip;
+        return $user->pegawai?->uuid === $cuti->pegawai_uuid;
     }
 
     private function isAssignedPimpinan(User $user, Cuti $cuti): bool

@@ -18,7 +18,7 @@ class ApproverDirectoryService
         }
 
         return User::role('pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
+            ->join('pegawai', 'pegawai.user_uuid', '=', 'users.uuid')
             ->select('pegawai.uuid as pimpinan_uuid', 'pegawai.nama')
             ->get();
     }
@@ -33,7 +33,7 @@ class ApproverDirectoryService
         }
 
         return User::role('atasan-pimpinan')
-            ->join('pegawai', 'users.nip', '=', 'pegawai.nip')
+            ->join('pegawai', 'pegawai.user_uuid', '=', 'users.uuid')
             ->select('pegawai.uuid as atasan_pimpinan_uuid', 'pegawai.nama')
             ->get();
     }

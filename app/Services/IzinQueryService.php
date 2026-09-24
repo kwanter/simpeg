@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Izin;
-use App\Models\Pegawai;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -31,7 +30,7 @@ class IzinQueryService
             return $query;
         }
 
-        $pegawaiUuid = Pegawai::where('nip', $user->nip)->value('uuid');
+        $pegawaiUuid = $user->pegawai?->uuid;
 
         if (! $pegawaiUuid) {
             return $query->whereRaw('1 = 0');
