@@ -1,0 +1,18 @@
+app/Http/Controllers/IzinController.php
+  h_00672522f4dbdd 17,45-48,78-93,266-269,285-288
+tests/Unit/IzinStructureTest.php
+  h_00672522f4dbdd 102-140
+tests/Unit/Policies/IzinEditDecisionEquivalenceTest.php
+  h_00672522f4dbdd 1-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a69b6c7658f4d185edc326ff0f4a19d0d0352b7d",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
