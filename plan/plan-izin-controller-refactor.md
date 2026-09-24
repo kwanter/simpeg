@@ -135,15 +135,20 @@ This ledger is the authoritative record of execution state. The per-step checkbo
 | T-004 IzinSubmissionService + unit contract | ✅ Complete | `ce393d4` |
 | T-005 store rewired | ✅ Complete | `aec21ec` |
 | T-006 update rewired | ✅ Complete | `aec21ec` (shared with T-005; see RBCK-001) |
-| T-007 Single resolution point + 404 contract | ⏳ Pending | — |
-| T-008 Prove and remove dead `$allowEdit` | ⏳ Pending | — |
-| T-009 Dedupe missing-pegawai guard | ⏳ Pending | — |
-| T-010 Controller structural pins | ⏳ Pending | — |
-| T-011 Final Floor-Guard Gate | ⏳ Pending | — |
+| T-007 Single resolution point + 404 contract | ✅ Complete | `2283f2d` |
+| T-008 Prove and remove dead `$allowEdit` | ✅ Complete | uncommitted |
+| T-009 Dedupe missing-pegawai guard | ✅ Complete | uncommitted |
+| T-010 Controller structural pins | ✅ Complete | uncommitted |
+| T-011 Final Floor-Guard Gate | ✅ Executed, awaiting sign-off | — |
 
-Phases 1, 2, and 3 are complete and were approved at their phase gates. Suite state at the end of Phase 3: **347 passed, 794 assertions**. The controller holds zero occurrences of `WorkdayService`, `isSingleLevel`, and `maxWorkdays`; `$allowEdit` remains by design and belongs to T-008.
+All twelve tickets have been executed. Phases 1 through 4 were approved at their gates. Suite state at the end of Phase 5: **353 passed, 822 assertions**. The AC-002 structural gate is complete: the controller holds zero occurrences of `WorkdayService`, `isSingleLevel`, `maxWorkdays`, and `$allowEdit`, exactly one missing-pegawai guard, and the two deliberately retained branches.
 
-Committed outside the ticket sequence to establish a clean AC-001 baseline: `27c1467` records the Izin characterization suite plus the `phpunit.xml` hardening, which had been sitting as uncommitted work. Without that commit, AC-001's verification command (`git status --short tests/`) produced a false positive because `IzinDocumentAuthorizationTest.php` showed as modified.
+Two gate results to read carefully:
+
+- **AC-033 (Playwright) is UNVERIFIED, not passed.** `node_modules/` is absent in this environment, so the Chromium suite could not run. The structural reason to expect no regression is that no Blade view, route, or frontend asset changed (`git diff --stat resources/ routes/` is empty), but that is an argument, not a test result.
+- **AC-001 holds for the inherited oracle only.** `git diff --stat 27c1467 -- tests/` shows that since the characterization commit, only three refactor-owned files changed — `IzinNoSuratBoundaryTest`, `IzinStructureTest`, and `IzinSubmissionServiceTest` — and **no inherited characterization file was touched**. The plan's Ticket-005, 006, 008, 009, and 010 all instruct extending `IzinStructureTest`, so audit finding MC-7 asks the specification to distinguish "inherited oracle file" from "refactor-owned file" explicitly.
+
+Committed outside the ticket sequence to establish a clean AC-001 baseline: `27c1467` records the Izin characterization suite plus the `phpunit.xml` hardening, which had been sitting as uncommitted work. Without that commit, AC-001's verification command (`git status --short tests/`) produced a false positive because `IzinDocumentAuthorizationTest.php` showed as modified. Documentation remediation for audit iteration 2 is recorded in `0603dc6`.
 
 ### Phase 1: Safety-Net Expansion (zero production change)
 

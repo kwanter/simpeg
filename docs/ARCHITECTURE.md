@@ -120,7 +120,7 @@ flowchart TD
 | `database/` | Define and populate persistence | Migrations, factories, seeders | Schema changes require migration safety and relevant persistence tests. |
 | `routes/` | Declare HTTP and console entry points | `web.php`, `auth.php`, `api.php`, `console.php`, `channels.php` | Middleware and route ordering are behaviorally significant; cover access via Feature tests. |
 | `resources/views/` | Render server-side user interface | Blade pages, layouts, components, and PDF templates | User-visible flows can be verified through HTTP assertions and Playwright. |
-| `tests/Unit/` | Test focused units and policy boundaries | 18 PHP test files | PHPUnit Unit suite configured in `phpunit.xml`; currently many tests use Laravel/database support, while structural pins inspect source directly. |
+| `tests/Unit/` | Test focused units and policy boundaries | 19 PHP test files | PHPUnit Unit suite configured in `phpunit.xml`; currently many tests use Laravel/database support, while structural pins inspect source directly. |
 | `tests/Feature/` | Verify integrated application behavior | 32 PHP test files | Covers route, auth, RBAC, workflow, middleware, and document authorization seams. |
 | `spec/` | Hold approved technical specifications | `spec-feature-*.md` with requirements, acceptance criteria, and pre-agreed test seam contracts | Approved specs are the frozen execution baseline; do not modify them from the code phase. |
 | `plan/` | Hold TDD implementation plans | `plan-*-refactor.md`, `plan-feature-*.md` with tracer-bullet tickets | Each ticket declares RED/GREEN/VERIFY/COMMIT steps against a named seam; keep plans in step with what was actually executed. |
@@ -160,7 +160,7 @@ flowchart TD
 ## 10. Testing Strategy
 
 - **PHP framework:** PHPUnit 10 through Laravel; configured suites are `Unit` and `Feature`.
-- **PHP test locations:** `tests/Unit/` (18 files) and `tests/Feature/` (32 files), counted directly from the repository rather than carried over from an earlier inventory. A further three files at the `tests/` root provide suite support: `TestCase.php`, `SimpegTestCase.php`, and `CreatesApplication.php`.
+- **PHP test locations:** `tests/Unit/` (19 files) and `tests/Feature/` (32 files), counted directly from the repository rather than carried over from an earlier inventory. A further three files at the `tests/` root provide suite support: `TestCase.php`, `SimpegTestCase.php`, and `CreatesApplication.php`.
 - **Browser framework:** Playwright; tests live in `e2e/` (one spec file detected, with two guest-facing scenarios). Configuration declares Chromium, Firefox, and WebKit, but CI runs only `--project=chromium`.
 - **Database:** PHPUnit uses SQLite `:memory:` with `RefreshDatabase`; this is fast and isolated but does not establish behavior specific to the production database engine, including real concurrent row-lock behavior.
 - **Shared setup:** `tests/SimpegTestCase.php` clears cached permissions, seeds permission definitions, and provides a role/user/pegawai factory helper.
