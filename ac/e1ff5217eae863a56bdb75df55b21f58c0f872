@@ -1,0 +1,14 @@
+tests/Feature/IzinContractPinTest.php
+  h_00672522f4dbdd 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ace1ff5217eae863a56bdb75df55b21f58c0f872",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
