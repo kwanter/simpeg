@@ -12,11 +12,37 @@ class UpdateIzinRequest extends FormRequest
 {
     use JenisIzinRulesTrait;
 
+    private ?Izin $cachedIzin = null;
+
+    private bool $izinResolved = false;
+
     public function authorize(): bool
     {
-        $izin = Izin::where('uuid', $this->route('izin'))->firstOrFail();
+        $izin = $this->resolvedIzin();
+
+        if ($izin === null) {
+            abort(404);
+        }
 
         return $this->user()->can('update', $izin);
+    }
+
+    /**
+     * The Izin bound to this request, resolved at most once and shared by
+     * authorize(), rules(), and the controller action (spec REQ-005, AC-021).
+     *
+     * Returns null when the route uuid matches no record. authorize() converts
+     * that into a 404 rather than a policy denial, so the response stays
+     * indistinguishable from a missing resource (spec REQ-012, SEC-005).
+     */
+    public function resolvedIzin(): ?Izin
+    {
+        if (! $this->izinResolved) {
+            $this->izinResolved = true;
+            $this->cachedIzin = Izin::where('uuid', $this->route('izin'))->first();
+        }
+
+        return $this->cachedIzin;
     }
 
     public function rules(): array
@@ -49,7 +75,7 @@ class UpdateIzinRequest extends FormRequest
      */
     public function isNoSuratUpdate(): bool
     {
-        $izin = Izin::where('uuid', $this->route('izin'))->first();
+        $izin = $this->resolvedIzin();
 
         return $izin !== null
             && $izin->verifikasi_atasan == 'Disetujui'

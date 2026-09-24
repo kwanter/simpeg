@@ -111,9 +111,9 @@ class IzinController extends Controller
         return view('izin.show', compact('izin'));
     }
 
-    public function update(UpdateIzinRequest $request, $uuid)
+    public function update(UpdateIzinRequest $request)
     {
-        $izin = Izin::where('uuid', $uuid)->firstOrFail();
+        $izin = $request->resolvedIzin();
         $this->authorize('update', $izin);
         $user = Auth::user();
 
