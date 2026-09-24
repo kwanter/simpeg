@@ -1,0 +1,19 @@
+app/Http/Controllers/IzinController.php
+  s_d79749604f85c8::t_0541d6e24d1d1f 114,116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2283f2d236b4ef459a2125086171a64ab3a313f2",
+  "prompts": {},
+  "sessions": {
+    "s_d79749604f85c8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f32a4bec3ffeaDd6uYJSfsXgef",
+        "model": "unknown"
+      },
+      "human_author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
