@@ -1,0 +1,14 @@
+tests/Feature/IzinNoSuratBoundaryTest.php
+  h_00672522f4dbdd 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2cacfaa27f97437e37ff96a1ed00aeca66755ea2",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
