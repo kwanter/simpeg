@@ -1,0 +1,20 @@
+app/Http/Requests/StoreIzinRequest.php
+  h_00672522f4dbdd 7,12-13
+app/Http/Requests/UpdateIzinRequest.php
+  h_00672522f4dbdd 7,13-14
+app/Traits/JenisIzinRulesTrait.php
+  h_00672522f4dbdd 1-67
+tests/Unit/IzinStructureTest.php
+  h_00672522f4dbdd 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8fea342177dd4970e85628198ee152ca113a1879",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
