@@ -1,0 +1,16 @@
+docs/ARCHITECTURE.md
+  h_00672522f4dbdd 123,163
+plan/plan-izin-controller-refactor.md
+  h_00672522f4dbdd 138-142,144,146-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0baebf31778fff34732f3049104331c30d7f1602",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
