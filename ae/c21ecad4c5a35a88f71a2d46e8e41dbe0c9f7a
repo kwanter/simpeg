@@ -1,0 +1,16 @@
+app/Http/Controllers/IzinController.php
+  h_00672522f4dbdd 15,27,92,94,139
+tests/Unit/IzinStructureTest.php
+  h_00672522f4dbdd 5,13-24,63-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aec21ecad4c5a35a88f71a2d46e8e41dbe0c9f7a",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
