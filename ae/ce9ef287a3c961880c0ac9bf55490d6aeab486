@@ -1,0 +1,22 @@
+CONTEXT.md
+  h_00672522f4dbdd 1-55
+docs/adr/0001-izin-no-surat-update-discrimination.md
+  h_00672522f4dbdd 1-23
+docs/audit/clarification-report-izin-controller-refactor-2026-09-24.md
+  h_00672522f4dbdd 1-94
+docs/audit/consistency-audit-izin-controller-refactor-2026-09-24.md
+  h_00672522f4dbdd 1-131
+plan/plan-refactor-izin-submission-v1.0.md
+  h_00672522f4dbdd 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aece9ef287a3c961880c0ac9bf55490d6aeab486",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
