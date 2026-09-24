@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Requests\UpdateIzinRequest;
 use App\Models\Izin;
 use App\Models\Pegawai;
 use Illuminate\Support\Facades\DB;
@@ -100,7 +101,7 @@ class IzinNoSuratBoundaryTest extends SimpegTestCase
         $this->assertNull($izin->fresh()->no_surat_izin);
     }
 
-    public function test_full_update_resolves_the_izin_at_most_once(): void
+    public function test_full_update_resolves_the_izin_exactly_once(): void
     {
         $admin = $this->createUserWithRole('admin');
         $izin = $this->createAtasanApprovedIzin();
@@ -118,14 +119,14 @@ class IzinNoSuratBoundaryTest extends SimpegTestCase
             ]);
         });
 
-        $this->assertLessThanOrEqual(
+        $this->assertSame(
             1,
             $lookups,
-            'A full update must resolve the Izin once and reuse it (AC-021).'
+            'A full update must resolve the Izin exactly once and reuse it (AC-021).'
         );
     }
 
-    public function test_no_surat_update_resolves_the_izin_at_most_once(): void
+    public function test_no_surat_update_resolves_the_izin_exactly_once(): void
     {
         $admin = $this->createUserWithRole('admin');
         $izin = $this->createAtasanApprovedIzin();
@@ -138,10 +139,33 @@ class IzinNoSuratBoundaryTest extends SimpegTestCase
             ]);
         });
 
-        $this->assertLessThanOrEqual(
+        $this->assertSame(
             1,
             $lookups,
-            'The no-surat path must resolve the Izin once and reuse it (AC-021).'
+            'The no-surat path must resolve the Izin exactly once and reuse it (AC-021).'
+        );
+    }
+
+    public function test_is_no_surat_update_is_cached_for_the_request_lifetime(): void
+    {
+        $izin = $this->createAtasanApprovedIzin();
+
+        $request = UpdateIzinRequest::create(route('izin.update', $izin->uuid), 'PUT', [
+            '_token' => 'test-token',
+            '_method' => 'PUT',
+            'no_surat_izin' => 'IZIN-2026-001',
+        ]);
+        $request->setContainer(app());
+        $request->setRedirector(app('redirect'));
+        $request->setRouteResolver(fn () => app('router')->getRoutes()->match($request));
+
+        $this->assertTrue($request->isNoSuratUpdate());
+
+        $request->merge(['extra_a' => '1', 'extra_b' => '2']);
+
+        $this->assertTrue(
+            $request->isNoSuratUpdate(),
+            'A second evaluation must reuse the cached answer. Recomputing would flip the predicate, because the payload now exceeds three entries (REQ-005, spec §4.2).'
         );
     }
 }

@@ -16,6 +16,8 @@ class UpdateIzinRequest extends FormRequest
 
     private bool $izinResolved = false;
 
+    private ?bool $noSuratUpdate = null;
+
     public function authorize(): bool
     {
         $izin = $this->resolvedIzin();
@@ -72,14 +74,23 @@ class UpdateIzinRequest extends FormRequest
     /**
      * Check if this is just a no_surat_izin update for an approved izin
      * (csrf, method, and no_surat_izin only).
+     *
+     * Memoized for the lifetime of the request so that rules() and the
+     * controller action always read the same answer (spec §4.2, REQ-005).
      */
     public function isNoSuratUpdate(): bool
     {
+        if ($this->noSuratUpdate !== null) {
+            return $this->noSuratUpdate;
+        }
+
         $izin = $this->resolvedIzin();
 
-        return $izin !== null
+        $this->noSuratUpdate = $izin !== null
             && $izin->verifikasi_atasan == 'Disetujui'
             && $this->has('no_surat_izin')
             && count($this->all()) <= 3;
+
+        return $this->noSuratUpdate;
     }
 }
