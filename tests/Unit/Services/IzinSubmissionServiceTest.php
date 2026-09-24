@@ -46,7 +46,11 @@ class IzinSubmissionServiceTest extends SimpegTestCase
 
         sort($publicMethods);
 
-        $this->assertSame(['prepareForCreate', 'prepareForFullUpdate', 'resolveOwnerUuid'], $publicMethods);
+        $this->assertSame(
+            ['prepareForCreate', 'prepareForFullUpdate', 'resolveOwnerUuid'],
+            $publicMethods,
+            'This seam is deliberately minimal (AC-003). If a fourth public method is genuinely needed, amend AC-003 before relaxing this assertion - do not delete the assertion to make an addition pass.'
+        );
     }
 
     public function test_prepare_for_create_pins_single_level_dates_and_zeroes_days(): void

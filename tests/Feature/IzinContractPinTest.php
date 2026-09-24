@@ -82,12 +82,18 @@ class IzinContractPinTest extends SimpegTestCase
         );
 
         // An ordered UUID (what the HasUuids trait would generate) encodes a
-        // millisecond timestamp in its first 12 hex characters, so its value
-        // tracks now() closely. A random v4 prefix lands a median ~1.4e14 away.
+        // millisecond timestamp in its first 12 hex characters, so its prefix
+        // tracks now() to within a few milliseconds. A random v4 prefix is
+        // uniform over 2^48, so a +/-1e6 ms window yields a false positive with
+        // probability ~7e-9 - three orders of magnitude rarer than the 1e9 ms
+        // (11 day) window that was here before. A value-only test cannot be made
+        // fully deterministic: Str::orderedUuid() reads the same $uuidFactory
+        // hook as Str::uuid() (vendor/laravel/framework .../Support/Str.php),
+        // so injecting a factory cannot tell the two generators apart.
         $prefix = (int) hexdec(substr($izin->uuid, 0, 12));
         $nowInMilliseconds = (int) round(microtime(true) * 1000);
         $this->assertGreaterThan(
-            1_000_000_000,
+            1_000_000,
             abs($prefix - $nowInMilliseconds),
             'The persisted uuid looks like a time-prefixed ordered UUID; the controller must keep assigning Str::uuid().'
         );

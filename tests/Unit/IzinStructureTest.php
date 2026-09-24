@@ -61,80 +61,79 @@ class IzinStructureTest extends TestCase
         }
     }
 
-    public function test_store_action_holds_no_perma_rule_logic(): void
+    /**
+     * Source of every method declared on the controller, keyed by method name.
+     * Scoping to method bodies keeps these assertions off class-level noise such
+     * as imports and the class docblock, and it names the offending method.
+     *
+     * @return array<string, string>
+     */
+    private function controllerMethodSources(): array
     {
-        $source = $this->controllerMethodSource('store');
+        $sources = [];
 
-        foreach (['WorkdayService', 'isSingleLevel', 'maxWorkdays'] as $symbol) {
+        foreach ((new \ReflectionClass(IzinController::class))->getMethods() as $method) {
+            $sources[$method->getName()] = $this->controllerMethodSource($method->getName());
+        }
+
+        return $sources;
+    }
+
+    public function test_no_controller_method_holds_perma_rule_logic(): void
+    {
+        foreach ($this->controllerMethodSources() as $method => $source) {
+            foreach (['WorkdayService', 'isSingleLevel', 'maxWorkdays'] as $symbol) {
+                $this->assertStringNotContainsString(
+                    $symbol,
+                    $source,
+                    $method.'() must delegate '.$symbol.' to IzinSubmissionService (REQ-001..REQ-003).'
+                );
+            }
+        }
+    }
+
+    public function test_no_controller_method_recomputes_the_edit_decision(): void
+    {
+        foreach ($this->controllerMethodSources() as $method => $source) {
             $this->assertStringNotContainsString(
-                $symbol,
+                '$allowEdit',
                 $source,
-                'IzinController::store() must delegate '.$symbol.' to IzinSubmissionService.'
+                $method.'() must not recompute an edit decision; IzinPolicy::update() is the single authority (REQ-004).'
             );
         }
     }
 
-    public function test_update_action_holds_no_perma_rule_logic(): void
+    public function test_exactly_one_controller_method_owns_the_missing_pegawai_guard(): void
     {
-        $source = $this->controllerMethodSource('update');
+        $owners = [];
 
-        foreach (['WorkdayService', 'isSingleLevel', 'maxWorkdays'] as $symbol) {
-            $this->assertStringNotContainsString(
-                $symbol,
-                $source,
-                'IzinController::update() must delegate '.$symbol.' to IzinSubmissionService.'
-            );
+        foreach ($this->controllerMethodSources() as $method => $source) {
+            if (str_contains($source, 'Data pegawai tidak ditemukan')) {
+                $owners[] = $method;
+            }
         }
-    }
 
-    public function test_controller_holds_no_perma_rule_logic_at_all(): void
-    {
-        $source = (string) file_get_contents(app_path('Http/Controllers/IzinController.php'));
-
-        foreach (['WorkdayService', 'isSingleLevel', 'maxWorkdays'] as $symbol) {
-            $this->assertStringNotContainsString(
-                $symbol,
-                $source,
-                'IzinSubmissionService must be the only implementation of '.$symbol.' (REQ-001..REQ-003).'
-            );
-        }
-    }
-
-    public function test_controller_holds_no_local_edit_authorization_decision(): void
-    {
-        $source = (string) file_get_contents(app_path('Http/Controllers/IzinController.php'));
-
-        $this->assertStringNotContainsString(
-            '$allowEdit',
-            $source,
-            'IzinController must not recompute an edit decision; IzinPolicy::update() is the single authority (REQ-004).'
-        );
-    }
-
-    public function test_controller_holds_exactly_one_missing_pegawai_guard(): void
-    {
-        $source = (string) file_get_contents(app_path('Http/Controllers/IzinController.php'));
-
-        $this->assertSame(
+        $this->assertCount(
             1,
-            substr_count($source, 'Data pegawai tidak ditemukan'),
-            'The three create actions must share one missing-pegawai guard rather than repeating the message (REQ-011).'
+            $owners,
+            'Exactly one controller method must own the missing-pegawai guard; found in: '.implode(', ', $owners)
         );
     }
 
-    public function test_controller_retains_the_deliberately_kept_branches(): void
+    public function test_destroy_retains_the_defensive_delete_guard(): void
     {
-        $source = (string) file_get_contents(app_path('Http/Controllers/IzinController.php'));
-
         $this->assertStringContainsString(
             'Pengajuan izin gagal dihapus.',
-            $source,
+            $this->controllerMethodSource('destroy'),
             'The defensive delete guard is retained on purpose. Removing it would turn a future model-level veto into a silent success (AC-038).'
         );
+    }
 
+    public function test_generate_pdf_retains_the_filename_fallback(): void
+    {
         $this->assertStringContainsString(
             '$izin->no_surat_izin ?? $izin->uuid',
-            $source,
+            $this->controllerMethodSource('generatePdf'),
             'The unreachable PDF filename fallback is retained on purpose (AC-040).'
         );
     }
