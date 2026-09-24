@@ -1,0 +1,19 @@
+spec/spec-feature-izin-controller-refactor.md
+  s_5acd42377ddbca::t_ee5d5e1375a9ac 1-513
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0603dc6c3cda9c405b2e6b62e0a6423126222c71",
+  "prompts": {},
+  "sessions": {
+    "s_5acd42377ddbca": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0d174-a095-7550-8b7c-f4b9d6dcbecb",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
