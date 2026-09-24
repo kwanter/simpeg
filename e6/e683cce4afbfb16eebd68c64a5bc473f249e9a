@@ -1,0 +1,18 @@
+tests/Feature/IzinContractPinTest.php
+  h_00672522f4dbdd 85-92,96
+tests/Unit/IzinStructureTest.php
+  h_00672522f4dbdd 64-71,73,75-76,78-79,82,84-91,95,97,99,101,106,108,110-114,116,118-119,123,127,130,132-133,136
+tests/Unit/Services/IzinSubmissionServiceTest.php
+  h_00672522f4dbdd 49-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6e683cce4afbfb16eebd68c64a5bc473f249e9a",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
