@@ -1,0 +1,16 @@
+app/Services/IzinSubmissionService.php
+  h_00672522f4dbdd 1-65
+tests/Unit/Services/IzinSubmissionServiceTest.php
+  h_00672522f4dbdd 1-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce393d481acc76228115707024a5d140f6f4823c",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
