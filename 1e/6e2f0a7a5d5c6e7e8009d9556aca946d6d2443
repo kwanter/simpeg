@@ -1,0 +1,14 @@
+tests/Feature/IzinCreateFormTest.php
+  h_00672522f4dbdd 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e6e2f0a7a5d5c6e7e8009d9556aca946d6d2443",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
