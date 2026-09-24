@@ -1,0 +1,18 @@
+app/Http/Requests/UpdateIzinRequest.php
+  h_00672522f4dbdd 19-20,77-79,83-86,89,93-94
+tests/Feature/IzinNoSuratBoundaryTest.php
+  h_00672522f4dbdd 5,104,122,125,129,142,145-168
+tests/Feature/IzinPermaCapTest.php
+  h_00672522f4dbdd 1-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad96fcd67241b53854073cdfc6a398c91d1273d9",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
