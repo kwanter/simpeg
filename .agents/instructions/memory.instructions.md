@@ -133,3 +133,85 @@ recovery cycles pass; re-review and dependency disposition remain pending.
 -->
 
 ---
+
+## Session Checkpoint: 2026-11-05
+
+- **Active Memory Path:** `.agents/instructions/memory.instructions.md`
+- **Current SDLC Phase:** Authorized bug fixes verified; local work committed
+  and pushed. This checkpoint does not establish release readiness.
+- **Active Artifacts:**
+  - `spec/spec-feature-monthly-pkp.md`, `plan/plan-monthly-pkp.md`, and
+    `docs/pkp-verification.md` remain the PKP reference artifacts.
+  - The preceding checkpoint retains PKP review and dependency-audit risks.
+- **Achieved Milestones:**
+  - Started the bind-mounted preview with `docker-compose.dev.yml` at
+    `http://localhost:8080`: Apache/PHP app, MySQL 8.0, and Redis.
+  - Ran 31 migrations, seeded six users and 50 employees, linked demo
+    accounts, configured two PKP assessors, and created a November PKP draft.
+  - Exercised real HTTP Izin approvals and Cuti three-stage approvals.
+    The approved annual leave consumed three days: 12 total, 3 used, 9 left.
+  - Fixed all four reported defects through regression tests and live HTTP:
+    PDF filename separators, Cuti letter-number-only validation, the missing
+    Cuti balance redirect route, and unimplemented resource show routes.
+- **Recorded Verification (not rerun during this checkpoint save):**
+  - Full suite in the app container: 602 passed, 4,580 assertions.
+  - Repository-wide Pint: 277 files passed.
+  - Izin and Cuti PDF downloads with slashed letter numbers returned 200
+    application/pdf; qpdf checks found no syntax or stream encoding errors.
+  - Cuti balance without a linked employee returned 302 to `/cuti`; the
+    linked employee case returned 200.
+  - Users, roles, and permissions detail GET URLs returned 405 rather than
+    500. Their index/edit pages and role permission editor returned 200.
+  - App restart retained the Redis-backed login session and database data.
+  - Browser relay failed while the Mac was locked; this session established
+    HTTP/PDF evidence, not fresh browser screenshot evidence.
+- **Dead-Ends (Do NOT Repeat):**
+  - Host qpdf exists at `/opt/homebrew/bin/qpdf`, but configuration requires
+    `PKP_QPDF_BINARY`. An unset variable caused 51 host-suite failures.
+    Supplying it made the two affected PKP modules pass 37 tests with 506
+    assertions; the complete container suite was green.
+  - Removing a resource show route leaves PUT/PATCH/DELETE at the same path;
+    GET therefore returns 405, not 404. Do not add routing workarounds.
+- **Updated Files:**
+  - `app/Http/Controllers/CutiController.php` and `IzinController.php` replace
+    slash/backslash characters only in generated PDF download filenames.
+  - `app/Http/Requests/UpdateCutiRequest.php` accepts the approved-record
+    letter-number-only payload using the existing validation rules.
+  - `routes/web.php` excludes show for users, roles, and permissions;
+    no show callers or corresponding controller actions existed.
+  - Regression coverage is in `CutiBalanceRouteTest`, `ResourceShowRoutesTest`,
+    `CutiNoSuratUpdateTest`, `CutiPdfFilenameTest`, and `IzinPdfEndpointTest`.
+- **Decisions Made:**
+  - User explicitly selected all local work for publication, including
+    prior PKP/Izin/CI/Docker/governance changes, not only this session's fixes.
+  - Commit `e0176e7` on main contains 241 changed files, titled
+    `feat(pkp): deliver monthly assessments and harden HR document workflows`.
+  - Push to `https://github.com/kwanter/simpeg.git` succeeded, advancing main
+    from `f36c14c` to `e0176e7`, including 15 previously local commits.
+    No merge was needed: main was ahead, not diverged; no force push occurred.
+  - New CSS `public/build/assets/app-DR2UAoqb.css` was committed with its
+    manifest. `storage/framework/testing-pkp.sqlite` was excluded as runtime
+    data. A limited credential-pattern scan found no matches; it was not a
+    comprehensive secret audit. Intentional Markdown hard breaks were kept.
+- **Next Action / Pending:**
+  - Preview containers were left running; runtime liveness is session-local.
+    Use `docker compose -f docker-compose.dev.yml down` to stop without
+    deleting persisted `docker/mysql-data`.
+  - Demo login identities include `user@simpeg.local`, `admin@simpeg.local`,
+    `superadmin@simpeg.local`, `atasanpimpinan@simpeg.local`,
+    `pimpinan@simpeg.local`, and `verifikator@simpeg.local`; obtain the local
+    seed password from the existing environment, not from this memory.
+  - Demo records include one approved Izin, one submitted Izin, one approved
+    Cuti, and one PKP draft. Both approved letters retain slashed numbers.
+  - Hosted CI results and deployment were not verified. Earlier PKP review
+    authorization and dependency findings remain pending; do not infer that
+    a successful push resolves those risks.
+  - This memory-only checkpoint is a new local edit after the published
+    commit; it has not been committed or pushed by the save request.
+
+<!-- checkpoint-tail: All four HR defects were fixed and verified with 602
+passing tests; all approved local work was pushed as e0176e7; preview was
+left running, while hosted CI, dependency disposition, and PKP review remain
+unverified or pending. -->
+
+---
