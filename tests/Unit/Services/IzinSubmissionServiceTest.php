@@ -6,6 +6,7 @@ use App\Models\Pegawai;
 use App\Services\IzinSubmissionService;
 use App\Support\IzinType;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\SimpegTestCase;
 
@@ -163,6 +164,30 @@ class IzinSubmissionServiceTest extends SimpegTestCase
         ] as $key) {
             $this->assertArrayNotHasKey($key, $result);
         }
+    }
+
+    public function test_single_level_normalisation_does_not_query_working_days(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-01-05'));
+
+        $hariLiburQueries = 0;
+        DB::listen(function ($query) use (&$hariLiburQueries) {
+            if (preg_match('/from ["`]?hari_libur["`]?/i', $query->sql)) {
+                $hariLiburQueries++;
+            }
+        });
+
+        $this->service()->prepareForCreate($this->payload([
+            'jenis_izin' => IzinType::KELUAR_KANTOR,
+            'tanggal_mulai' => '2026-01-05',
+            'tanggal_selesai' => '2026-01-05',
+        ]));
+
+        $this->assertSame(
+            0,
+            $hariLiburQueries,
+            'The single-level branch must not compute working days whose result it immediately discards (PERF-02).'
+        );
     }
 
     public function test_resolve_owner_uuid_follows_the_privilege_and_emptiness_table(): void

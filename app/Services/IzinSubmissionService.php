@@ -44,16 +44,20 @@ class IzinSubmissionService
     {
         $jenis = $validated['jenis_izin'];
 
+        if (IzinType::isSingleLevel($jenis)) {
+            $validated['jumlah_hari'] = 0;
+            $validated['tanggal_mulai'] = now()->toDateString();
+            $validated['tanggal_selesai'] = now()->toDateString();
+
+            return $validated;
+        }
+
         $validated['jumlah_hari'] = WorkdayService::countWorkdays(
             $validated['tanggal_mulai'],
             $validated['tanggal_selesai']
         );
 
-        if (IzinType::isSingleLevel($jenis)) {
-            $validated['jumlah_hari'] = 0;
-            $validated['tanggal_mulai'] = now()->toDateString();
-            $validated['tanggal_selesai'] = now()->toDateString();
-        } elseif ($jenis === IzinType::TIDAK_MASUK
+        if ($jenis === IzinType::TIDAK_MASUK
             && $validated['jumlah_hari'] > IzinType::maxWorkdays(IzinType::TIDAK_MASUK)) {
             throw ValidationException::withMessages([
                 'tanggal_selesai' => ['Izin tidak masuk kerja maksimal 2 (dua) hari kerja.'],

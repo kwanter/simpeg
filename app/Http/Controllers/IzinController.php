@@ -120,7 +120,7 @@ class IzinController extends Controller
 
     public function update(UpdateIzinRequest $request)
     {
-        $izin = $request->resolvedIzin();
+        $izin = $request->resolvedIzinOrFail();
         $this->authorize('update', $izin);
         $user = Auth::user();
 
@@ -128,9 +128,11 @@ class IzinController extends Controller
         $isNoSuratUpdate = $request->isNoSuratUpdate();
 
         // Don't allow full updating if already verified by pimpinan or atasan
-        if (! $isNoSuratUpdate &&
+        if (
+            ! $isNoSuratUpdate &&
             ($izin->verifikasi_pimpinan !== 'Belum Diverifikasi' ||
-             ($izin->verifikasi_atasan !== 'Belum Diverifikasi' && ! $user->hasRole('super-admin') && ! $user->hasRole('admin')))) {
+                ($izin->verifikasi_atasan !== 'Belum Diverifikasi' && ! $user->hasRole('super-admin') && ! $user->hasRole('admin')))
+        ) {
             return redirect()->route('izin.index')->with('error', 'Pengajuan izin yang sudah diverifikasi tidak dapat diubah');
         }
 
@@ -240,6 +242,7 @@ class IzinController extends Controller
         $pdf = \PDF::loadView($template, ['izin' => $izin]);
 
         $filename = 'Surat_Izin_'.$izin->pegawai->nama.'_'.($izin->no_surat_izin ?? $izin->uuid).'.pdf';
+        $filename = str_replace(['/', '\\'], '-', $filename);
 
         return $pdf->download($filename);
     }

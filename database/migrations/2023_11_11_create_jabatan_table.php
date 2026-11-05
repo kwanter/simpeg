@@ -14,7 +14,9 @@ return new class extends Migration
             $table->text('deskripsi')->nullable();
             $table->uuid('parent_uuid')->nullable();
             $table->timestamps();
+        });
 
+        Schema::table('jabatan', function (Blueprint $table) {
             $table->foreign('parent_uuid')
                 ->references('uuid')
                 ->on('jabatan')

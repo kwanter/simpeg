@@ -35,6 +35,7 @@ class UserRolePermissionSeeder extends Seeder
             'view cuti', 'create cuti', 'update cuti', 'verifikasi cuti', 'delete cuti', 'pimpinan cuti', 'atasan pimpinan cuti', 'proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti',
             'view izin', 'create izin', 'update izin', 'verifikasi izin', 'delete izin',
             'verifikasi data',
+            'pkp.view-all', 'pkp.manage-assessors', 'pkp.manage-deadlines', 'pkp.reassign',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -76,6 +77,7 @@ class UserRolePermissionSeeder extends Seeder
         $adminRole->givePermissionTo(['create riwayat_jabatan', 'view riwayat_jabatan']);
         $adminRole->givePermissionTo(['create riwayat_pangkat', 'view riwayat_pangkat']);
         $adminRole->givePermissionTo(['verifikasi data']);
+        $adminRole->givePermissionTo(['pkp.view-all', 'pkp.manage-assessors', 'pkp.manage-deadlines', 'pkp.reassign']);
 
         $atasanpimpinanRole = Role::where('name', 'atasan-pimpinan')->first();
         $atasanpimpinanRole->givePermissionTo(['create cuti', 'view cuti', 'update cuti', 'delete cuti', 'pimpinan cuti', 'atasan pimpinan cuti', 'proses-verifikasi-atasan-pimpinan cuti', 'verifikasi-pimpinan cuti', 'proses-verifikasi-pimpinan cuti']);

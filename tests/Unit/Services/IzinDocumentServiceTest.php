@@ -128,20 +128,23 @@ class IzinDocumentServiceTest extends TestCase
         $this->assertSame('no-store, private', $response->headers->get('Cache-Control'));
     }
 
-    public function test_download_rejects_unsafe_and_missing_filenames(): void
+    public function test_download_rejects_an_unsafe_filename(): void
     {
         Storage::fake('local');
         Storage::fake('public');
-        $service = new IzinDocumentService;
-
-        try {
-            $service->download('../secret.pdf');
-            $this->fail('Unsafe filenames should return a not found response.');
-        } catch (NotFoundHttpException) {
-            $this->assertTrue(true);
-        }
 
         $this->expectException(NotFoundHttpException::class);
-        $service->download('missing.pdf');
+
+        (new IzinDocumentService)->download('../secret.pdf');
+    }
+
+    public function test_download_rejects_a_missing_filename(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $this->expectException(NotFoundHttpException::class);
+
+        (new IzinDocumentService)->download('missing.pdf');
     }
 }

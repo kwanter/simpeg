@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libicu-dev \
         libcurl4-openssl-dev \
         default-mysql-client \
+        qpdf \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo \
@@ -35,6 +36,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         xml \
         curl \
     && rm -rf /var/lib/apt/lists/*
+
+ENV PKP_QPDF_BINARY=/usr/bin/qpdf
 
 # ── Redis extension via PECL ────────────────────────────────────────────────
 RUN pecl install redis \

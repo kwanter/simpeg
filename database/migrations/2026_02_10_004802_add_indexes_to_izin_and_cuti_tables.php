@@ -42,7 +42,11 @@ return new class extends Migration
         Schema::table('cuti', function (Blueprint $table) {
             $table->dropIndex(['status']);
             $table->dropIndex(['jenis_cuti']);
-            $table->dropIndex(['pegawai_uuid']);
+            if (Schema::getConnection()->getDriverName() === 'mysql' && ! Schema::hasIndex('cuti', 'cuti_pegawai_uuid_foreign')) {
+                $table->renameIndex('cuti_pegawai_uuid_index', 'cuti_pegawai_uuid_foreign');
+            } else {
+                $table->dropIndex(['pegawai_uuid']);
+            }
         });
 
         Schema::table('hari_libur', function (Blueprint $table) {

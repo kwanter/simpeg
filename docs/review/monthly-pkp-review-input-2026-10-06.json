@@ -1,0 +1,447 @@
+{
+  "baseline_head": "e6e683cce4afbfb16eebd68c64a5bc473f249e9a",
+  "mode": "scoped uncommitted working tree including untracked source",
+  "review_date": "2026-10-06",
+  "scope_exclusions": [
+    "unrelated Izin source/tests/plans",
+    "unrelated lockfile churn",
+    "SDLC bootstrap skills",
+    "generated build assets",
+    "test database contents"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/php-tests.yml",
+      "sha256": "45ab223ed86ced09f90adf1617d9ad5b02eaf421426636fa0049f53cb48f2a42"
+    },
+    {
+      "path": ".github/workflows/pkp-integration.yml",
+      "sha256": "10a0210d08f2f4813d8a3cc61064bbd1f3ec68325501d0db69a0cc64a0efbdbc"
+    },
+    {
+      "path": ".github/workflows/playwright.yml",
+      "sha256": "b07884edad760fa784c421cd1b3be182a9215682eb602c05e5abdb3201d43477"
+    },
+    {
+      "path": "CONSTRAINTS.md",
+      "sha256": "d3d5794bab0d702f886948452fbeafa1a63fcb5952f054ecc344640ed4e73f65"
+    },
+    {
+      "path": "CONTEXT.md",
+      "sha256": "4ba06fb4f59fd03dd6400f10c4a79f9b2593072df946ff447780f89ced05e0f7"
+    },
+    {
+      "path": "app/Http/Controllers/PkpController.php",
+      "sha256": "4ec3e864c4025d6a880e5b5e1f44de8eff98058c2bf666712fe5cc805a1b0bfd"
+    },
+    {
+      "path": "app/Http/Requests/ConfigurePkpAssessorsRequest.php",
+      "sha256": "d0e6a0fb1bc0dbe9755b13b867ef7445122864f7fd1785bca23ed7c633e92bea"
+    },
+    {
+      "path": "app/Http/Requests/ConfigurePkpDeadlineRequest.php",
+      "sha256": "af8526476cd006d8646f710e1baf5caf34534367137b9b464320efc9017f6b70"
+    },
+    {
+      "path": "app/Http/Requests/DecidePkpRequest.php",
+      "sha256": "5fd72008b3b7e4e85a84fcc710a3ff2c6c58ecb9beef822b86c7b6fe8133f0b2"
+    },
+    {
+      "path": "app/Http/Requests/InspectPkpDocumentRequest.php",
+      "sha256": "22b54f41d7e3c95bdee94adbf3610dfe8c17c13ed68fd5025d2c3c9dc2b770c6"
+    },
+    {
+      "path": "app/Http/Requests/ReassignPkpAssessorRequest.php",
+      "sha256": "781bf93773cc5a861e8bd831d41a1ab34e36f922f62fd24f46dbef5bcb281f39"
+    },
+    {
+      "path": "app/Http/Requests/ReassignPkpInspectorRequest.php",
+      "sha256": "4f3ae31736d447460f5c11f0511646ec3bbfda84e2489580e6922a581dd6b4b6"
+    },
+    {
+      "path": "app/Http/Requests/RevisePkpRequest.php",
+      "sha256": "b5b82eb5e298e90c686766e95a12f8bdb578575aa240f4f277042b1146bfdaa3"
+    },
+    {
+      "path": "app/Http/Requests/SavePkpRequest.php",
+      "sha256": "ebbbfddcb654b258a102aa98919b84060ffe7d641a37bf598c9456daa84f2de6"
+    },
+    {
+      "path": "app/Http/Requests/StorePkpDocumentRequest.php",
+      "sha256": "5cfb2548206ac5395219c47731c4bd67cf9059b344c43de29ad0b6b52713fd95"
+    },
+    {
+      "path": "app/Http/Requests/StorePkpRequest.php",
+      "sha256": "6e1c208d03968a9a6982eb6058292fd3bca6f12e2cf658764c52a9fabd8c57ad"
+    },
+    {
+      "path": "app/Http/Requests/SubmitPkpRequest.php",
+      "sha256": "d7c93f4a2063c7b1bde40b9acb6282c06b54c861f2d01489128879dd43c3ee75"
+    },
+    {
+      "path": "app/Models/Pkp.php",
+      "sha256": "b6598c9b985ae0c445c691569b1613e7b65057ef74c5c90e95a34beb5b7af637"
+    },
+    {
+      "path": "app/Models/PkpDocument.php",
+      "sha256": "eacdcc0e01925782bd8dd411d8648d6491c57fd5130083d01120c4aa0e63d272"
+    },
+    {
+      "path": "app/Policies/PkpPolicy.php",
+      "sha256": "b24ff319b2e342ab41b901cc2a820ec13aa6d0a827208f3e07df8e49957b29e0"
+    },
+    {
+      "path": "app/Services/PkpAssessmentService.php",
+      "sha256": "e05e40d6b16a27e78495622ec73bddecfdc1a0134b14c4bb3b299c34c3a946d8"
+    },
+    {
+      "path": "app/Services/PkpAssessorOptionsService.php",
+      "sha256": "dddc12040e21c67639a0b00af2fedf3801961e68b9977be22416de3d9f196994"
+    },
+    {
+      "path": "app/Services/PkpAssessorSettingsService.php",
+      "sha256": "68bc03357f41a4ff9656018826cfe16dc4a44a828898cd3db5a659f8a24d6cc5"
+    },
+    {
+      "path": "app/Services/PkpAssignmentService.php",
+      "sha256": "bd88e5b08f7fe2638b86bb8a17cc19d97a7a0c2cad3dcfe2da8c16954532028c"
+    },
+    {
+      "path": "app/Services/PkpAuthorization.php",
+      "sha256": "2e1f398d1929550f72739dd37ef0434377f99fcea2a0472b6cef9b523b52e009"
+    },
+    {
+      "path": "app/Services/PkpCalculator.php",
+      "sha256": "1d354f21d246b6811107e1e7de39524a62c5b35d11c350289b310d86775b5b8c"
+    },
+    {
+      "path": "app/Services/PkpDeadlineService.php",
+      "sha256": "8122714373b8a83011b6f748c9cc2a8939c51ba9db13df92ac23c9e21376a30c"
+    },
+    {
+      "path": "app/Services/PkpDocumentService.php",
+      "sha256": "cff06970ca370b5a24d26e3073c18a0bbe40775a3606e08eec066dfd83eaa7e5"
+    },
+    {
+      "path": "app/Services/PkpIdentityService.php",
+      "sha256": "37741281171fe67716121cf662081b97e7f1e1bb437b5e6d4c4631c1ef77b7ac"
+    },
+    {
+      "path": "app/Services/PkpMutationResult.php",
+      "sha256": "831a9b4e5f1eb43a6f4bfc1f7bcb0a38599624dccc334d4316ed574bfddf2345"
+    },
+    {
+      "path": "app/Services/PkpPdfService.php",
+      "sha256": "e8248d962151917200bff606f8fea727d7e1faf43f3da07f745ccda3d8c1ce20"
+    },
+    {
+      "path": "app/Services/PkpPdfValidator.php",
+      "sha256": "09182d266ebc7b4284a814b438c3c92d8b1271074c71b6132b8aa94d04d4eb90"
+    },
+    {
+      "path": "app/Services/PkpSubmissionService.php",
+      "sha256": "282ad440b966e4f1cdb301cd3b2196694cdf9985c9817ed13fd451d1a0d7afdd"
+    },
+    {
+      "path": "app/Support/ActivityInput.php",
+      "sha256": "27bc849828ab589b056143d57074d7a1073d1a2b1aff8a2190c8a4435f8e652e"
+    },
+    {
+      "path": "app/Support/CalculationResult.php",
+      "sha256": "2cf67abc3f234e4e1419cef42d824d1155f33ce3a124ca55075303f53efa84d1"
+    },
+    {
+      "path": "app/Support/ConfigurationResult.php",
+      "sha256": "8c3ca716af9c4764a42ed551396b0b219265a9e6a8297518794b69f9c8a18653"
+    },
+    {
+      "path": "app/Support/ExactValue.php",
+      "sha256": "33aa3cdaf05a55daeb44d2270abeb79487134b9f829d06f4888cd2e65d9b42d2"
+    },
+    {
+      "path": "app/Support/IndicatorInput.php",
+      "sha256": "a41464909b53e9fbd8ac564e67be613e95fcce1cfb533d97f462e55715db9268"
+    },
+    {
+      "path": "app/Support/PdfInspection.php",
+      "sha256": "ddff8cdbd618e49b2bd17c814275f2b5b9285236e32f746ba21b561400f79aa3"
+    },
+    {
+      "path": "app/Support/PkpContext.php",
+      "sha256": "8e83acd603179ee9bad6f8439947ae34f9068b036bb90861e872d526185376a0"
+    },
+    {
+      "path": "compose.pkp-tests.yaml",
+      "sha256": "ad94e1dd2ef76c589d60a363917eca2975ac6614a4af73755c27e3b22a36c97e"
+    },
+    {
+      "path": "composer.json",
+      "sha256": "1d2d8bce4a50643f0febe79b4f83335c6c3cd2aabc903edef7dddab05e57ac99"
+    },
+    {
+      "path": "config/pkp.php",
+      "sha256": "52d1eda2cd3f6486dad8d8c8363329ba715343d24ef7f95466e6aaf3f09b4cf0"
+    },
+    {
+      "path": "database/migrations/2023_11_11_create_jabatan_table.php",
+      "sha256": "099ec45ccbdfa7076c839db64bcb69f8f819cafb45b7ca79673909839ffd0689"
+    },
+    {
+      "path": "database/migrations/2025_11_11_create_cuti_balance_table.php",
+      "sha256": "d58b7873f10fb57741c127edb6f60ea43d2cba51fb8e40f1e3ea43f6960898b0"
+    },
+    {
+      "path": "database/migrations/2026_10_06_100001_create_pkp_assessor_settings.php",
+      "sha256": "c785ad9978dc306f0adc8b171efc0abc9ba8671f07b6ad25b712debef1429164"
+    },
+    {
+      "path": "database/migrations/2026_10_06_100002_create_pkp_drafts.php",
+      "sha256": "3b4f4953cfcda410117daa50209980efd621d9619fd1961eb4ae7153b2f33075"
+    },
+    {
+      "path": "database/migrations/2026_10_06_100003_create_pkp_activities.php",
+      "sha256": "74158a5c2cb52246b6fccf26184290eb1bb45e493b688dda512ff461f166c0c0"
+    },
+    {
+      "path": "database/migrations/2026_10_06_100004_create_pkp_submissions.php",
+      "sha256": "7cdeb59a4a9141a570c5c018d5107411b1dd4d476f825029a47bde798bdbe5f8"
+    },
+    {
+      "path": "database/migrations/2026_10_06_100005_create_pkp_content_decisions.php",
+      "sha256": "67dcdcd94e706c9517fd7d9957b88a7494f23e2d16450f0f38e091b867f3d22a"
+    },
+    {
+      "path": "database/migrations/2026_10_06_100006_create_pkp_documents.php",
+      "sha256": "909729e604082601befc850307a882ed76bf914ce0442bf8c6c3ff402782311b"
+    },
+    {
+      "path": "database/migrations/2026_10_06_100007_create_pkp_document_reviews.php",
+      "sha256": "8b25e90a89d0257ab07e1ba9c30e47d5938d216a2850dd67ea732803e3316221"
+    },
+    {
+      "path": "database/seeders/PkpE2EFixtureSeeder.php",
+      "sha256": "95780b5a043b4a69d2d7d14157680693c487661207b2d5f0a7fe22bfcc8c0c67"
+    },
+    {
+      "path": "database/seeders/UserRolePermissionSeeder.php",
+      "sha256": "b1cdf1622f96494768ad9fe11a81d56e5e8c28422717dae056c9c9d6a313c545"
+    },
+    {
+      "path": "docker/apache/Dockerfile",
+      "sha256": "5a19a51ff734e6f332b400974e67c60323e5a623e7b3869f9a1f5c9c0c15d9ea"
+    },
+    {
+      "path": "docker/apache/php.ini",
+      "sha256": "9ef24fbb448618dbab175b6626593b0d0b51006c53c2572fc5f46a7d80ba5f76"
+    },
+    {
+      "path": "docker/common/php-fpm/Dockerfile",
+      "sha256": "4222fc187bc04c15b4cf171eeaa5e19548ab6462fe41463c0180669a182b00f6"
+    },
+    {
+      "path": "docker/common/php-fpm/pkp.ini",
+      "sha256": "b3b0901f7f3b75655d4a0ca63878d01b16d85d2c6cd456f27937f55f568a0786"
+    },
+    {
+      "path": "docker/development/workspace/Dockerfile",
+      "sha256": "f566047dcf5c41d9c6a5d3e199e5d12491d762f81b58b1af405743611f0d3187"
+    },
+    {
+      "path": "docker/production/nginx/nginx.conf",
+      "sha256": "6842e76538f5d213b253a0a15d132b402c25523e665cc90001870589df6a5adc"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "76cf64c9aa7c5c4742d87dc2e4b864e62d6e7637ebee56a6f4680c6e1e169bb1"
+    },
+    {
+      "path": "docs/pkp-verification.md",
+      "sha256": "7403070eac5deba575b5cb7c4c274bda5787718039522231ac0ae237e393a34a"
+    },
+    {
+      "path": "e2e/pkp.spec.js",
+      "sha256": "172416f0369f9ebde1aa26990f3892d1e9fcae135613d9b92d952c48a8139ad4"
+    },
+    {
+      "path": "phpunit.pkp-concurrency.xml",
+      "sha256": "cd84cf82777878d35c002e1875db4c1b1d9a814091a251f959e9b644fa33188b"
+    },
+    {
+      "path": "plan/plan-monthly-pkp.md",
+      "sha256": "484e85ca65ee0b85c2f952e7f08bc9a6ed795553017f2f2dbfa6ffbdfb41dcd6"
+    },
+    {
+      "path": "playwright.config.js",
+      "sha256": "18a54bc8d41cde178fe9b86f9b87ac90abd692320f2b998a821022fe00900552"
+    },
+    {
+      "path": "playwright.pkp.config.js",
+      "sha256": "a2ad4566f94c3fc6ba06a55936395410784bbf469277cec949ccda9245efa425"
+    },
+    {
+      "path": "resources/views/layouts/navigation.blade.php",
+      "sha256": "f7f65626a7c010c28d405a3cb7986077c6dd1026d5870beaa936c88f84f1b764"
+    },
+    {
+      "path": "resources/views/pkp/assessments.blade.php",
+      "sha256": "6ddf4125f3758447f22665404adc00003f0f676e8bc2b1c49896ddc7be7c6608"
+    },
+    {
+      "path": "resources/views/pkp/assessor-settings.blade.php",
+      "sha256": "3728b40c6391b4772ddfd8caf1b8c17ab293df0b5b12f9fbc7e4365b80bede16"
+    },
+    {
+      "path": "resources/views/pkp/create.blade.php",
+      "sha256": "7fba18cb9497358a2cfbc66368b71cba6a856f777fee7cb3615bdefa3794f7d3"
+    },
+    {
+      "path": "resources/views/pkp/deadline.blade.php",
+      "sha256": "505403f8eaa0e4cdd2653f8bfd28fe4b64e9efb518cecab8a558a6be2f858f2c"
+    },
+    {
+      "path": "resources/views/pkp/edit.blade.php",
+      "sha256": "b5b48fba689862777facd43042b5b8f2d30f2c7d638b1f721d8fb463d9d79dad"
+    },
+    {
+      "path": "resources/views/pkp/index.blade.php",
+      "sha256": "2e8a519b030e553e6578213ddf8eb01762e95c6d90cf03ab9a72414b9df31eb4"
+    },
+    {
+      "path": "resources/views/pkp/partials/document-review.blade.php",
+      "sha256": "04d1fd4475b01f37867e6e40e51c7e948f6694aedbe5a2cafca628571018d4f8"
+    },
+    {
+      "path": "resources/views/pkp/partials/documents.blade.php",
+      "sha256": "9403fdabc6605bff33533d0d94064fa73a38e034bc585714fa6f7d1b5baf38c6"
+    },
+    {
+      "path": "resources/views/pkp/partials/reassignment.blade.php",
+      "sha256": "52f315fd7d2e4a1782a86d9c84854f356d43fe2ba88f117862d6ffc2cd2fbdab"
+    },
+    {
+      "path": "resources/views/pkp/partials/scores.blade.php",
+      "sha256": "3939a8c049d52c63b311fdbcce3fafb74222d860ed0cd13ca91f996d46e12a07"
+    },
+    {
+      "path": "resources/views/pkp/pdf.blade.php",
+      "sha256": "d52ba92158e7036a87dc84384055b665806a05615b7b6c66ea7384bbd1d1018f"
+    },
+    {
+      "path": "routes/web.php",
+      "sha256": "581854c66c50f99cc0c982b351b7800cd877a460675adb424c6a9907027e4ba2"
+    },
+    {
+      "path": "spec/spec-feature-monthly-pkp.md",
+      "sha256": "512156a3937a0925a101eca9cae2e6ad5187eb38395b262fde1bdd6266418734"
+    },
+    {
+      "path": "tests/Feature/PkpActivityTest.php",
+      "sha256": "5e235f3d6069bf0d368c79e65faf389aa556e8666ceae4d554c184aae663a68c"
+    },
+    {
+      "path": "tests/Feature/PkpAssessmentTest.php",
+      "sha256": "75fd36bec87436e317a76b6b4c1ed1457f6120200fc8d8e1d183a3197f7ecfae"
+    },
+    {
+      "path": "tests/Feature/PkpAssessorSettingsTest.php",
+      "sha256": "ad6e0421112cb70b3b5783308abfe31e6f610c5e45088e637fdbd848bac4d916"
+    },
+    {
+      "path": "tests/Feature/PkpDeadlineTest.php",
+      "sha256": "cfae8687e1cbf922198b3b9efe3fa440e6368c1478b9a75a450f15766c7f87f3"
+    },
+    {
+      "path": "tests/Feature/PkpDocumentFailureTest.php",
+      "sha256": "60f5997cc10c327108377f51d6d941649c444771083a0546146d2152ad906d02"
+    },
+    {
+      "path": "tests/Feature/PkpDocumentInspectionTest.php",
+      "sha256": "dfeac974d9685078843326e14a91f989e0e3cf04f992f09a5974f9e2d804ea12"
+    },
+    {
+      "path": "tests/Feature/PkpDocumentUploadTest.php",
+      "sha256": "4f612e46d4c7d5d3d6a3111b2916572435b62780f76f59a6ae62ba5f88f7b581"
+    },
+    {
+      "path": "tests/Feature/PkpDraftTest.php",
+      "sha256": "24bb4102739d66ce7300b013f65fe3b48fe6ab497621e40478bdfcc3a1283252"
+    },
+    {
+      "path": "tests/Feature/PkpExternalTest.php",
+      "sha256": "c6e16e6665d18f32a9aca73bacda8a328ad64ca54bc4041618d999601318da63"
+    },
+    {
+      "path": "tests/Feature/PkpFinalReplacementTest.php",
+      "sha256": "6b6f5d7e28472046c6515129fcc7f270950c65f9ba3ae1daadee5e1694b989d1"
+    },
+    {
+      "path": "tests/Feature/PkpHistoryTest.php",
+      "sha256": "e4add2c89d55c442b57bf6ffedecaa39de91a8402570d2247e209f6a7c6c5530"
+    },
+    {
+      "path": "tests/Feature/PkpNavigationTest.php",
+      "sha256": "54eba6a0987d969e0d3fed2fa18b371c197c5742b46a21ffa92aa843c105ea61"
+    },
+    {
+      "path": "tests/Feature/PkpPdfTest.php",
+      "sha256": "fa49b1d0e407d18f21ba73daa78367aa7644a5f674e4273b5056f385beb5f2c1"
+    },
+    {
+      "path": "tests/Feature/PkpReassignmentTest.php",
+      "sha256": "d9ec3ebe0a9bb47c220a6c1ea4ed6d5ba696ccc40329f09466f6d24dc1c01245"
+    },
+    {
+      "path": "tests/Feature/PkpRevisionTest.php",
+      "sha256": "11abfc7c92df371cb7978c0c60cd518adcf7b8fd523e4dc9cfcecd94dbb79337"
+    },
+    {
+      "path": "tests/Feature/PkpScoreDisplayTest.php",
+      "sha256": "515ac9dfee1bc41df57559af2c5ff59ffca8e694fd0fd16313359f30924d80fd"
+    },
+    {
+      "path": "tests/Feature/PkpSubmissionTest.php",
+      "sha256": "ec6039a08e906ac2c291b71f1bec27bf5792ef0fc303fd636f664a2537d2745e"
+    },
+    {
+      "path": "tests/Integration/Pkp/PkpUploadEnvelopeTest.php",
+      "sha256": "e4c39145ee15ddace0872bc5bfe55185ab99781de6e127a1102fc40f9caa757f"
+    },
+    {
+      "path": "tests/Integration/Pkp/PkpWorkflowRaceTest.php",
+      "sha256": "c79e370cfe21916b5bba97e111814a533982e7b2f9ea2f627df0b276876e94cc"
+    },
+    {
+      "path": "tests/Support/PkpConcurrencyHarness.php",
+      "sha256": "b60c3645db75e0c978605ad6706f7841914ccd3fd5a926a8e4b6303181accc68"
+    },
+    {
+      "path": "tests/Unit/PkpCalculationContractTest.php",
+      "sha256": "59dd23485041bcbf41fefc37fe2f27eb2c5d94cafe02eda6a1c4e51232f672ad"
+    },
+    {
+      "path": "tests/Unit/PkpCalculatorTest.php",
+      "sha256": "2e79bea92272cf0b04863c7a0f8919407902b4f25711c28d597ddd82c1e3f39b"
+    },
+    {
+      "path": "tests/Unit/PkpMutationResultTest.php",
+      "sha256": "ced10cfc9147fc26523df6f736cee925835f4c069be02841c5cfe59495c8628d"
+    },
+    {
+      "path": "tests/Unit/PkpPdfInspectionTest.php",
+      "sha256": "c6051edeee0142856e9efc96f4ffad439d725373bb39d8d3f4b44c7fc66ed8ba"
+    },
+    {
+      "path": "tests/Unit/PkpPdfValidatorTest.php",
+      "sha256": "c24067e27ebbca19adf8ec94f372287b776beda8a9581bbbf0c9a8eeccbac741"
+    },
+    {
+      "path": "tests/Unit/Policies/PkpAuthorizationTest.php",
+      "sha256": "fee81bf37926bef5c9bc56ab8df29016cb5e2201e445a51345824ca6025eb23f"
+    },
+    {
+      "path": "tests/Unit/Services/PkpIdentityTest.php",
+      "sha256": "de3647a4d5677dc077d5e9e8e6f92589e4056162275f786e591064d0528348a0"
+    }
+  ],
+  "scoped_diff_sha256": "d863258c7b4624a64d7ec423f7a48f18535b5eaa41a79bab53045056b758abeb"
+}

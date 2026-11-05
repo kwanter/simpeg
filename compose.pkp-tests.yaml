@@ -1,0 +1,83 @@
+services:
+  pkp-postgres-test:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: pkp_concurrency
+      POSTGRES_USER: simpeg
+      POSTGRES_PASSWORD: simpeg-test-password
+    ports:
+      - "${PKP_TEST_POSTGRES_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simpeg -d pkp_concurrency"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  pkp-postgres-migration-compatibility:
+    image: postgres:16
+    depends_on:
+      pkp-postgres-test:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        psql --host=pkp-postgres-test --username=simpeg --dbname=pkp_concurrency
+        --set=ON_ERROR_STOP=1
+        --command="CREATE OR REPLACE FUNCTION public.uuid() RETURNS uuid LANGUAGE SQL VOLATILE AS 'SELECT gen_random_uuid()';"
+    environment:
+      PGPASSWORD: simpeg-test-password
+
+  pkp-mysql-test:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: pkp_concurrency
+      MYSQL_ROOT_PASSWORD: simpeg-test-password
+    ports:
+      - "${PKP_TEST_MYSQL_PORT:-53306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: docker/common/php-fpm/Dockerfile
+      target: production
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "true"
+      APP_KEY: base64:U0lNUEVHUEtQLVNUQUNLLTIwMjYxMDA2VEVTVEtFWSE=
+      APP_URL: http://127.0.0.1:8085
+      CACHE_STORE: array
+      CACHE_DRIVER: array
+      SESSION_DRIVER: file
+      SESSION_SECURE_COOKIE: "false"
+      QUEUE_CONNECTION: sync
+      DB_CONNECTION: pgsql
+      DB_HOST: pkp-postgres-test
+      DB_PORT: 5432
+      DB_DATABASE: pkp_concurrency
+      DB_USERNAME: simpeg
+      DB_PASSWORD: simpeg-test-password
+    depends_on:
+      pkp-postgres-test:
+        condition: service_healthy
+      pkp-postgres-migration-compatibility:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm-healthcheck || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  pkp-nginx-test:
+    build:
+      context: .
+      dockerfile: docker/production/nginx/Dockerfile
+    ports:
+      - "127.0.0.1:${PKP_TEST_HTTP_PORT:-8085}:80"
+    depends_on:
+      php-fpm:
+        condition: service_healthy

@@ -18,7 +18,17 @@ class Izin extends Model
 
     protected $keyType = 'string';
 
-    // Request boundaries whitelist fields; approval metadata remains non-fillable.
+    // The request layer is the real whitelist: FormRequest::validated() decides
+    // what reaches the model, and IzinSubmissionService::prepareForFullUpdate()
+    // additionally strips approval metadata from a full update. status and the
+    // verifikasi_* columns are deliberately fillable because the store path
+    // mass-assigns the initial approval state through prepareForCreate().
+    //
+    // Note for the next reader: the `izin` migration gives those three columns
+    // defaults of 'Diajukan'/'Belum Diverifikasi', so dropping them from this
+    // list happens to pass the suite. It was tried and observed to pass. That
+    // makes the schema the source of truth for the initial state instead of the
+    // service, which is a design change, not a tidy-up - decide it deliberately.
     protected $fillable = [
         'uuid',
         'pegawai_uuid',

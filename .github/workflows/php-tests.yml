@@ -31,6 +31,25 @@ jobs:
           coverage: none
           tools: pint
 
+      - name: Install and verify qpdf runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes qpdf
+          export PKP_QPDF_BINARY="$(command -v qpdf)"
+          echo "PKP_QPDF_BINARY=$PKP_QPDF_BINARY" >> "$GITHUB_ENV"
+          php <<'PHP'
+          <?php
+          $binary = getenv('PKP_QPDF_BINARY');
+          if (! is_string($binary) || ! str_starts_with($binary, '/') || ! is_executable($binary)) {
+              exit(1);
+          }
+          exec(escapeshellarg($binary).' --version', $output, $status);
+          echo implode(PHP_EOL, $output), PHP_EOL;
+          if ($status !== 0 || preg_match('/^qpdf version (\\d+)\\./', $output[0] ?? '', $matches) !== 1 || (int) $matches[1] < 11) {
+              exit(1);
+          }
+          PHP
+
       - name: Get composer cache directory
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT

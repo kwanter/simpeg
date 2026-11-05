@@ -27,6 +27,25 @@ jobs:
           extensions: mbstring, xml, sqlite3, pdo, pdo_sqlite, gd, intl, zip, dom, curl
           coverage: none
 
+      - name: Install and verify qpdf runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes qpdf
+          export PKP_QPDF_BINARY="$(command -v qpdf)"
+          echo "PKP_QPDF_BINARY=$PKP_QPDF_BINARY" >> "$GITHUB_ENV"
+          php <<'PHP'
+          <?php
+          $binary = getenv('PKP_QPDF_BINARY');
+          if (! is_string($binary) || ! str_starts_with($binary, '/') || ! is_executable($binary)) {
+              exit(1);
+          }
+          exec(escapeshellarg($binary).' --version', $output, $status);
+          echo implode(PHP_EOL, $output), PHP_EOL;
+          if ($status !== 0 || preg_match('/^qpdf version (\\d+)\\./', $output[0] ?? '', $matches) !== 1 || (int) $matches[1] < 11) {
+              exit(1);
+          }
+          PHP
+
       - name: Get composer cache directory
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
@@ -66,9 +85,28 @@ jobs:
         env:
           APP_URL: http://127.0.0.1:8000
 
+      - name: Run PKP Playwright tests
+        run: npx playwright test --config=playwright.pkp.config.js --project=chromium
+        env:
+          PKP_E2E_BASE_URL: http://127.0.0.1:8001
+
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+  qpdf-runtimes:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify qpdf in Apache image
+        run: |
+          docker build --file docker/apache/Dockerfile --tag simpeg-apache-qpdf:test docker/apache
+          docker run --rm --entrypoint php --env PKP_QPDF_BINARY=/usr/bin/qpdf simpeg-apache-qpdf:test -r '$b=getenv("PKP_QPDF_BINARY"); exec(escapeshellarg($b)." --version", $o, $s); if ($s !== 0 || preg_match("/^qpdf version (\\d+)\\./", $o[0] ?? "", $m) !== 1 || (int) $m[1] < 11) exit(1); echo $o[0], PHP_EOL;'
+      - name: Build and verify qpdf in workspace image
+        run: |
+          docker build --file docker/development/workspace/Dockerfile --tag simpeg-workspace-qpdf:test .
+          docker run --rm --entrypoint php --env PKP_QPDF_BINARY=/usr/bin/qpdf simpeg-workspace-qpdf:test -r '$b=getenv("PKP_QPDF_BINARY"); exec(escapeshellarg($b)." --version", $o, $s); if ($s !== 0 || preg_match("/^qpdf version (\\d+)\\./", $o[0] ?? "", $m) !== 1 || (int) $m[1] < 11) exit(1); echo $o[0], PHP_EOL;'

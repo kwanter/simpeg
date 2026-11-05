@@ -106,4 +106,21 @@ class IzinPdfEndpointTest extends SimpegTestCase
 
         $this->actingAs($owner)->get(route('izin.pdf', $izin->uuid))->assertForbidden();
     }
+
+    public function test_slashed_letter_number_is_sanitized_in_the_download_filename(): void
+    {
+        $owner = $this->createUserWithRole('user', ['nip' => 'PDF-OWNER-002'], ['nama' => 'Ayu Test']);
+        $pegawai = Pegawai::where('nip', $owner->nip)->firstOrFail();
+        $izin = Izin::factory()->create([
+            'pegawai_uuid' => $pegawai->uuid,
+            'jenis_izin' => IzinType::KELUAR_KANTOR,
+            'status' => 'Disetujui',
+            'verifikasi_atasan' => 'Disetujui',
+            'no_surat_izin' => 'W8-A1/IP/XI/2026',
+        ]);
+
+        $this->expectPdfDownload($izin, 'izin.pdf-keluar-kantor', 'Surat_Izin_Ayu Test_W8-A1-IP-XI-2026.pdf');
+
+        $this->actingAs($owner)->get(route('izin.pdf', $izin->uuid))->assertOk();
+    }
 }

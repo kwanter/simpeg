@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(php artisan test --filter=IzinDocumentAuthorizationTest 2 >& 1)",
+      "Shell(ls -la | grep -E '^\\-.*\\.env' ; echo \"--- env grep ---\"; grep -nE '^(DB_CONNECTION|DB_DATABASE|APP_ENV)' .env 2>/dev/null; echo \"--- phpunit cache ---\"; ls -la .phpunit* 2>/dev/null)",
+      "Shell(php -v)",
+      "Shell(php -r echo \"ok\\n\";)",
+      "Shell(php artisan tinker --execute=echo config('database.default'); 2 >& 1)",
+      "Shell(./vendor/bin/phpunit:*)",
+      "Shell(env -u DB_CONNECTION -u DB_DATABASE -u APP_ENV php artisan test --filter=IzinDocumentAuthorizationTest 2 >& 1)",
+      "Shell(env -u DB_CONNECTION -u DB_DATABASE -u DB_HOST -u DB_PORT -u DB_USERNAME -u DB_PASSWORD -u APP_ENV -u CACHE_DRIVER -u SESSION_DRIVER -u QUEUE_CONNECTION -u REDIS_HOST -u REDIS_PASSWORD -u REDIS_PORT -u MAIL_MAILER php artisan test --filter=IzinDocumentAuthorizationTest 2 >& 1)",
+      "Shell(test:*)",
+      "Shell(ls:*)",
+      "Shell(php -r 'var_dump([\"SERVER\"=>$_SERVER[\"DB_CONNECTION\"] ?? null, \"ENV\"=>$_ENV[\"DB_CONNECTION\"] ?? null, \"getenv\"=>getenv(\"DB_CONNECTION\") ?: null]);')",
+      "Shell(php artisan test 2 >& 1)",
+      "Shell(php artisan test --filter=IzinApprovalEndpointsTest 2 >& 1)",
+      "Shell(grep:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

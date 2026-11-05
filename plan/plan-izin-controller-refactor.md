@@ -136,17 +136,17 @@ This ledger is the authoritative record of execution state. The per-step checkbo
 | T-005 store rewired | ✅ Complete | `aec21ec` |
 | T-006 update rewired | ✅ Complete | `aec21ec` (shared with T-005; see RBCK-001) |
 | T-007 Single resolution point + 404 contract | ✅ Complete | `2283f2d` |
-| T-008 Prove and remove dead `$allowEdit` | ✅ Complete | uncommitted |
-| T-009 Dedupe missing-pegawai guard | ✅ Complete | uncommitted |
-| T-010 Controller structural pins | ✅ Complete | uncommitted |
+| T-008 Prove and remove dead `$allowEdit` | ✅ Complete | `a69b6c7` (shared with T-009 and T-010; see RBCK-001) |
+| T-009 Dedupe missing-pegawai guard | ✅ Complete | `a69b6c7` (shared; see RBCK-001) |
+| T-010 Controller structural pins | ✅ Complete | `a69b6c7` (shared; see RBCK-001) |
 | T-011 Final Floor-Guard Gate | ✅ Executed, awaiting sign-off | — |
 
-All twelve tickets have been executed. Phases 1 through 4 were approved at their gates. Suite state at the end of Phase 5: **353 passed, 822 assertions**. The AC-002 structural gate is complete: the controller holds zero occurrences of `WorkdayService`, `isSingleLevel`, `maxWorkdays`, and `$allowEdit`, exactly one missing-pegawai guard, and the two deliberately retained branches.
+All twelve tickets have been executed. Phases 1 through 4 were approved at their gates. Suite state at the end of Phase 5: **353 passed, 822 assertions**. The follow-up refactoring plan (`plan-refactor-izin-submission-v1.0.md`) has since raised this to **356 passed, 830 assertions**. The AC-002 structural gate is complete: the controller holds zero occurrences of `WorkdayService`, `isSingleLevel`, `maxWorkdays`, and `$allowEdit`, exactly one missing-pegawai guard, and the two deliberately retained branches.
 
 Two gate results to read carefully:
 
 - **AC-033 (Playwright) is UNVERIFIED, not passed.** `node_modules/` is absent in this environment, so the Chromium suite could not run. The structural reason to expect no regression is that no Blade view, route, or frontend asset changed (`git diff --stat resources/ routes/` is empty), but that is an argument, not a test result.
-- **AC-001 holds for the inherited oracle only.** `git diff --stat 27c1467 -- tests/` shows that since the characterization commit, only three refactor-owned files changed — `IzinNoSuratBoundaryTest`, `IzinStructureTest`, and `IzinSubmissionServiceTest` — and **no inherited characterization file was touched**. The plan's Ticket-005, 006, 008, 009, and 010 all instruct extending `IzinStructureTest`, so audit finding MC-7 asks the specification to distinguish "inherited oracle file" from "refactor-owned file" explicitly.
+- **AC-001 holds for the inherited oracle only.** Run `git diff --stat 27c1467 -- tests/` to see the current set of refactor-owned files; **no inherited characterization file has been touched**. This is deliberately not quoted as a fixed number: the set grew from three to five within a single session as tickets added assertions (`IzinNoSuratBoundaryTest`, `IzinStructureTest`, `IzinSubmissionServiceTest`, `IzinEditDecisionEquivalenceTest`, and `IzinPermaCapTest`), which is the same reason the architecture map warns against quoting undated counts. Audit finding MC-7 asks the specification to distinguish "inherited oracle file" from "refactor-owned file" explicitly.
 
 Committed outside the ticket sequence to establish a clean AC-001 baseline: `27c1467` records the Izin characterization suite plus the `phpunit.xml` hardening, which had been sitting as uncommitted work. Without that commit, AC-001's verification command (`git status --short tests/`) produced a false positive because `IzinDocumentAuthorizationTest.php` showed as modified. Documentation remediation for audit iteration 2 is recorded in `0603dc6`.
 
@@ -328,7 +328,9 @@ Committed outside the ticket sequence to establish a clean AC-001 baseline: `27c
 
 ## 5. Rollback / Recovery Plan
 
-- **RBCK-001:** Every ticket in this plan produces exactly one atomic commit, so `git revert <sha>` reverts that ticket in isolation without disturbing the others. **One recorded exception:** Ticket-005 and Ticket-006 share commit `aec21ec`, because both rewrite `app/Http/Controllers/IzinController.php` and `tests/Unit/IzinStructureTest.php` and their hunks in those two files are interleaved; splitting them would have required hand-crafted patches for no review benefit. To revert store delegation while keeping update delegation, revert `aec21ec` and then re-apply the `update()` hunk by hand, working from `git show aec21ec -- app/Http/Controllers/IzinController.php`.
+- **RBCK-001:** A ticket produces **one commit per coherent change set**, so `git revert <sha>` normally reverts a ticket in isolation. This rule was originally written as "exactly one atomic commit per ticket"; that promise proved unkeepable and has been relaxed to describe reality. There are **two recorded exceptions**, both arising from tickets whose hunks interleave in the same two files:
+  - `aec21ec` covers Ticket-005 and Ticket-006 (store and update delegation). To revert store delegation while keeping update delegation, revert `aec21ec` and then re-apply the `update()` hunk by hand, working from `git show aec21ec -- app/Http/Controllers/IzinController.php`.
+  - `a69b6c7` covers Ticket-008, Ticket-009, and Ticket-010 (edit-authorization removal, guard deduplication, and the retention pins). The same technique applies, working from `git show a69b6c7`.
 - **RBCK-002:** No migration is introduced by any ticket, so no database rollback or data-recovery procedure is required. If a migration appears during implementation, stop — it violates CON-004.
 - **RBCK-003:** If Ticket-003 (trait extraction) regresses validation, revert that commit alone and re-run the 23 PERMA pins before continuing. Phases 3–5 do not depend on the trait except through T-007, so they remain revertible independently.
 - **RBCK-004:** If Ticket-007 changes any status code, revert it immediately. AC-035 and AC-036 are the specific guards; a 403 appearing where 404 is expected is a hard stop, not a test to adjust.

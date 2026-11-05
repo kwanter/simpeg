@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('cuti_balance', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->string('pegawai_uuid');
+            $table->uuid('pegawai_uuid');
             $table->foreign('pegawai_uuid')->references('uuid')->on('pegawai')->onDelete('cascade');
             $table->integer('year');
             $table->integer('total_days')->default(12); // Default annual leave is 12 days

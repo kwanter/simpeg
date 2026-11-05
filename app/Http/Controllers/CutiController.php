@@ -351,7 +351,7 @@ class CutiController extends Controller
         $pegawai = $user->pegawai;
 
         if (! $pegawai) {
-            return redirect()->route('cuti')->with('error', 'Data pegawai tidak ditemukan');
+            return redirect()->route('cuti.index')->with('error', 'Data pegawai tidak ditemukan');
         }
 
         $balance = $this->cutiBalances->getOrCreateBalance($pegawai->uuid, date('Y'));
@@ -412,6 +412,7 @@ class CutiController extends Controller
 
         $pdf = $cuti->generatePdf();
         $filename = 'Surat_Cuti_'.$cuti->pegawai->nama.'_'.$cuti->no_surat_cuti.'.pdf';
+        $filename = str_replace(['/', '\\'], '-', $filename);
 
         return $pdf->download($filename);
     }

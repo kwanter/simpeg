@@ -1,6 +1,6 @@
 ---
 title: Izin Controller Refactor (Behavior-Preserving)
-version: 1.3
+version: 1.4
 date_created: 2026-09-24
 last_updated: 2026-09-24
 status: Approved
@@ -314,7 +314,7 @@ Every criterion below is stated so that it can be verified by an automated test 
 
 - **AC-001 (oracle)**: No **inherited oracle file** may be modified or deleted. An inherited oracle file is any file matching `tests/**/*Izin*` that was already tracked at the characterization baseline commit `27c1467`. A **refactor-owned file** is one introduced by §6.4; those MAY grow as later tickets add assertions to them, because growing them is how this specification pins its own structural goals. Verified by `git diff --stat 27c1467 -- tests/`, which must list refactor-owned files only.
 - **AC-002**: `IzinController.php` satisfies every structural assertion enumerated in §4.3, including the deduplicated missing-pegawai guard and the retained A4 and A6 branches.
-- **AC-003**: `App\Services\IzinSubmissionService` is a non-`final` class exposing exactly the three public methods of §4.1, and is resolvable from the container without construction arguments.
+- **AC-003**: `App\Services\IzinSubmissionService` is a non-`final` class that exposes every public method specified in §4.1 and is resolvable from the container without construction arguments. A reflection-based test MUST assert that each §4.1 method is public; it MUST NOT fail solely because additional public methods exist.
 - **AC-004**: `IzinSubmissionService` has dedicated unit coverage that exercises §4.1.1–§4.1.3 without issuing an HTTP request.
 
 ### 5.2 Submission Normalization
@@ -492,7 +492,7 @@ npm audit
 ## 8. Implementation Guardrails (Three-Tier System)
 
 - **Always do:** Write the failing test first at the seam named in §6.1; keep `IzinPolicy` as the sole authorization authority; keep every redirect target, flash key, flash message, and validation message byte-identical; run the focused test, then the full suite, then Pint.
-- **Ask first:** Adding any new public method outside the three named in §4.1; changing any validation rule, error key, or error message in either Request class; renaming, merging, or retyping a `formData()` key listed in §4.3.1; introducing any new Composer or npm dependency; touching any file listed as "untouched production files" in §7.
+- **Ask first:** Adding any new public method that changes the service's specified contract or observable behavior; changing any validation rule, error key, or error message in either Request class; renaming, merging, or retyping a `formData()` key listed in §4.3.1; introducing any new Composer or npm dependency; touching any file listed as "untouched production files" in §7.
 - **Never do:** Modify or delete an existing file matching `tests/**/*Izin*`; write a dedicated test for the shared trait; normalize the scalar `jenisIzin` override in `createKeluarKantor()`; add a suppression annotation; skip or delete a test; weaken an assertion; change a route, URL, or HTTP verb; add a migration; write a mass-assignment path that bypasses `validated()`; construct a storage path in the controller.
 
 ## 9. Rationale, Context & Architecture Decisions (ADRs)

@@ -81,4 +81,15 @@ class CutiBalanceRouteTest extends SimpegTestCase
         $this->get(route('cuti.update-balance'))->assertRedirect(route('login'));
         $this->get(route('cuti.update-all-balances'))->assertRedirect(route('login'));
     }
+
+    public function test_balance_page_redirects_instead_of_erroring_when_the_user_has_no_pegawai(): void
+    {
+        $user = $this->createUserWithRole('user');
+        Pegawai::where('nip', $user->nip)->delete();
+
+        $response = $this->actingAs($user)->get(route('cuti.balance'));
+
+        $response->assertRedirect(route('cuti.index'));
+        $response->assertSessionHas('error');
+    }
 }

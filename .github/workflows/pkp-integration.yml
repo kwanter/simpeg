@@ -1,0 +1,187 @@
+name: PKP Database Integration
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pkp-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: pkp_concurrency
+          POSTGRES_USER: simpeg
+          POSTGRES_PASSWORD: simpeg-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U simpeg -d pkp_concurrency"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: pkp_concurrency
+      DB_USERNAME: simpeg
+      DB_PASSWORD: simpeg-test-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, sqlite3, pdo, pdo_pgsql, gd, intl, zip, dom, curl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          npm ci
+          npm run build
+      - name: Configure Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+      - name: Install and verify qpdf
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes qpdf postgresql-client
+          export PKP_QPDF_BINARY="$(command -v qpdf)"
+          echo "PKP_QPDF_BINARY=$PKP_QPDF_BINARY" >> "$GITHUB_ENV"
+          php -r '$b=getenv("PKP_QPDF_BINARY"); exec(escapeshellarg($b)." --version", $o, $s); if ($s !== 0 || preg_match("/^qpdf version (\\d+)\\./", $o[0] ?? "", $m) !== 1 || (int) $m[1] < 11) exit(1); echo $o[0], PHP_EOL;'
+      - name: Prepare isolated legacy PostgreSQL migration compatibility
+        env:
+          PGPASSWORD: simpeg-test-password
+        run: psql --host=127.0.0.1 --port=5432 --username=simpeg --dbname=pkp_concurrency --set=ON_ERROR_STOP=1 --command="CREATE OR REPLACE FUNCTION public.uuid() RETURNS uuid LANGUAGE SQL VOLATILE AS 'SELECT gen_random_uuid()';"
+      - name: Migrate isolated PostgreSQL database
+        run: CACHE_STORE=array CACHE_DRIVER=array php artisan migrate:fresh --force
+      - name: Verify additive PKP migration recovery
+        run: |
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate:rollback --step=7 --force
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate --force
+      - name: Verify baseline migration recovery
+        run: |
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate:reset --force
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate --force
+      - name: Verify PostgreSQL races
+        run: vendor/bin/phpunit --configuration=phpunit.pkp-concurrency.xml --filter=PkpWorkflowRaceTest
+      - name: Format checks
+        run: vendor/bin/pint --test
+
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: pkp_concurrency
+          MYSQL_ROOT_PASSWORD: simpeg-test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: pkp_concurrency
+      DB_USERNAME: root
+      DB_PASSWORD: simpeg-test-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, sqlite3, pdo, pdo_mysql, gd, intl, zip, dom, curl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          npm ci
+          npm run build
+      - name: Configure Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+      - name: Install and verify qpdf
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes qpdf
+          export PKP_QPDF_BINARY="$(command -v qpdf)"
+          echo "PKP_QPDF_BINARY=$PKP_QPDF_BINARY" >> "$GITHUB_ENV"
+          php -r '$b=getenv("PKP_QPDF_BINARY"); exec(escapeshellarg($b)." --version", $o, $s); if ($s !== 0 || preg_match("/^qpdf version (\\d+)\\./", $o[0] ?? "", $m) !== 1 || (int) $m[1] < 11) exit(1); echo $o[0], PHP_EOL;'
+      - name: Migrate isolated MySQL database
+        run: CACHE_STORE=array CACHE_DRIVER=array php artisan migrate:fresh --force
+      - name: Verify additive PKP migration recovery
+        run: |
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate:rollback --step=7 --force
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate --force
+      - name: Verify baseline migration recovery
+        run: |
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate:reset --force
+          CACHE_STORE=array CACHE_DRIVER=array php artisan migrate --force
+      - name: Verify MySQL races
+        run: vendor/bin/phpunit --configuration=phpunit.pkp-concurrency.xml --filter=PkpWorkflowRaceTest
+      - name: Format checks
+        run: vendor/bin/pint --test
+
+  upload-stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, sqlite3, pdo, pdo_pgsql, gd, intl, zip, dom, curl
+          coverage: none
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+      - name: Configure Laravel test client
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+      - name: Build isolated Nginx/PHP-FPM upload stack
+        env:
+          PKP_TEST_POSTGRES_PORT: 55432
+          PKP_TEST_HTTP_PORT: 8085
+        run: docker compose -f compose.pkp-tests.yaml up --detach --build pkp-nginx-test
+      - name: Seed authenticated upload fixtures
+        run: docker compose -f compose.pkp-tests.yaml exec --no-TTY php-fpm php artisan db:seed --class=PkpE2EFixtureSeeder --force
+      - name: Verify upload envelope over real Nginx and PHP-FPM
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 55432
+          DB_DATABASE: pkp_concurrency
+          DB_USERNAME: simpeg
+          DB_PASSWORD: simpeg-test-password
+          CACHE_STORE: array
+          CACHE_DRIVER: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          PKP_STACK_BASE_URL: http://127.0.0.1:8085
+        run: vendor/bin/phpunit --configuration=phpunit.pkp-concurrency.xml --filter=PkpUploadEnvelopeTest
+      - name: Collect stack logs on failure
+        if: failure()
+        run: docker compose -f compose.pkp-tests.yaml logs --no-color
+      - name: Stop isolated upload stack
+        if: always()
+        run: docker compose -f compose.pkp-tests.yaml down --volumes

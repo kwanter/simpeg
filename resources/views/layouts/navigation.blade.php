@@ -1,4 +1,23 @@
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+    @php
+        $pkpNavActor = Auth::user();
+        $pkpNavContext = new \App\Support\PkpContext(targetPegawai: $pkpNavActor?->pegawai);
+        $pkpAuthorization = app(\App\Services\PkpAuthorization::class);
+        $pkpHasContentWork = $pkpNavActor !== null
+            && $pkpNavActor->status === '1'
+            && $pkpNavActor->email_verified_at !== null
+            && $pkpNavActor->pegawai !== null
+            && app(\App\Services\PkpAssessmentService::class)->hasCurrentContentAssignments($pkpNavActor);
+        $pkpHasDocumentWork = $pkpNavActor !== null
+            && $pkpNavActor->status === '1'
+            && $pkpNavActor->email_verified_at !== null
+            && $pkpNavActor->pegawai !== null
+            && app(\App\Services\PkpAssessmentService::class)->hasCurrentDocumentAssignments($pkpNavActor);
+        $pkpCanCreate = $pkpNavActor !== null && $pkpAuthorization->allows($pkpNavActor, 'create', $pkpNavContext);
+        $pkpCanViewAll = $pkpNavActor !== null && $pkpAuthorization->allows($pkpNavActor, 'viewAll', $pkpNavContext);
+        $pkpCanManageDeadlines = $pkpNavActor !== null && $pkpAuthorization->allows($pkpNavActor, 'manageDeadlines', $pkpNavContext);
+    @endphp
+
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -53,6 +72,31 @@
                         </x-nav-link>
                         @endcan
                     @endif
+                    @if ($pkpCanCreate)
+                        <x-nav-link :href="route('pkp.index')" :active="request()->routeIs('pkp.index', 'pkp.create')">
+                            PKP Bulanan
+                        </x-nav-link>
+                    @endif
+                    @if ($pkpCanViewAll)
+                        <x-nav-link :href="url('/pkp?scope=all')" :active="request()->is('pkp')">
+                            PKP Semua Pegawai
+                        </x-nav-link>
+                    @endif
+                    @if ($pkpCanManageDeadlines)
+                        <x-nav-link :href="route('pkp.deadline.show', [now('Asia/Makassar')->year, now('Asia/Makassar')->month])" :active="request()->routeIs('pkp.deadline.*')">
+                            Batas Waktu PKP
+                        </x-nav-link>
+                    @endif
+                    @if ($pkpHasContentWork)
+                        <x-nav-link :href="route('pkp.assessments', ['kind' => 'content'])" :active="request()->routeIs('pkp.assessments') && request('kind', 'content') === 'content'">
+                            Penilaian PKP
+                        </x-nav-link>
+                    @endif
+                    @if ($pkpHasDocumentWork)
+                        <x-nav-link :href="route('pkp.assessments', ['kind' => 'document'])" :active="request()->routeIs('pkp.assessments') && request('kind') === 'document'">
+                            Pemeriksaan Dokumen PKP
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -106,7 +150,7 @@
 
             <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                <button type="button" aria-label="Buka navigasi" :aria-expanded="open.toString()" @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -156,6 +200,31 @@
                         {{ __('Hari Libur') }}
                     </x-responsive-nav-link>
                 @endcan
+            @endif
+            @if ($pkpCanCreate)
+                <x-responsive-nav-link :href="route('pkp.index')" :active="request()->routeIs('pkp.index', 'pkp.create')">
+                    PKP Bulanan
+                </x-responsive-nav-link>
+            @endif
+            @if ($pkpCanViewAll)
+                <x-responsive-nav-link :href="url('/pkp?scope=all')" :active="request()->is('pkp')">
+                    PKP Semua Pegawai
+                </x-responsive-nav-link>
+            @endif
+            @if ($pkpCanManageDeadlines)
+                <x-responsive-nav-link :href="route('pkp.deadline.show', [now('Asia/Makassar')->year, now('Asia/Makassar')->month])" :active="request()->routeIs('pkp.deadline.*')">
+                    Batas Waktu PKP
+                </x-responsive-nav-link>
+            @endif
+            @if ($pkpHasContentWork)
+                <x-responsive-nav-link :href="route('pkp.assessments', ['kind' => 'content'])" :active="request()->routeIs('pkp.assessments') && request('kind', 'content') === 'content'">
+                    Penilaian PKP
+                </x-responsive-nav-link>
+            @endif
+            @if ($pkpHasDocumentWork)
+                <x-responsive-nav-link :href="route('pkp.assessments', ['kind' => 'document'])" :active="request()->routeIs('pkp.assessments') && request('kind') === 'document'">
+                    Pemeriksaan Dokumen PKP
+                </x-responsive-nav-link>
             @endif
         </div>
 

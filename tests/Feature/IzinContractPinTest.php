@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Http\Requests\UpdateIzinRequest;
 use App\Models\Izin;
 use App\Models\Pegawai;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tests\SimpegTestCase;
 
 class IzinContractPinTest extends SimpegTestCase
@@ -53,6 +55,22 @@ class IzinContractPinTest extends SimpegTestCase
         $this->actingAs($other)
             ->put(route('izin.update', $izin->uuid), ['no_surat_izin' => 'X'])
             ->assertForbidden();
+    }
+
+    public function test_resolved_izin_or_fail_aborts_not_found_for_an_unknown_uuid(): void
+    {
+        $request = UpdateIzinRequest::create(route('izin.update', (string) Str::uuid()), 'PUT', [
+            '_token' => 'test-token',
+            '_method' => 'PUT',
+            'no_surat_izin' => 'IZIN-2026-001',
+        ]);
+        $request->setContainer(app());
+        $request->setRedirector(app('redirect'));
+        $request->setRouteResolver(fn () => app('router')->getRoutes()->match($request));
+
+        $this->expectException(NotFoundHttpException::class);
+
+        $request->resolvedIzinOrFail();
     }
 
     public function test_guest_cannot_reach_the_izin_write_routes(): void

@@ -18,7 +18,9 @@ This document is the canonical architectural map of SIMPEG. It records the repos
 
 ## 1. Project Overview
 
-SIMPEG is a Laravel-based human-resources information system for managing employees (`Pegawai`), leave requests (`Cuti`), permit requests (`Izin`), organizational records, and national holidays. Its key business workflows include role- and permission-controlled access, multi-stage approvals, leave-balance rules, auditability, and official PDF document generation.
+> **Updated 2026-10-06:** Monthly PKP now includes direct module authorization, owner/admin lists, exact scoring, effective identity, immutable submissions, assessor and inspector reassignment, approved PDF printing, private signed-document review/replacement, external PDF submission, monthly deadlines, and real PostgreSQL/MySQL race tests. The 10 MiB upload also passes through production Nginx/PHP-FPM, and qpdf 12.2.0 is verified in FPM, Apache, and workspace images.
+
+SIMPEG is a Laravel-based human-resources information system for managing employees (`Pegawai`), leave requests (`Cuti`), permit requests (`Izin`), monthly performance assessments (`PKP`), organizational records, and national holidays. Its key business workflows include role- and permission-controlled access, approval workflows, leave-balance rules, auditability, and official PDF document generation.
 
 The repository is a single Laravel application with Blade-rendered pages and a small Vite-managed frontend asset pipeline. The application follows a conventional Laravel MVC structure with business operations factored into services and authorization expressed through middleware and policies; it is not organized as a strict Clean Architecture or package-level modular monolith.
 
@@ -51,11 +53,42 @@ flowchart TD
 
 `CutiApprovalService` and `IzinApprovalService` are representative public seams for approval behavior. They use transactions and require an expected current status before persisting a transition; the `Cuti` flow also coordinates balance updates. This guards application-level state transitions, while SQLite in-memory tests do not by themselves verify production-database locking semantics.
 
+The PKP workflow uses `PkpAuthorization` to call `PkpPolicy` directly because the global super-admin `Gate::before` callback can grant generic Gate checks before a policy runs. Owner and authorized all-record list queries enforce separate `viewOwnList` and `viewAll` predicates, paginate 25 rows, and expose revision references and completeness state. Draft saves, submission, assessor decisions, reassignment, and document operations use transactional services with aggregate versions; attempts snapshot identity, exact scores, and assigned authority. The `/pkp/assessments` queries limit content and document work to the current assigned assessor/inspector.
+
+`PkpErrorResponses` is registered only on the authenticated PKP route group.
+It normalizes Laravel-rendered validation/authorization/resource/database
+failures into PKP error envelopes and preserves HTML field feedback with
+non-file input. Private source downloads include the applicable attempt in
+their policy context. PDF inspection bounds stdout and stderr together at
+64 KiB per operation, each operation at 5 seconds, and the entire inspection
+at 15 seconds. `PdfValidationLimit` maps to 422; unavailable qpdf maps to 503.
+
+Owner draft authoring supports bounded nullable notes and an eligible allowed
+assessor selection for both application and external sources. Saves lock the
+period/configuration before the aggregate and revalidate current/requested
+assignment. PKP edit-decimal fields retain raw whitespace through the global
+trim middleware so request validation can reject it; other fields and modules
+keep their existing normalization. Stored editor/snapshot decimal values are
+projected as invariant strings using Brick decimal normalization without
+rounding. Detail exposes policy-derived correction and identity-refresh
+capabilities; the correction form uses the existing revision-create endpoint.
+
+PKP detail accepts scoped `revision_uuid` and optional `submission_uuid`
+selectors. Official and pending read contexts are authorized independently;
+only visible contexts enter the response and navigation. Historical reads use
+frozen attempt input/identity/score, disable mutation actions, and expose
+first-submission/deadline/classification snapshots. Assessor history is scoped
+to current assigned attempts and its own content decisions; historical source
+downloads require that same decision/source relationship. The history view
+omits private storage paths. `PkpAssessmentService::queuePage()` provides
+25-row paginators for both kinds, while `queue()` retains the first-page array
+adapter for existing callers. Queue links select the exact revision.
+
 ## 4. Dependencies & External Services
 
 - **Database:** Laravel-configured database; PHPUnit defaults to SQLite `:memory:`. README documents MySQL-based local/container modes.
 - **Authentication and authorization:** Laravel authentication/verification and Spatie Laravel Permission with project-specific role and permission models.
-- **PDF rendering:** `barryvdh/laravel-dompdf` for official Cuti/Izin documents.
+- **PDF rendering and inspection:** `barryvdh/laravel-dompdf` renders official documents; qpdf 11+ validates uploaded PKP PDFs through an absolute configured executable. Approved current and archived PKP printing uses the bound immutable submission; application PDFs include frozen notes and an exact calculation appendix. `PkpPdfTest` inspects real QDF text with the same qpdf prerequisite, while local Poppler extraction/rendering independently verifies multipage layout. Maximum-length print text uses continuation rows and wrapped notes with actual page-coordinate checks; identity resolution reads employee and both period histories in one SQL statement, proved by controlled committed-worker barriers on both supported engines.
 - **HTTP client and monitoring:** Guzzle and Sentry Laravel integration.
 - **Backup and revisions:** Spatie Laravel Backup and Venturecraft Revisionable.
 - **Queue/cache/session:** Laravel drivers selected by environment; Docker documentation describes Redis-capable development and production configurations. PHPUnit overrides queue, cache, and session to synchronous/in-memory-friendly drivers.
@@ -67,7 +100,7 @@ flowchart TD
 .
 ├── .agents/                 # Agent skills, instructions, and documentation standards
 ├── .claude/                 # Mirrored agent configuration
-├── .github/workflows/       # PHP quality and Playwright CI workflows
+├── .github/workflows/       # PHP, browser, DB-concurrency, and upload-stack CI workflows
 ├── app/
 │   ├── Console/             # Artisan commands and scheduling
 │   ├── Exceptions/          # Exception handling
@@ -103,6 +136,8 @@ flowchart TD
 ├── storage/                 # Runtime logs, cache, and generated files
 └── tests/
     ├── Feature/             # HTTP, authorization, workflow, and integration tests
+    ├── Integration/Pkp/     # Real PostgreSQL/MySQL races and Nginx/PHP upload envelope
+    ├── Support/              # Two-process PKP concurrency harness
     └── Unit/                # Service, policy, rule, middleware, and support tests
 ```
 
@@ -113,8 +148,8 @@ flowchart TD
 | `app/Http/Controllers/` | Handle HTTP use cases | Resource, workflow, profile, and authentication controllers | Keep HTTP orchestration at the boundary; test observable behavior through Feature tests. |
 | `app/Http/Requests/` | Validate and authorize request data | Store/update/verification request classes | Keep request-boundary validation explicit and cover invalid input. |
 | `app/Http/Middleware/` | Apply cross-cutting request behavior | Authentication-related and security middleware | Exercise behavior through middleware or HTTP Feature tests. |
-| `app/Policies/` | Centralize model/action authorization | `CutiPolicy`, `IzinPolicy` | Preserve role, permission, assignment, ownership, and status constraints. |
-| `app/Services/` | Encapsulate application workflows and reusable operations | Approval, balance, eligibility, workday, query, approver, document, and submission services | Public service methods are unit/feature test seams; state-changing approval methods must preserve transaction and status guards. |
+| `app/Policies/` | Centralize model/action authorization | `CutiPolicy`, `IzinPolicy`, `PkpPolicy` | Preserve role, permission, assignment, ownership, and status constraints; PKP uses its direct `PkpAuthorization` boundary rather than generic Gate results. |
+| `app/Services/` | Encapsulate application workflows and reusable operations | Approval, balance, eligibility, workday, query, approver, document, submission, assignment, identity, calculation, assessment, deadline, and PDF services | Public service methods are unit/feature test seams; state transitions preserve transactions, aggregate versions, and current-state guards. |
 | `app/Models/` | Represent persisted business records | `Pegawai`, `Cuti`, `Izin`, `User`, and related records | Relationships and persistence behavior are backed by migrations and factories. |
 | `app/Support/` and `app/Rules/` | Hold domain-oriented value helpers and validation rules | Cuti/Izin types and `SafeEmail` | Prefer focused unit tests for deterministic behavior. |
 | `database/` | Define and populate persistence | Migrations, factories, seeders | Schema changes require migration safety and relevant persistence tests. |
@@ -134,11 +169,15 @@ flowchart TD
 - `composer.json`: PHP runtime constraints, Laravel dependencies, PSR-4 autoloading, and Composer lifecycle scripts.
 - `package.json`: Vite build/dev commands and frontend/browser-test dependencies; no standalone JS test/lint scripts are declared.
 - `phpunit.xml`: Unit/Feature suites, `app/` source inclusion, and SQLite in-memory testing defaults.
+- `phpunit.pkp-concurrency.xml`: Isolated real-engine integration suite; it deliberately does not force SQLite or wrap fixtures in a parent transaction.
+- `compose.pkp-tests.yaml`: Disposable PostgreSQL 16/MySQL 8 databases plus an Nginx/PHP-FPM stack for PKP upload-envelope checks.
 - `playwright.config.js`: E2E directory, browser projects (Chromium, Firefox, WebKit), web server command, and CI reporter/retry settings.
+- `playwright.pkp.config.js`: PKP-only Chromium harness with a dedicated persistent SQLite fixture database and guarded test-fixture seeder; its twelve browser scenarios cover owner list/create/edit, admin all-record/deadline pages, assessment queues, printing, upload/review, external-source submission, correction approval, historical decision navigation, and R1 inspection while R2 is pending.
 - `vite.config.js`: Laravel Vite plugin and CSS/JavaScript entry points.
 - `routes/web.php` and `routes/auth.php`: Primary web and authentication route definitions.
 - `.github/workflows/php-tests.yml`: PHP 8.2–8.4 matrix, frontend build, Pint, PHPUnit, and Composer audit step.
 - `.github/workflows/playwright.yml`: Chromium E2E setup and execution in CI.
+- `.github/workflows/pkp-integration.yml`: Separate PostgreSQL/MySQL race gates and the production Nginx/PHP-FPM upload test stack.
 - `CONSTITUTION.md` and `CONSTRAINTS.md`: Project engineering principles and required quality gates.
 
 ## 8. Entry Points
@@ -160,9 +199,9 @@ flowchart TD
 ## 10. Testing Strategy
 
 - **PHP framework:** PHPUnit 10 through Laravel; configured suites are `Unit` and `Feature`.
-- **PHP test locations:** `tests/Unit/` (19 files) and `tests/Feature/` (32 files), counted directly from the repository rather than carried over from an earlier inventory. A further three files at the `tests/` root provide suite support: `TestCase.php`, `SimpegTestCase.php`, and `CreatesApplication.php`.
-- **Browser framework:** Playwright; tests live in `e2e/` (one spec file detected, with two guest-facing scenarios). Configuration declares Chromium, Firefox, and WebKit, but CI runs only `--project=chromium`.
-- **Database:** PHPUnit uses SQLite `:memory:` with `RefreshDatabase`; this is fast and isolated but does not establish behavior specific to the production database engine, including real concurrent row-lock behavior.
+- **PHP test locations:** `tests/Unit/`, `tests/Feature/`, and `tests/Integration/Pkp/` cover PKP authorization, owner/admin list scopes, exact calculation, lifecycle, reassignment, replacement, history retention, runtime PDF validation, and upload envelopes. `PkpWorkflowRaceTest` uses committed fixtures and two independent PHP workers. A further three files at the `tests/` root provide ordinary suite support.
+- **Browser framework:** Playwright; the dedicated PKP harness runs twelve Chromium flows against an isolated persistent test database, including desktop/mobile lists, reassignment, final replacement, metadata/correction, history navigation, dual-context inspection, printing, and external-source approval.
+- **Database:** Ordinary PHPUnit uses SQLite `:memory:` for fast isolated cases. The separate concurrency suite has passed on PostgreSQL 16 and MySQL 8.4 using independent connections/processes; this supplies real row-lock evidence for the covered transitions.
 - **Shared setup:** `tests/SimpegTestCase.php` clears cached permissions, seeds permission definitions, and provides a role/user/pegawai factory helper.
 - **Commands:**
   - `php artisan test`
@@ -175,6 +214,12 @@ flowchart TD
 | Module / Layer | Primary Test Seam | Test Type | Observed Strategy | Testability Score |
 | --- | --- | --- | --- | --- |
 | Services and workflow rules | Public service methods such as `CutiApprovalService::applyPimpinan()` | Unit / Feature | Laravel app and SQLite database; asserts resulting status and balance | 4/5 |
+| PKP authorization | `PkpAuthorization::allows()` and direct `PkpPolicy` predicates | Unit / Feature | Real Spatie provider verifies unlinked admin configuration and denial despite a positive global super-admin Gate result | 5/5 |
+| PKP scoring and identity | `PkpCalculator::calculate()` and `PkpIdentityService::resolve()` | Unit | Independent rational oracles, month-end history selection, tie-conflict rejection, and source history UUID retention | 5/5 |
+| PKP list and lifecycle | `PkpSubmissionService::list/create/save/submit()` and `PkpAssessmentService::decide/queue()` | Feature / E2E | Real SQLite migrations, owner/admin scope and pagination, HTTP assignment checks, frozen attempt hashes, approval/return, private document review, deadlines, and browser entry | 5/5 |
+| PKP database concurrency | `PkpConcurrencyHarness::runTogether()` and `PkpWorkflowRaceTest` | Integration | Two independently booted PHP workers race duplicate create/revise/decisions, deadline/submit, and assessor assignment/approval on PostgreSQL 16 and MySQL 8.4 | 5/5 |
+| PKP upload envelope | `PkpUploadEnvelopeTest` through production Nginx/PHP-FPM | Integration / Runtime | Real authenticated session and CSRF; 10 MiB accepted, 10 MiB + 1 byte rejected by Laravel, and requests above 16 MiB rejected by Nginx with prior binding retained | 5/5 |
+| PKP private upload recovery | `PkpDocumentService::store/download` and revision-bound metadata | Feature / Runtime | Injected metadata failure removes staged B while accepted A, its review, and authorized private download remain intact | 5/5 |
 | Izin submission rules | `IzinSubmissionService::prepareForCreate()`, `prepareForFullUpdate()`, and `resolveOwnerUuid()` | Unit | Pure domain rules against real `WorkdayService`/`IzinType` and SQLite; mocking these dependencies is prohibited, and `Carbon::setTestNow()` supplies date determinism | 5/5 |
 | Structural refactor invariants | Source inspection via `ReflectionMethod::getFileName()`/`getStartLine()`, e.g. `tests/Unit/IzinStructureTest.php` | Unit | Asserts that relocated rules live in the trait and that the controller holds no PERMA rule logic; tolerant of reformatting because it reads declarations, not text matches | 4/5 |
 | Policies and middleware | Policy methods and HTTP routes guarded by middleware | Unit / Feature | Direct policy assertions plus authenticated HTTP requests | 4/5 |

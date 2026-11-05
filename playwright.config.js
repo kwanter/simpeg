@@ -5,6 +5,7 @@ const baseURL = process.env.APP_URL || 'http://127.0.0.1:8000';
 
 export default defineConfig({
   testDir: './e2e',
+  testMatch: 'example.spec.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -17,7 +18,12 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: process.env.PKP_CHROMIUM_EXECUTABLE
+          ? { executablePath: process.env.PKP_CHROMIUM_EXECUTABLE }
+          : undefined,
+      },
     },
     {
       name: 'firefox',

@@ -79,6 +79,17 @@ class IzinStructureTest extends TestCase
         return $sources;
     }
 
+    public function test_the_shared_base_rules_live_in_the_trait(): void
+    {
+        foreach ([StoreIzinRequest::class, UpdateIzinRequest::class] as $requestClass) {
+            $this->assertStringEndsWith(
+                'app/Traits/JenisIzinRulesTrait.php',
+                (new \ReflectionMethod($requestClass, 'baseRules'))->getFileName(),
+                $requestClass.'::baseRules() must be inherited from the shared trait rather than duplicated (ARCH-01).'
+            );
+        }
+    }
+
     public function test_no_controller_method_holds_perma_rule_logic(): void
     {
         foreach ($this->controllerMethodSources() as $method => $source) {

@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Models\Izin;
-use App\Support\IzinType;
 use App\Traits\JenisIzinRulesTrait;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -47,6 +46,24 @@ class UpdateIzinRequest extends FormRequest
         return $this->cachedIzin;
     }
 
+    /**
+     * The Izin bound to this request, or a 404. The controller consumes this so
+     * the 404 contract is enforced at the call site instead of being inherited
+     * as a side effect of authorize() (COR-01). Doing so duplicates authorize()'s
+     * own abort() deliberately: this is defence in depth on the boundary that
+     * keeps 404 and 403 distinguishable (SEC-005).
+     */
+    public function resolvedIzinOrFail(): Izin
+    {
+        $izin = $this->resolvedIzin();
+
+        if ($izin === null) {
+            abort(404);
+        }
+
+        return $izin;
+    }
+
     public function rules(): array
     {
         // Check if this is just a no_surat_izin update for an approved izin
@@ -56,17 +73,7 @@ class UpdateIzinRequest extends FormRequest
             ];
         }
 
-        $rules = [
-            'jenis_izin' => ['required', 'string', 'in:'.implode(',', IzinType::all())],
-            'tanggal_mulai' => ['required', 'date'],
-            'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
-            'jam_mulai' => ['nullable', 'date_format:H:i'],
-            'jam_selesai' => ['nullable', 'date_format:H:i'],
-            'alasan' => ['required', 'string'],
-            'dokumen' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'mimetypes:application/pdf,image/jpeg,image/png', 'max:2048'],
-            'atasan_pimpinan_uuid' => ['required', 'exists:pegawai,uuid'],
-            'pimpinan_uuid' => ['required', 'exists:pegawai,uuid'],
-        ];
+        $rules = $this->baseRules();
 
         return array_merge($rules, $this->jenisRules());
     }

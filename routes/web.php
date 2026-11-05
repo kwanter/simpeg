@@ -1,21 +1,22 @@
 <?php
 
+use App\Http\Controllers\PkpController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RiwayatJabatanController;
 use App\Http\Controllers\RiwayatPangkatController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['middleware' => ['role:super-admin', 'auth', 'verified']], function (): void {
-    Route::resource('permissions', App\Http\Controllers\PermissionController::class);
+    Route::resource('permissions', App\Http\Controllers\PermissionController::class)->except('show');
     Route::post('permissions/search', [App\Http\Controllers\PermissionController::class, 'search']);
-    Route::resource('roles', App\Http\Controllers\RoleController::class);
+    Route::resource('roles', App\Http\Controllers\RoleController::class)->except('show');
     Route::get('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'addPermissionToRole']);
     Route::put('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'givePermissionToRole']);
     Route::post('roles/search', [App\Http\Controllers\RoleController::class, 'search']);
 })->name('roles.');
 
 Route::group(['middleware' => ['role:super-admin|admin', 'auth', 'verified']], function (): void {
-    Route::resource('users', App\Http\Controllers\UserController::class);
+    Route::resource('users', App\Http\Controllers\UserController::class)->except('show');
     Route::post('users/search', [App\Http\Controllers\UserController::class, 'search']);
 })->name('users.');
 
@@ -87,6 +88,73 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+Route::middleware(['auth', 'verified', App\Http\Middleware\PkpErrorResponses::class])->prefix('pkp')->name('pkp.')->group(function (): void {
+    Route::get('/', [PkpController::class, 'index'])->name('index');
+    Route::get('/create', [PkpController::class, 'create'])->name('create');
+    Route::get('/assessments', [PkpController::class, 'assessments'])->name('assessments');
+    Route::get('/deadlines/{year}/{month}', [PkpController::class, 'deadline'])
+        ->whereNumber('year')
+        ->whereNumber('month')
+        ->name('deadline.show');
+    Route::put('/deadlines/{year}/{month}', [PkpController::class, 'updateDeadline'])
+        ->whereNumber('year')
+        ->whereNumber('month')
+        ->name('deadline.update');
+    Route::get('/my-assessor-options', [PkpController::class, 'myAssessorOptions'])->name('my-assessor-options');
+    Route::post('/', [PkpController::class, 'store'])->name('store');
+    Route::post('/{pkp_uuid}/revisions', [PkpController::class, 'revise'])
+        ->whereUuid('pkp_uuid')
+        ->name('revisions.store');
+    Route::get('/{pkp_uuid}/revisions/{revision_uuid}/pdf', [PkpController::class, 'pdf'])
+        ->whereUuid('pkp_uuid')
+        ->whereUuid('revision_uuid')
+        ->name('revisions.pdf');
+    Route::get('/{pkp_uuid}/revisions/{revision_uuid}/edit', [PkpController::class, 'editRevision'])
+        ->whereUuid('pkp_uuid')
+        ->whereUuid('revision_uuid')
+        ->name('revisions.edit');
+    Route::get('/{pkp_uuid}', [PkpController::class, 'show'])
+        ->whereUuid('pkp_uuid')
+        ->name('show');
+    Route::post('/{pkp_uuid}/submit', [PkpController::class, 'submit'])
+        ->whereUuid('pkp_uuid')
+        ->name('submit');
+    Route::post('/{pkp_uuid}/reassign-assessor', [PkpController::class, 'reassignAssessor'])
+        ->whereUuid('pkp_uuid')
+        ->name('reassign-assessor');
+    Route::post('/{pkp_uuid}/reassign-inspector', [PkpController::class, 'reassignInspector'])
+        ->whereUuid('pkp_uuid')
+        ->name('reassign-inspector');
+    Route::post('/{pkp_uuid}/refresh-identity', [PkpController::class, 'refreshIdentity'])
+        ->whereUuid('pkp_uuid')
+        ->name('refresh-identity');
+    Route::post('/{pkp_uuid}/decision', [PkpController::class, 'decide'])
+        ->whereUuid('pkp_uuid')
+        ->name('decision');
+    Route::post('/{pkp_uuid}/revisions/{revision_uuid}/documents', [PkpController::class, 'storeDocument'])
+        ->whereUuid('pkp_uuid')
+        ->whereUuid('revision_uuid')
+        ->name('revisions.documents.store');
+    Route::get('/{pkp_uuid}/documents/{document_uuid}/download', [PkpController::class, 'downloadDocument'])
+        ->whereUuid('pkp_uuid')
+        ->whereUuid('document_uuid')
+        ->name('documents.download');
+    Route::post('/{pkp_uuid}/documents/{document_uuid}/decision', [PkpController::class, 'decideDocument'])
+        ->whereUuid('pkp_uuid')
+        ->whereUuid('document_uuid')
+        ->name('documents.decision');
+    Route::put('/{pkp_uuid}/revisions/{revision_uuid}', [PkpController::class, 'updateRevision'])
+        ->whereUuid('pkp_uuid')
+        ->whereUuid('revision_uuid')
+        ->name('revisions.update');
+    Route::get('/assessor-settings/{pegawai_uuid}', [PkpController::class, 'assessorSettings'])
+        ->whereUuid('pegawai_uuid')
+        ->name('assessor-settings.show');
+    Route::put('/assessor-settings/{pegawai_uuid}', [PkpController::class, 'updateAssessorSettings'])
+        ->whereUuid('pegawai_uuid')
+        ->name('assessor-settings.update');
+});
 
 // Izin routes — fixed-path PERMA routes BEFORE resource to avoid {uuid} collision
 Route::middleware(['auth', 'verified'])->group(function () {
