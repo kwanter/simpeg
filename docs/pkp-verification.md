@@ -194,3 +194,30 @@ without `PKP_CHROMIUM_EXECUTABLE` overrides:
 
 These are local results. A new hosted run of the modified workflow is still
 required before claiming the hosted Playwright gate passes.
+
+## Hosted Playwright Follow-Up: 2026-11-06
+
+Run `42177037854` tested commit `d3665aa` with Node 22.22.2. Browser
+installation completed successfully in approximately 10 seconds. Both base
+browser tests and 11 of 12 PKP tests passed, including both PDF scenarios.
+The qpdf runtime image job also passed. PHP Tests (`42177037648`) and PKP
+Database Integration (`42177037779`) passed for the same commit.
+
+The remaining failure was the assessment reassignment scenario, which
+submitted immediately after an asynchronous draft save. A temporary probe
+delayed delivery of the real save response by one second. The save advanced
+the record from version 1 to version 2, but the subsequent submit request
+still sent `expected_version=1` and correctly received HTTP 409. The original
+submission-success assertion failed, reproducing the hosted symptom.
+
+The scenario now waits for the saved-page navigation and its success status
+before submitting. Under the identical delayed-response probe, submission
+sent `expected_version=2`, received HTTP 303, and the complete reassignment
+scenario passed. Application code, optimistic-locking checks, retries,
+timeouts, and existing assertions remain unchanged.
+
+Both complete browser suites then passed with `CI=1` on Node 22.22.2 using
+the installed Chromium channel without an executable override: two base
+tests in 4.3 seconds and 12 PKP tests in approximately 77 seconds. The PKP
+configuration still uses zero retries. JavaScript syntax and whitespace
+checks passed.

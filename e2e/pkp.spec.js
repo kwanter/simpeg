@@ -283,6 +283,8 @@ test('administrator can reassign a submitted assessment to an allowed replacemen
   await page.getByLabel('Target kualitas').fill('100.0000');
   await page.getByLabel('Realisasi kuantitas').fill('2.0000');
   await page.getByRole('button', { name: 'Simpan draf' }).click();
+  await expect(page).toHaveURL(/\?saved=1$/);
+  await expect(page.getByRole('status').filter({ hasText: 'Perubahan tersimpan' })).toBeVisible();
   await page.getByRole('button', { name: 'Ajukan ke Pejabat Penilai' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'PKP berhasil diajukan' })).toBeVisible();
 
