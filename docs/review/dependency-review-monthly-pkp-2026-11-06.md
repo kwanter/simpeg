@@ -253,22 +253,30 @@ deployment, staging, or release authorization is implied.
 The in-range patch set was executed after this review was published. Values
 below are measured after the change, not projected.
 
-- **Composer:** 5 upgrades, 0 removals, 0 installs. `symfony/http-foundation`
+- **Composer:** 6 upgrades, 0 removals, 0 installs. `symfony/http-foundation`
   v6.4.41 to v6.4.50, `symfony/http-kernel` v6.4.41 to v6.4.50,
   `symfony/routing` v6.4.41 to v6.4.50, `symfony/mime` v6.4.41 to v6.4.49,
-  `league/flysystem` 3.34.0 to 3.36.0. `composer.json` is unchanged; the
-  upgrades resolve inside the existing `^10.10` framework constraints.
+  `league/flysystem` 3.34.0 to 3.36.0, `symfony/yaml` v7.4.13 to v7.4.23.
+  `composer.json` is unchanged; every upgrade resolves inside the existing
+  framework constraints, including the dev-only YAML used by Sail.
 - **Composer audit:** 15 advisory records across 7 packages dropped to
-  **7 records across 2 packages** (`laravel/framework` and dev-only
-  `symfony/yaml`). The reachable `Cache-Control` ReDoS is cleared.
+  **5 records on a single package**, `laravel/framework`, which collapse to
+  four unique advisories. The reachable `Cache-Control` ReDoS is cleared, and
+  both YAML parser advisories are gone.
 - **npm:** 41 packages removed, 12 changed. `axios` 1.21.0,
   `vite` 8.3.6, `sucrase` 3.35.1, `postcss-selector-parser` 6.1.5,
   `source-map-js` 1.2.2, `follow-redirects` 1.16.2. `glob` and `minimatch`
   are no longer installed at any depth. `package.json` is unchanged.
 - **npm audit:** 0 vulnerabilities, down from 8 packages and 24 instances.
-- **Regression guard:** `tests/Unit/DependencyFloorTest.php` pins both floors
-  and the two forbidden ranges. It failed before the change, 3 tests and 25
-  assertions pass after, and it asserts floors rather than exact versions.
+- **Regression guard:** `tests/Unit/DependencyFloorTest.php` pins six PHP
+  floors, six npm floors, and two forbidden ranges. It failed before the
+  change, 3 tests and 27 assertions pass after, and it asserts floors rather
+  than exact versions.
+- **Fix verified in the vendored code, not just in metadata:**
+  `HeaderUtils::split()` now uses possessive quantifiers and only consumes
+  whitespace when more of the value follows. The documented worst-case header
+  parsed in 0.645 ms with no directive loss, where the advisory measured
+  813 ms on PHP 8.5 before the fix.
 - **Gates:** full PHP suite 605 passed / 4,605 assertions / 84.21 s; Pint
   PASS on 278 files; `npm run build` green on vite 8.3.6; base Chromium suite
   2 passed; PKP Chromium suite 12 passed with 0 retries.
@@ -284,6 +292,7 @@ below are measured after the change, not projected.
   service name; clearing each cache individually works, and the failure is
   environmental rather than caused by the upgrade.
 
-Still open: the four Laravel advisories and two `symfony/yaml` advisories,
-which Phases 2 to 4 address. Phase 2 needs explicit approval because it edits
-CI configuration.
+Still open: the four Laravel advisories, which only the framework upgrade in
+Phase 4 closes. Every advisory that any in-range patch could clear is now
+cleared. Phase 2 needs explicit approval because it edits CI
+configuration.

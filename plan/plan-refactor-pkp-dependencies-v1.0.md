@@ -50,7 +50,8 @@ Reports: `docs/review/dependency-review-monthly-pkp-2026-11-06.md`.
 
 TASK-101 reads `composer.lock` and asserts the patched floors:
 `symfony/http-foundation` and `http-kernel` and `routing` at 6.4.50 or newer,
-`symfony/mime` at 6.4.49 or newer, `league/flysystem` at 3.35.3 or newer. It
+`symfony/mime` at 6.4.49 or newer, `league/flysystem` at 3.35.3 or newer,
+`symfony/yaml` at 7.4.23 or newer. It
 must fail before the bump and pass after, so the contract survives future
 refreshes. Keep it a floor assertion, not an exact version pin, so routine
 updates stay legal.
@@ -60,12 +61,14 @@ TASK-102 does the same for `package-lock.json`: `axios` at 1.20.0 or newer,
 `postcss-selector-parser` at 6.1.5 or newer, and no `glob` node at all (sucrase
 3.35.1 removes it). Do not assert exact versions.
 
-TASK-103 uses the proven dry-run set:
+TASK-103 executed the proven dry-run set, plus the dev-only YAML patch that
+the same dry-run proved in range:
 
 ```sh
 composer update "symfony/http-foundation:^6.4.50" \
   "symfony/http-kernel:^6.4.50" "symfony/routing:^6.4.50" \
   "symfony/mime:^6.4.49" "league/flysystem:^3.35.3"
+composer update symfony/yaml   # 7.4.13 -> 7.4.23, dev-only
 ```
 
 TASK-104 uses the proven npm set:

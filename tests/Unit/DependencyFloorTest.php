@@ -22,6 +22,7 @@ final class DependencyFloorTest extends TestCase
         'symfony/routing' => '6.4.50',
         'symfony/mime' => '6.4.49',
         'league/flysystem' => '3.35.3',
+        'symfony/yaml' => '7.4.23',
     ];
 
     /**
