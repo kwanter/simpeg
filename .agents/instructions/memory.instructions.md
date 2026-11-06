@@ -215,3 +215,100 @@ left running, while hosted CI, dependency disposition, and PKP review remain
 unverified or pending. -->
 
 ---
+
+## Session Checkpoint: 2026-11-06
+
+- **Active Memory Path:** `.agents/instructions/memory.instructions.md`
+- **Current SDLC Phase:** Hosted CI repair complete and verified. All three
+  workflows pass for commit `1b0f3f6`. This checkpoint does not establish
+  release readiness; prior PKP review and dependency gates stay open.
+- **Active Artifacts:**
+  - `docs/pkp-verification.md` — Status: ✅ Updated with the CI runtime
+    repair record and the hosted follow-up evidence.
+  - `spec/spec-feature-monthly-pkp.md` and `plan/plan-monthly-pkp.md` remain
+    the PKP reference artifacts; the TASK-50A review gate is still pending.
+- **Achieved Milestones:**
+  - Root-caused two cancelled hosted Playwright runs that had produced no E2E
+    evidence. The job exhausted its 15-minute limit inside
+    `playwright install` under `lts/*`, which resolved to Node 26.13.0.
+  - Proved the cause with the same downloaded Chromium archive: extraction
+    through Playwright's ZIP path finished in 1.57 seconds on Node 22.22.2
+    and never resolved on Node 24 or in a bounded Node 26 container probe.
+  - Pinned `node-version: 22.22.2` in the Playwright workflow. A clean
+    install of Chromium, FFmpeg, and Headless Shell then took 226 seconds.
+  - Found and fixed a second browser-mode defect: the default Headless Shell
+    left both PDF popups at `about:blank`. Both Chromium projects now set
+    `channel: 'chromium'`; no PDF assertion was weakened.
+  - Committed and pushed the CI repair as `d3665aa`. Hosted run `42177037854`
+    installed browsers in about 10 seconds, passed 2 base tests, and passed
+    11 of 12 PKP tests; the reassignment scenario failed.
+  - Reproduced that failure locally by delaying the real draft-save response
+    by one second. The save advanced the record to version 2, but the submit
+    request still carried `expected_version=1` and correctly got HTTP 409.
+  - Fixed the test interleaving by waiting for the saved-page navigation and
+    its success status before submitting. Under the identical delayed probe
+    the submit carried version 2, received HTTP 303, and the scenario passed.
+  - Committed and pushed the synchronization fix as `1b0f3f6`, including the
+    verification record.
+  - Hosted verification for `1b0f3f6` is green: Playwright Tests
+    `42206465199` (2 base tests at 5.7 seconds, 12 PKP tests at 1.2 minutes),
+    PHP Tests `42206465224` (8.2, 8.3, and 8.4 plus Pint), and PKP Database
+    Integration `42206465423` (MySQL, PostgreSQL, migration recovery, races,
+    and the Nginx/PHP-FPM upload stack).
+- **Dead-Ends (Do NOT Repeat):**
+  - **Attempted:** Back omp's browser automation with Lightpanda
+    `1.1.0-nightly.11745` through `browser.cdpUrl`, a keeper process holding
+    a page target, and a Chromium-style `app.path` wrapper.
+    **Reason:** omp enumerates page targets through Chromium-style HTTP
+    discovery. Lightpanda never lists dynamically created targets there
+    (upstream issue #1932), and a second CDP client cannot drive its pages
+    (targets bind to the creating connection; issue #3182). All three routes
+    threw `No page targets available`. Lightpanda works only as the sole
+    client through `playwright-core` `connectOverCDP`. Every session setting
+    was reverted; do not retry without checking those upstream issues.
+  - **Attempted:** Treating the Playwright Headless Shell as sufficient for
+    PDF printing scenarios.
+    **Reason:** Both PDF popups stayed at `about:blank` while other tests
+    passed. Select `channel: 'chromium'` for PDF coverage.
+  - **Attempted:** Judging browser-install progress from log silence or from
+    the download reaching 100 percent.
+    **Reason:** Extraction is the stalling phase, and the earlier bounded
+    background probes were killed at their own 180-second cap. Judge by the
+    installation marker or the finished process, not by missing output.
+  - **Attempted:** Writing JSON `null` back to a `cfg://` key.
+    **Reason:** The cfg device requires content and stores the literal string
+    `"null"`. An empty string is the falsy sentinel that reads as unset.
+- **Updated Files:**
+  - `.github/workflows/playwright.yml` pins Node `22.22.2` instead of `lts/*`.
+  - `playwright.config.js` and `playwright.pkp.config.js` set
+    `channel: 'chromium'` for the Chromium project.
+  - `e2e/pkp.spec.js` waits for the saved-page navigation and status before
+    the reassignment submission; no other assertion, retry, or timeout
+    changed.
+  - `docs/pkp-verification.md` records the runtime diagnosis, the hosted run
+    evidence, and the race root cause.
+- **Decisions Made:**
+  - Fixed the reproduced runtime incompatibility by pinning Node rather than
+    raising the 15-minute job limit or skipping browser installation.
+  - Kept the PKP suite at zero retries and fixed the test interleaving
+    instead, leaving application code and optimistic locking untouched.
+  - Accepted the two pre-existing actionlint ShellCheck warnings and the
+    Node 20 action deprecation warnings as out of scope for this repair.
+  - Declined to add `test-results/` artifact upload; it is optional
+    diagnostics, not part of the requested CI fix.
+- **Next Action / Pending:**
+  - Earlier gates remain open and are not resolved by green CI: the PKP
+    review authorization (TASK-50A), Composer audit advisories, and npm audit
+    findings recorded in the 2026-10-07 checkpoint.
+  - No deployment, staging migration, or release was performed or approved.
+  - `storage/framework/testing-pkp.sqlite` stays untracked as runtime test
+    data.
+  - This checkpoint is a new local edit after `1b0f3f6`; it has not been
+    committed or pushed by the save request.
+
+<!-- checkpoint-tail: Playwright CI was repaired by pinning Node 22.22.2 and
+selecting full Chromium, a save/submit race was fixed with a navigation wait,
+and all three hosted workflows pass for 1b0f3f6; PKP review and dependency
+gates remain open. -->
+
+---
