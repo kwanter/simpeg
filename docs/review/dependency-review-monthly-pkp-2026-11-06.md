@@ -247,3 +247,43 @@ and `symfony/yaml` (2), and only a framework major upgrade closes the first.
 Executable proposal: `plan/plan-refactor-pkp-dependencies-v1.0.md`.
 No dependency was modified, installed, or upgraded by this review, and no
 deployment, staging, or release authorization is implied.
+
+## 9. Phase 1 Applied (2026-11-06)
+
+The in-range patch set was executed after this review was published. Values
+below are measured after the change, not projected.
+
+- **Composer:** 5 upgrades, 0 removals, 0 installs. `symfony/http-foundation`
+  v6.4.41 to v6.4.50, `symfony/http-kernel` v6.4.41 to v6.4.50,
+  `symfony/routing` v6.4.41 to v6.4.50, `symfony/mime` v6.4.41 to v6.4.49,
+  `league/flysystem` 3.34.0 to 3.36.0. `composer.json` is unchanged; the
+  upgrades resolve inside the existing `^10.10` framework constraints.
+- **Composer audit:** 15 advisory records across 7 packages dropped to
+  **7 records across 2 packages** (`laravel/framework` and dev-only
+  `symfony/yaml`). The reachable `Cache-Control` ReDoS is cleared.
+- **npm:** 41 packages removed, 12 changed. `axios` 1.21.0,
+  `vite` 8.3.6, `sucrase` 3.35.1, `postcss-selector-parser` 6.1.5,
+  `source-map-js` 1.2.2, `follow-redirects` 1.16.2. `glob` and `minimatch`
+  are no longer installed at any depth. `package.json` is unchanged.
+- **npm audit:** 0 vulnerabilities, down from 8 packages and 24 instances.
+- **Regression guard:** `tests/Unit/DependencyFloorTest.php` pins both floors
+  and the two forbidden ranges. It failed before the change, 3 tests and 25
+  assertions pass after, and it asserts floors rather than exact versions.
+- **Gates:** full PHP suite 605 passed / 4,605 assertions / 84.21 s; Pint
+  PASS on 278 files; `npm run build` green on vite 8.3.6; base Chromium suite
+  2 passed; PKP Chromium suite 12 passed with 0 retries.
+- **Cache hygiene:** no compiled route cache existed (`bootstrap/cache`
+  holds only `packages.php` and `services.php`), and config, route, view, and
+  event caches were cleared anyway, which satisfies the upstream requirement
+  to rebuild routing state after the matcher fix.
+- **Two notes for the record.** Rebuilt CSS drops an unused `.break-all`
+  utility because clearing compiled views removed it from Tailwind's scan
+  surface; no view references that class, and no at-rule or used selector
+  changed. `php artisan optimize:clear` fails on this host only, inside
+  `cache:clear`, because phpredis is loaded and `REDIS_HOST` is the Docker
+  service name; clearing each cache individually works, and the failure is
+  environmental rather than caused by the upgrade.
+
+Still open: the four Laravel advisories and two `symfony/yaml` advisories,
+which Phases 2 to 4 address. Phase 2 needs explicit approval because it edits
+CI configuration.

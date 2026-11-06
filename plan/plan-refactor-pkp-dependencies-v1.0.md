@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: Planned
+status: In Progress (Phase 1 complete)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -39,14 +39,14 @@ Reports: `docs/review/dependency-review-monthly-pkp-2026-11-06.md`.
 - **GOAL-001:** Clear every advisory that a patch inside the declared range
   removes, with the full suite green.
 
-| Task     | Description                | Ref      | Done | Date |
-| -------- | -------------------------- | -------- | :--: | :--: |
-| TASK-101 | RED: dependency floor test | SEC-001  | [ ]  |      |
-| TASK-102 | RED: npm floor check       | SEC-003  | [ ]  |      |
-| TASK-103 | GREEN: PHP patch set       | SEC-001  | [ ]  |      |
-| TASK-104 | GREEN: npm patch set       | SEC-003  | [ ]  |      |
-| TASK-10X | VERIFY: full gates         | TEST-001 | [ ]  |      |
-| TASK-10Y | APPROVAL: before Phase 2   | PRN-001  | [ ]  |      |
+| Task     | Description                | Ref      | Done | Date       |
+| -------- | -------------------------- | -------- | :--: | :--------: |
+| TASK-101 | RED: dependency floor test | SEC-001  | [x]  | 2026-11-06 |
+| TASK-102 | RED: npm floor check       | SEC-003  | [x]  | 2026-11-06 |
+| TASK-103 | GREEN: PHP patch set       | SEC-001  | [x]  | 2026-11-06 |
+| TASK-104 | GREEN: npm patch set       | SEC-003  | [x]  | 2026-11-06 |
+| TASK-10X | VERIFY: full gates         | TEST-001 | [x]  | 2026-11-06 |
+| TASK-10Y | APPROVAL: before Phase 2   | PRN-001  | [ ]  |            |
 
 TASK-101 reads `composer.lock` and asserts the patched floors:
 `symfony/http-foundation` and `http-kernel` and `routing` at 6.4.50 or newer,
