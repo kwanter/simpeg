@@ -534,7 +534,7 @@ remain Phase 5 work; this phase does not claim their completion.
 | TASK-507 | VERIFY: full gates/audits | PRN-002 | [x] | 2026-10-07 |
 | TASK-508 | GREEN: realized AC evidence | TEST-002 | [x] | 2026-10-07 |
 | TASK-509 | VERIFY: docs/scope | PRN-002 | [x] | 2026-10-07 |
-| TASK-50A | APPROVAL: user approves completion/re-review | PRN-001 | [ ] | |
+| TASK-50A | APPROVAL: user approves completion | PRN-001 | [x] | 2026-11-06 |
 
 The identity race uses independent committed workers and controlled barriers
 around the authoritative read. Verify PostgreSQL 16 and MySQL 8 behavior,
@@ -767,3 +767,24 @@ seconds after the two migration repairs. Pint passed 274 files, both
 migration syntax checks passed, and all five owned stack containers are
 verified exited without volume removal. Local Phase 5 execution gates are
 complete; TASK-50A remains the user's completion/re-review checkpoint.
+
+## TASK-50A Approval Record: 2026-11-06
+
+The user approved the completion and re-review checkpoint on 2026-11-06
+after the read-only re-review in
+`docs/review/code-review-monthly-pkp-2026-11-06.md` verified all 14
+required findings against HEAD `d309b4c`:
+
+- Axis A resolved 6 of 6 required findings; Axis B resolved 8 of 8.
+- Focused suite `php artisan test --filter=Pkp` with the real qpdf binary
+  passed 232 tests and 3,578 assertions in 74.00 seconds.
+- Repository-wide Pint passed 277 files during the same review.
+- Readiness score 95/100 with no critical-flaw veto.
+
+Two optional items remain open by decision: `PERF-01` (per-indicator
+activity query, bounded by the 50-indicator cap) and `ARCH-01` (two
+sibling exception classes remain in `PkpPdfValidator.php`). `DEP-01`
+dependency advisories still need a separate decision.
+
+This approval closes the TASK-50A checkpoint only. Deployment, staging
+migration, and release remain separately authorized.
