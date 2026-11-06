@@ -20,6 +20,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        channel: 'chromium',
         launchOptions: process.env.PKP_CHROMIUM_EXECUTABLE
           ? { executablePath: process.env.PKP_CHROMIUM_EXECUTABLE }
           : undefined,

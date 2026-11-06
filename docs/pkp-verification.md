@@ -157,3 +157,40 @@ Current resumed logs are `/tmp/pkp-phase5-resumed-full-php.log`,
 `/tmp/pkp-phase5-resumed-{pg,mysql}-{up,down,reup}.log`, and
 `/tmp/pkp-phase5-resumed-stop.log`. No hosted CI, production migration,
 release, staging, or commit was performed.
+
+## Playwright CI Runtime Repair: 2026-11-05
+
+Hosted run `41980827810` exhausted its 15-minute job limit while installing
+Chromium with Playwright 1.58.2 on Node 26.13.0. Both browser-test steps were
+skipped. The browser download reaching 100% did not establish installation
+completion. Run `41976208086` also exceeded the same job limit.
+
+A downloaded Chromium 1208 archive passed `unzip -t`. Extracting that exact
+archive through Playwright's bundled ZIP implementation completed in 1.57
+seconds on Node 22.22.2. The Node 24 probe exited without resolving the
+extraction promise; a bounded Node 26.13.0 container probe remained unresolved
+and failed after 15 seconds. A small ZIP probe succeeded on Node 26, so the
+failure is archive-dependent rather than all ZIP extraction being broken.
+
+The workflow now pins Node 22.22.2 instead of the moving `lts/*` alias. The
+15-minute job limit, browser version, dependencies, and test assertions are
+unchanged. This avoids the reproduced runtime incompatibility without
+increasing the timeout or bypassing browser installation.
+
+The first clean-install run exposed a separate browser-mode mismatch:
+Headless Shell left both PDF popups at `about:blank` (10 PKP tests passed,
+two PDF tests failed). Both Chromium projects now set `channel: 'chromium'`
+to use full Chromium's new headless mode. No PDF assertions were weakened.
+
+Verification with Node 22.22.2 and a fresh Playwright browser directory,
+without `PKP_CHROMIUM_EXECUTABLE` overrides:
+
+- Clean Chromium, FFmpeg, and Headless Shell installation: passed in 226
+  seconds, including archive extraction and host-requirement validation.
+- Base Chromium suite: two tests passed in 5.9 seconds.
+- PKP Chromium suite: 12 tests passed in approximately 70 seconds, including
+  both PDF popups, the 500-activity round trip, and frozen identity resubmit.
+- Frontend production build: passed with Vite 8.1.5.
+
+These are local results. A new hosted run of the modified workflow is still
+required before claiming the hosted Playwright gate passes.
