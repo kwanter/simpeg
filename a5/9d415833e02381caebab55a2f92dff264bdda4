@@ -1,0 +1,28 @@
+composer.lock
+  h_00672522f4dbdd 2000,2004,2008-2009,2077,2079,4850,4854,4858-4859,4907,4927,4931,4935,4939-4940,4997,5025,5045,5133,5137,5141-5142,5166,5198,5218,6115,6119,6123-6124,6178,6198
+docs/review/dependency-review-monthly-pkp-2026-11-06.md
+  h_00672522f4dbdd 250-289
+package-lock.json
+  h_00672522f4dbdd 125-127,131,150-166,168-170,185-187,202-204,219-221,236-238,253-255,273-275,293-295,313-315,333-335,353-355,373-375,390-392,407-409,567-569,574,958-960,1631-1633,1794-1796,1814,1816,1936-1938,2040-2042,2046,2056-2070,2098-2100,2108-2110,2119,2318-2320,2324-2327,2344,2407-2409
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 5,42-49
+public/build/assets/app-C4uPkXvh.css
+  h_00672522f4dbdd 1
+public/build/assets/app-CkHvnd1H.js
+  h_00672522f4dbdd 1-17,21
+public/build/manifest.json
+  h_00672522f4dbdd 3,12
+tests/Unit/DependencyFloorTest.php
+  h_00672522f4dbdd 1-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a59d415833e02381caebab55a2f92dff264bdda4",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
