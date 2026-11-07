@@ -30,6 +30,13 @@ upgrade guides, and from source scans of this repository.
 The highest floor is **12.69.0**, so a Laravel 12 resolution must stay at or
 above it.
 
+`composer audit` prints five records for these four advisories. The CRLF issue
+is reported twice, as `PKSA-3r5d-mb8f-1qw9` and `PKSA-mdq4-51ck-6kdq`
+(CVE-2026-48019), both resolving to `GHSA-5vg9-5847-vvmq`. Count advisories by
+GHSA, not by record; the baseline policy in `.github/ComposerAuditPolicy.php`
+listed the four GHSA ids, which is why the record count and the accepted set
+differ by one.
+
 Laravel 11 is **not** a viable intermediate stop. The same CRLF advisory
 covers `illuminate/mail` `>=11.0.0,<12.0.0`, and Composer 2.10's advisory
 policy refuses to install that line at all: a probe asking for

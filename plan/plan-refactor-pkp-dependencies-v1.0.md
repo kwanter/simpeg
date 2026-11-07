@@ -276,7 +276,8 @@ approved.
 - **FILE-001:** `composer.json`, `composer.lock` (Symfony and Flysystem
   floors).
 - **FILE-002:** `package.json`, `package-lock.json` (five npm floors).
-- **FILE-003:** `tests/Unit/DependencyFloorTest.php` and the npm floor check.
+- **FILE-003:** `tests/Unit/DependencyFloorTest.php` and the npm floor check;
+  also the backup absence guard added with the drop.
 - **FILE-004:** `.github/workflows/php-tests.yml` (audit gate).
 - **FILE-004A:** `.github/ComposerAuditPolicy.php`,
   `.github/check-composer-audit.php`, and
@@ -290,6 +291,8 @@ approved.
   (topology decision and audit counts).
 - **FILE-008:** `docs/review/laravel-eol-break-inventory-2026-11-07.md`
   (framework upgrade inventory and recommendation).
+- **FILE-009:** `PRODUCTION-RUNBOOK.md` (backup gate now names
+  `simpeg-backup.service` and keeps the off-host sync as its own step).
 
 ## 5. Rollback / Recovery Plan
 
