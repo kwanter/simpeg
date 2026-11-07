@@ -1,0 +1,20 @@
+composer.lock
+  h_00672522f4dbdd 9440,9444,9448-9449,9492,9512
+docs/review/dependency-review-monthly-pkp-2026-11-06.md
+  h_00672522f4dbdd 256,259-261,263-265,271-279,295-298
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 53-54,64-65,71
+tests/Unit/DependencyFloorTest.php
+  h_00672522f4dbdd 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6fc72bf55fb04ed3318c02fb01bd53c02aa3fba6",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
