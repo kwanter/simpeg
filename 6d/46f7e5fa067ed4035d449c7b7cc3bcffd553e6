@@ -1,0 +1,26 @@
+.github/ComposerAuditPolicy.php
+  h_00672522f4dbdd 1-114
+.github/check-composer-audit.php
+  h_00672522f4dbdd 1-37
+.github/workflows/php-tests.yml
+  h_00672522f4dbdd 22,81-84,89-91,96-104
+docs/ARCHITECTURE.md
+  h_00672522f4dbdd 4,103,178-183,199-206,245-252,273-275
+docs/review/dependency-review-monthly-pkp-2026-11-06.md
+  h_00672522f4dbdd 299-373
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 5,19-20,94-101,106-139,201-203,214-216
+tests/Unit/ComposerAuditPolicyTest.php
+  h_00672522f4dbdd 1-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d46f7e5fa067ed4035d449c7b7cc3bcffd553e6",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
