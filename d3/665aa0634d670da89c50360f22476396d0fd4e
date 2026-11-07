@@ -1,0 +1,20 @@
+.github/workflows/playwright.yml
+  h_00672522f4dbdd 71
+docs/pkp-verification.md
+  h_00672522f4dbdd 160-196
+playwright.config.js
+  h_00672522f4dbdd 23
+playwright.pkp.config.js
+  h_00672522f4dbdd 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d3665aa0634d670da89c50360f22476396d0fd4e",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
