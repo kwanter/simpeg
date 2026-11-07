@@ -70,8 +70,8 @@ The resolvable Laravel 12 set on PHP 8.2 locks:
 
 ## 4. Finding: the backup package is unreferenced in code
 
-`spatie/laravel-backup` is required in `composer.json` but no application code
-uses it:
+`spatie/laravel-backup` was required in `composer.json` at inventory time
+(removed on 2026-11-07; see section 7) but no application code used it:
 
 - `config/backup.php` does not exist.
 - No reference exists in `app/`, `routes/`, `resources/`, `bootstrap/`, or the
@@ -87,18 +87,20 @@ Documentation is a different story, and it contradicts itself:
 - `VPS-DEPLOYMENT-GUIDE.md:636-671` implements backup without it, through a
   custom `pg_dump` plus `storage` tarball script driven by systemd.
 
-Both cannot be true of the same deployment. The runbook gate names a package
-that ships no configuration and runs no schedule here, while the deployment
+Both cannot be true of the same deployment. The runbook gate named a package
+that shipped no configuration and ran no schedule here, while the deployment
 guide describes the mechanism that actually exists. Dropping the package
-therefore keeps the PHP floor at 8.2 — the PHP 8.3 requirement in probes three
-and four came only from `spatie/laravel-backup` — but it also obliges revising
-`PRODUCTION-RUNBOOK.md:97` in the same change. Leaving that line untouched
-would leave a release gate pointing at nothing.
+therefore kept the PHP floor at 8.2 — the PHP 8.3 requirement in probes three
+and four came only from `spatie/laravel-backup` — and it obliged revising
+`PRODUCTION-RUNBOOK.md:97` in the same change. That revision is done; the line
+now names the systemd units and keeps the off-host requirement as a separate
+step.
 
-Keeping the package is the alternative, and it costs more than it looks:
-backup 9.4 raises the PHP floor to 8.3, and the package still has no
-`config/backup.php` and no schedule entry, so it would not take a backup until
-both were added — duplicating what the systemd script already does.
+Keeping the package would have been the alternative, and it costs more than it
+looks: backup 9.4 raises the PHP floor to 8.3, and the package would still have
+had no `config/backup.php` and no schedule entry, so it would not have taken a
+backup until both were added — duplicating what the systemd script already
+does.
 
 ## 5. Application break surface, Laravel 10 to 12
 

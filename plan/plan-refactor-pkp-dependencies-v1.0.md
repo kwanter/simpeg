@@ -305,3 +305,8 @@ approved.
   fix the proxy, not the application.
 - **RBCK-004:** If a patched dependency breaks a test, do not lower the floor.
   File the specific incompatibility and hold the release.
+- **RBCK-005:** The backup removal is undone by reverting its commit, which
+  restores `composer.json`, `composer.lock`, and the runbook gate together.
+  Re-requiring the package on its own fails
+  `tests/Unit/DependencyFloorTest.php` by design; if it really must return,
+  change that test in the same commit and state which PHP floor you accepted.
