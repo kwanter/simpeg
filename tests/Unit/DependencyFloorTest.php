@@ -82,6 +82,23 @@ final class DependencyFloorTest extends TestCase
         }
     }
 
+    /**
+     * Re-adding the backup package silently raises the PHP floor: its 9.x
+     * releases require PHP ^8.3, and its 8.x releases cap the framework at
+     * Laravel 11. Backups are taken by the pg_dump script documented in
+     * VPS-DEPLOYMENT-GUIDE.md, so the package stays out of the lockfile.
+     */
+    public function test_the_unused_backup_package_stays_out_of_the_lockfile(): void
+    {
+        $lock = $this->composerLock();
+
+        $this->assertArrayNotHasKey(
+            'spatie/laravel-backup',
+            $lock,
+            'spatie/laravel-backup is locked again; it forces PHP ^8.3 and duplicates the systemd backup script.'
+        );
+    }
+
     public function test_no_copy_of_a_forbidden_npm_package_is_installed(): void
     {
         $lock = $this->packageLock();

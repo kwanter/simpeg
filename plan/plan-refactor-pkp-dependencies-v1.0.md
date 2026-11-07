@@ -247,6 +247,13 @@ four advisories with no Docker or CI-matrix change. Laravel 13.40 on PHP 8.3
 stays documented as the later option; it additionally needs
 `laravel/tinker ^3.0` and `brick/math ^0.14.2 || ^1.0`.
 
+The user chose to drop the package on 2026-11-07, and that part is executed:
+`spatie/laravel-backup` and four transitive packages left the lockfile,
+`composer.json` no longer requires it, `PRODUCTION-RUNBOOK.md` now points the
+release gate at `simpeg-backup.service` and `simpeg-backup.timer`, and
+`tests/Unit/DependencyFloorTest.php` fails if the package returns. PHP stays at
+8.2. The framework line itself still waits on TASK-40Y.
+
 Evidence lives in
 `docs/review/laravel-eol-break-inventory-2026-11-07.md`. Do not start the
 upgrade inside this plan; TASK-40Y stays open until an upgrade spec is

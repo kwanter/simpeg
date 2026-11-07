@@ -94,7 +94,13 @@ PHP-FPM entrypoint automatically:
 
 Before first production release:
 
-- Configure `spatie/laravel-backup` destination outside app host.
+- Install the `simpeg-backup` script and its systemd timer from
+  `VPS-DEPLOYMENT-GUIDE.md` (section on backups). It dumps PostgreSQL and
+  archives the storage volume to `/var/backups/simpeg` on the same host. This
+  project does not use `spatie/laravel-backup`.
+- Sync `/var/backups/simpeg` to a destination outside the app host before the
+  first release; a backup that only lives on the app host does not survive
+  host loss.
 - Back up PostgreSQL plus persistent storage volume.
 - Restore both into isolated environment.
 - Verify login, employee records, Cuti/Izin, and private documents.
