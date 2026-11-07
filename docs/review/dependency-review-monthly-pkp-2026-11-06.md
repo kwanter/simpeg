@@ -367,7 +367,33 @@ would have missed shipped Axios. No quality threshold was lowered.
 - Workflow structure passed actionlint with external shellcheck disabled;
   the new shell commands are executed by the smoke checks above.
 
-These are local results, not a hosted Actions run. Hosted validation remains
-pending commit and push. Application code, dependency manifests, lockfiles,
-and production configuration are unchanged by Phase 2. Laravel remediation
-and all deployment/release approvals remain separate.
+These local results are separate from the hosted verification below.
+Application code, dependency manifests, lockfiles, and production
+configuration are unchanged by Phase 2. Laravel remediation and all
+deployment/release approvals remain separate.
+
+### Hosted verification (2026-11-07)
+
+Implementation commit `6d46f7e` was pushed to `main`. All results below
+belong to the exact SHA `6d46f7e5fa067ed4035d449c7b7cc3bcffd553e6`:
+
+- [PHP Tests][hosted-phase2-php] completed successfully on PHP 8.2, 8.3,
+  and 8.4. The inspected PHP 8.2 log records 623 passing tests with
+  4,628 assertions, zero npm vulnerabilities, and exactly four accepted
+  baseline GHSAs. The Composer gate prints owner `kwanter`, review deadline
+  2026-11-21 UTC, and no unreviewed advisories.
+- [PKP Database Integration][hosted-phase2-db] completed successfully:
+  MySQL, PostgreSQL, migration recovery, race checks, and authenticated
+  uploads through the real Nginx/PHP-FPM stack.
+- [Playwright Tests][hosted-phase2-browser] completed successfully:
+  2 base browser tests, 12 PKP tests, and qpdf verification in both the
+  Apache and workspace images.
+
+[hosted-phase2-php]: https://github.com/kwanter/simpeg/actions/runs/42325153933
+[hosted-phase2-db]: https://github.com/kwanter/simpeg/actions/runs/42325153844
+[hosted-phase2-browser]: https://github.com/kwanter/simpeg/actions/runs/42325153988
+
+TASK-20X is complete. Phase 2 now has both local and hosted evidence;
+passing with the approved baseline does not mean the Laravel advisories
+are fixed. The baseline expiry and separate deployment/release approvals
+remain in force.

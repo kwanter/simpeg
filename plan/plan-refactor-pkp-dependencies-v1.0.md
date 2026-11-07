@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: In Progress (Phase 2 local verification complete)
+status: In Progress (Phase 2 hosted verification complete)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -97,7 +97,7 @@ Record the before/after audit counts.
 | TASK-202 | GREEN: reviewed Composer gate  | GATE-001 | [x]  | 2026-11-07 |
 | TASK-203 | GREEN: full npm audit gate     | GATE-001 | [x]  | 2026-11-07 |
 | TASK-20L | VERIFY: local workflow checks  | GATE-001 | [x]  | 2026-11-07 |
-| TASK-20X | VERIFY: hosted workflow run    | GATE-001 | [ ]  |            |
+| TASK-20X | VERIFY: hosted workflow run    | GATE-001 | [x]  | 2026-11-07 |
 | TASK-20Y | APPROVAL: CI sign-off          | PRN-001  | [x]  | 2026-11-07 |
 
 TASK-201 is evidence, not code: run the audit locally, confirm exit 1 while
@@ -129,14 +129,28 @@ in `CONSTRAINTS.md` is lowered.
 
 TASK-20L covers local execution of the exact workflow commands, negative
 CLI cases, registry-error and high-devDependency probes, the full PHP suite,
-and workflow lint. TASK-20X remains pending until commit/push is authorized
-and the hosted workflow completes against that exact commit.
+and workflow lint. Local verification passed: 18 policy tests / 21
+assertions, seven CLI scenarios, three controlled npm registry cases, and
+the full PHP suite (623 tests / 4,628 assertions). Repository Pint passed
+279 files and both `.github` helpers were checked explicitly.
 
-Local verification passed: 18 policy tests / 21 assertions, seven CLI
-scenarios, three controlled npm registry cases, and the full PHP suite
-(623 tests / 4,628 assertions). Repository Pint passed 279 files and both
-`.github` helpers were checked explicitly. No hosted run is claimed before
-commit and push.
+TASK-20X completed on 2026-11-07 after commit `6d46f7e` was pushed. All three
+hosted workflows passed against the same full SHA:
+`6d46f7e5fa067ed4035d449c7b7cc3bcffd553e6`.
+
+- [PHP Tests][phase2-php]: PHP 8.2/8.3/8.4, including both audit gates.
+- [PKP Database Integration][phase2-db]: MySQL, PostgreSQL, and upload stack.
+- [Playwright Tests][phase2-browser]: 2 base tests, 12 PKP tests, and qpdf
+  verification in both runtime images.
+
+[phase2-php]: https://github.com/kwanter/simpeg/actions/runs/42325153933
+[phase2-db]: https://github.com/kwanter/simpeg/actions/runs/42325153844
+[phase2-browser]: https://github.com/kwanter/simpeg/actions/runs/42325153988
+
+Hosted logs confirmed zero npm vulnerabilities and exactly four accepted
+Laravel GHSAs, with owner `kwanter` and review deadline 2026-11-21 UTC.
+This completes Phase 2 verification, not Laravel remediation or release
+approval. Phases 3 and 4 remain separate.
 
 ### Implementation Phase 3: Deployment-dependent advisories
 
