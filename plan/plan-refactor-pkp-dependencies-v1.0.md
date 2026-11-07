@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: In Progress (Phase 2 hosted verification complete)
+status: In Progress (Phase 3 complete; Phase 4 awaits approval)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -157,22 +157,35 @@ approval. Phases 3 and 4 remain separate.
 - **GOAL-003:** Resolve or consciously accept the three findings that depend
   on live server topology.
 
-| Task     | Description              | Ref     | Done | Date |
-| -------- | ------------------------ | ------- | :--: | :--: |
-| TASK-301 | PROBE: live SCRIPT_NAME  | SEC-001 | [ ]  |      |
-| TASK-302 | GREEN: pin Vite host     | SEC-003 | [ ]  |      |
-| TASK-303 | DOC: topology decision   | SEC-001 | [ ]  |      |
-| TASK-30Y | APPROVAL: before Phase 4 | PRN-001 | [ ]  |      |
+| Task     | Description              | Ref     | Done | Date       |
+| -------- | ------------------------ | ------- | :--: | :--------: |
+| TASK-301 | PROBE: live SCRIPT_NAME  | SEC-001 | [x]  | 2026-11-07 |
+| TASK-302 | GREEN: pin Vite host     | SEC-003 | [x]  | 2026-11-07 |
+| TASK-303 | DOC: topology decision   | SEC-001 | [x]  | 2026-11-07 |
+| TASK-30Y | APPROVAL: before Phase 4 | PRN-001 | [ ]  |            |
 
-TASK-301 answers two questions on the real deployment, not the repo examples:
-what `SCRIPT_NAME` and path info the front controller receives, and whether any
-path-based rule sits in front of PHP. Those two facts decide the base-URL and
-script-name advisories. Do not patch application code to compensate for an
-unknown proxy topology.
+TASK-301 answered the two questions on a running Nginx and PHP-FPM pair built
+from `docker/production/nginx/nginx.conf`, not from the repository examples:
+`SCRIPT_NAME` is always `/index.php`, `PATH_INFO` is always null, and the
+`^~ /storage/dokumen/` rule matches a different path than PHP parses.
+Comparing `symfony/http-foundation` 6.4.41 with 6.4.50 reproduced the
+script-name path bypass before the Phase 1 floor and showed it closed after.
+Protocol-relative and backslash request URIs produced no attacker-chosen base
+URL in either version, so no proxy change is required. Details live in
+`docs/review/dependency-review-monthly-pkp-2026-11-06.md` section 11.
 
-TASK-302 sets `server.host: '127.0.0.1'` in `vite.config.js`, or documents that
-Vite must not run inside Sail. `laravel-vite-plugin` forces `0.0.0.0` when
-`LARAVEL_SAIL` is set, which makes `/__open-in-editor` LAN-reachable.
+TASK-302 pinned `server.host: '127.0.0.1'` in `vite.config.js`. The guard in
+`tests/Unit/ViteDevServerHostTest.php` resolves the host through Vite and
+fails when the Sail environment widens it to `0.0.0.0`. A real dev server
+bound only `127.0.0.1`, and because a loopback container process is
+unreachable through a published Docker port, running Vite inside Sail now
+needs the explicit `npm run dev -- --host 0.0.0.0` override that the guard
+also asserts.
+
+TASK-303 recorded the decision: the Symfony floor closes the script-name and
+base-URL advisories, the residual Nginx path-rule mismatch only reaches Laravel
+routes that authorize independently, and no application code compensates for
+proxy topology. Phase 4 stays blocked until the user approves an upgrade spec.
 
 ### Implementation Phase 4: Laravel end-of-life decision
 
@@ -216,6 +229,7 @@ a framework upgrade inside this plan.
   `.github/check-composer-audit.php`, and
   `tests/Unit/ComposerAuditPolicyTest.php` (reviewed baseline gate).
 - **FILE-005:** `vite.config.js` (dev host).
+- **FILE-005A:** `tests/Unit/ViteDevServerHostTest.php` (dev-host guard).
 - **FILE-006:** `docs/review/dependency-review-monthly-pkp-2026-11-06.md`
   (topology decision and audit counts).
 

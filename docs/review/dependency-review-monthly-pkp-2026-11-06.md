@@ -397,3 +397,83 @@ TASK-20X is complete. Phase 2 now has both local and hosted evidence;
 passing with the approved baseline does not mean the Laravel advisories
 are fixed. The baseline expiry and separate deployment/release approvals
 remain in force.
+
+## 11. Phase 3 Deployment-Dependent Advisories (2026-11-07)
+
+The three findings that depended on live server topology were probed against
+a running Nginx and PHP-FPM pair instead of being decided from the repository
+examples.
+
+### Vite dev-server binding
+
+`laravel-vite-plugin` 3.1.3 widens the bind address whenever `LARAVEL_SAIL` is
+set and the config declares no host (`dist/index.js:1353-1355`). Resolving the
+project configuration through Vite itself returned `0.0.0.0` with
+`LARAVEL_SAIL=1` and Vite's default loopback host without it, so a Vite server
+started inside Sail was reachable from the LAN together with
+`/__open-in-editor`.
+
+- `vite.config.js` now pins `server.host: '127.0.0.1'`.
+- `tests/Unit/ViteDevServerHostTest.php` resolves the configuration through
+  Vite rather than reading the file text: 3 tests, 9 assertions. It failed
+  first with `Failed asserting that an array contains '0.0.0.0'`.
+- A real `npx vite` started with `LARAVEL_SAIL=1` listened only on
+  `127.0.0.1:5199`, confirmed twice through `lsof`.
+- A container process bound to `127.0.0.1` is unreachable through a published
+  Docker port (measured: HTTP `000`), so exposing the server inside Sail now
+  requires the explicit `npm run dev -- --host 0.0.0.0` override. The guard
+  test asserts that override still widens the host, keeping the escape hatch
+  deliberate rather than accidental.
+- The workspace service in `compose.dev.yaml` publishes `5173` without setting
+  `LARAVEL_SAIL`, so Vite there already bound Vite's loopback default and
+  already needed that override. This change aligns Sail with the same rule
+  instead of tightening only one of the two paths.
+
+### Front-controller topology
+
+The documented production Nginx configuration was run with `php:8.2-fpm` and a
+front-controller probe:
+
+- `SCRIPT_NAME` is `/index.php` for every request, and `PATH_INFO` is always
+  null: Nginx never splits path information.
+- `REQUEST_URI` preserves protocol-relative and backslash forms exactly
+  (`//evil.example/x`, `/\evil.example/x`).
+- `/index.phpadmin` and `/index.phpstorage/dokumen/secret.pdf` both reach the
+  front controller with HTTP 200 while `/storage/dokumen/secret.pdf` returns
+  Nginx 404, so the `^~ /storage/dokumen/` rule matches a different path than
+  PHP parses.
+
+### Symfony behavior, measured differentially
+
+The same probe ran against `symfony/http-foundation` 6.4.41 (the pre-Phase-1
+version) and 6.4.50 (locked):
+
+- `/index.phpadmin`: 6.4.41 derived `baseUrl=/index.php` and
+  `pathInfo=/admin`, reproducing the script-name path bypass. 6.4.50 keeps
+  `baseUrl=''` and `pathInfo=/index.phpadmin`.
+- `/index.phpstorage/dokumen/secret.pdf`: 6.4.41 reduced the path to
+  `/storage/dokumen/secret.pdf`; 6.4.50 keeps the full request path.
+- `//evil.example/x` and `/\evil.example/x`: both versions returned an empty
+  base URL across three `PHP_SELF` variants, so base-URL poisoning was not
+  reproduced with these Nginx variables. The patched release additionally
+  short-circuits both prefixes in `getBaseUrl()`.
+- At the application layer, `root()`, `url('/login')`, and `route('login')`
+  stayed on `http://simpeg.test` for all four crafted request URIs.
+
+### Decision
+
+- No application code compensates for proxy topology; if a live proxy is later
+  found to differ, the proxy is fixed instead.
+- The script-name and base-URL advisories are closed by the Symfony 6.4.50
+  floor already pinned in `tests/Unit/DependencyFloorTest.php`. The residual
+  Nginx path-rule mismatch only reaches Laravel routes that authorize
+  independently, so `^~ /storage/dokumen/` stays as defense in depth and needs
+  no patch.
+- Host-placeholder routing (CVE-2026-118516) does not apply: no
+  `Route::domain` declaration exists. Rebuild the route cache after any future
+  Symfony upgrade.
+- MIME parameter injection (CVE-2026-45070) and the inline-fragment advisory
+  do not apply: no parameterized header construction, `FragmentHandler`, or
+  `SubRequestHandler` usage exists.
+- Phase 3 changed one configuration file and added one guard test. No
+  dependency, lockfile, workflow, or application behavior changed.
