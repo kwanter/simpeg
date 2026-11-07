@@ -1,0 +1,14 @@
+docs/review/dependency-review-monthly-pkp-2026-11-06.md
+  h_00672522f4dbdd 536-549
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f04ea3f3935038dfab4b719f1b1fbe0fdb36208c",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
