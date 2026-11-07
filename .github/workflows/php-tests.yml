@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: ['8.2', '8.3', '8.4']
+        php: ["8.2", "8.3", "8.4"]
     steps:
       - uses: actions/checkout@v4
 
@@ -78,14 +78,27 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: npm audit (all dependencies)
+        # Axios ships in the browser bundle despite being a devDependency.
+        run: npm audit --include=dev --audit-level=high --package-lock-only --ignore-scripts
+
       - name: Build frontend assets
         run: npm run build
 
       - name: Run Pint (lint)
-        run: vendor/bin/pint --test
+        run: |
+          vendor/bin/pint --test
+          vendor/bin/pint --test .github/ComposerAuditPolicy.php .github/check-composer-audit.php
 
       - name: Run PHP tests
         run: php artisan test
 
-      - name: Composer audit
-        run: composer audit --no-interaction || true
+      - name: Composer audit (reviewed baseline)
+        # Owner: kwanter; review by 2026-11-21 UTC; remove after the framework upgrade.
+        # Only four reviewed Laravel GHSAs are tolerated, never the whole package.
+        # Reasons and IDs: .github/ComposerAuditPolicy.php and the dependency review.
+        run: |
+          audit_status=0
+          composer --no-cache --no-plugins --no-scripts audit --locked --no-interaction --format=json > composer-audit.json || audit_status=$?
+          cat composer-audit.json
+          php .github/check-composer-audit.php composer-audit.json "$audit_status"

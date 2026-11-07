@@ -1,7 +1,7 @@
 ---
 goal: Repository Architecture and Structure Documentation
 date_created: 2026-09-24
-last_updated: 2026-09-24
+last_updated: 2026-11-07
 status: 'Active'
 ---
 
@@ -100,7 +100,7 @@ adapter for existing callers. Queue links select the exact revision.
 .
 ├── .agents/                 # Agent skills, instructions, and documentation standards
 ├── .claude/                 # Mirrored agent configuration
-├── .github/workflows/       # PHP, browser, DB-concurrency, and upload-stack CI workflows
+├── .github/                 # CI workflows and the reviewed Composer audit gate
 ├── app/
 │   ├── Console/             # Artisan commands and scheduling
 │   ├── Exceptions/          # Exception handling
@@ -175,7 +175,12 @@ adapter for existing callers. Queue links select the exact revision.
 - `playwright.pkp.config.js`: PKP-only Chromium harness with a dedicated persistent SQLite fixture database and guarded test-fixture seeder; its twelve browser scenarios cover owner list/create/edit, admin all-record/deadline pages, assessment queues, printing, upload/review, external-source submission, correction approval, historical decision navigation, and R1 inspection while R2 is pending.
 - `vite.config.js`: Laravel Vite plugin and CSS/JavaScript entry points.
 - `routes/web.php` and `routes/auth.php`: Primary web and authentication route definitions.
-- `.github/workflows/php-tests.yml`: PHP 8.2–8.4 matrix, frontend build, Pint, PHPUnit, and Composer audit step.
+- `.github/workflows/php-tests.yml`: PHP 8.2–8.4 matrix, frontend build, Pint,
+  PHPUnit, a reviewed Composer baseline gate, and a full npm high/critical gate.
+- `.github/ComposerAuditPolicy.php`: Four reviewed Laravel GHSA exceptions,
+  package-bound identity checks, source deduplication, and fail-closed expiry.
+- `.github/check-composer-audit.php`: CLI consuming the raw JSON audit report
+  and preserved Composer exit status; no Laravel application boot is needed.
 - `.github/workflows/playwright.yml`: Chromium E2E setup and execution in CI.
 - `.github/workflows/pkp-integration.yml`: Separate PostgreSQL/MySQL race gates and the production Nginx/PHP-FPM upload test stack.
 - `CONSTITUTION.md` and `CONSTRAINTS.md`: Project engineering principles and required quality gates.
@@ -191,7 +196,14 @@ adapter for existing callers. Queue links select the exact revision.
 ## 9. Environment & Deployment
 
 - **CI/CD:** GitHub Actions workflows in `.github/workflows/` run on pushes and pull requests to `main`/`master`.
-- **PHP workflow:** Tests PHP 8.2, 8.3, and 8.4; installs Composer/npm dependencies; builds assets; runs Pint and PHPUnit. Its `composer audit` command ends with `|| true`, so audit findings do not currently fail this job.
+- **PHP workflow:** Tests PHP 8.2, 8.3, and 8.4; installs Composer/npm
+  dependencies; builds assets; runs Pint and PHPUnit. Composer audit preserves
+  its exit status and passes through the reviewed policy checker. Only four
+  Laravel GHSAs are temporarily accepted through 2026-11-21 UTC, owned by
+  `kwanter`; all other advisories, invalid reports, and expired exceptions
+  fail. npm audits the full lockfile including dev dependencies and fails on
+  high/critical findings or audit service errors. Gate success is not a claim
+  that the accepted Laravel advisories are fixed or that release is approved.
 - **Browser workflow:** Installs and runs Playwright Chromium tests; uploads the HTML report artifact.
 - **Deployment:** Docker development configurations include Sail and Apache; production Dockerfiles separate Nginx and PHP-FPM. The README states production can be launched manually or with an orchestrator.
 - **Critical environment variables:** `APP_ENV`, `APP_DEBUG`, `APP_KEY`, `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and environment-dependent `CACHE_DRIVER`, `QUEUE_CONNECTION`, and `SESSION_DRIVER`. Production secrets must be supplied through the deployment environment.
@@ -230,6 +242,14 @@ adapter for existing callers. Queue links select the exact revision.
 
 Scores are a qualitative snapshot of the inspected test seams and existing coverage, not a code-coverage measurement.
 
+The CI dependency seam is `ComposerAuditPolicy::check()` plus the CLI in
+`.github/check-composer-audit.php`. `ComposerAuditPolicyTest` exercises
+package-bound identities, duplicate sources, malformed and filtered reports,
+status consistency, and the UTC expiry boundary with deterministic dates.
+Workflow command smoke checks execute the real Composer and npm CLIs;
+controlled npm registry responses prove high devDependency findings and
+registry outages block without asserting workflow source text.
+
 ## 11. AI Agent Boundaries
 
 - Follow `AGENTS.md`, `CONSTITUTION.md`, and `CONSTRAINTS.md`; use Indonesian for user-facing communication and English for code and generated documentation.
@@ -250,7 +270,9 @@ Scores are a qualitative snapshot of the inspected test seams and existing cover
 
 - Add Playwright scenarios for authenticated submission and approval paths so critical user-facing behavior is covered beyond guest access.
 - Where row-locking and concurrent approvals are a production risk, validate the behavior against the production database engine in an appropriate integration environment; SQLite in-memory tests alone cannot establish it.
-- Align the `composer audit` CI behavior with the hard quality constraint that requires dependency audit failures to be actionable; the current PHP workflow intentionally ignores the command's exit status.
+- Review the four Laravel audit exceptions by 2026-11-21 UTC and remove them
+  after the framework upgrade. Do not widen the baseline or bypass registry
+  errors to make the dependency gate pass.
 - Keep the named route, policy, and service boundaries as agreed public test seams, and add focused regression tests whenever their observable behavior changes.
 - For behaviour-preserving refactors, reuse the reflection-based structural pin pattern in `tests/Unit/IzinStructureTest.php`. `ReflectionMethod::getFileName()` reports the trait's file for inherited methods and the class's file for local ones, so the assertion survives reformatting and supplies a genuine failing state for work that changes no behaviour. A plain text grep over a whole file cannot scope the check to one action.
 - Treat a new service or controller seam as a change to this document: update the `app/Services/` inventory in §6 and the seam matrix in §10 in the same change, not only the specification. Every SDLC artifact that declares a seam is a reader of this map.

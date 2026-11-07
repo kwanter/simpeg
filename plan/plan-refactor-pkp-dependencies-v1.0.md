@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: In Progress (Phase 1 complete)
+status: In Progress (Phase 2 local verification complete)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -16,8 +16,8 @@ tags: ["refactor", "security", "dependencies", "ci", "tdd"]
   change.
 - **SEC-003:** Clear all npm advisories whose parents permit an in-range
   patch, without widening major ranges or using overrides.
-- **GATE-001:** Make `CONSTRAINTS.md` dependency thresholds enforceable:
-  `composer audit` must fail the build and `npm audit` must run.
+- **GATE-001:** Enforce the dependency contract: reject unreviewed Composer
+  advisories and npm high/critical findings across the complete lockfile.
 - **DEP-001:** Record and decide the Laravel 10 end-of-life exposure; do not
   silently patch around it.
 - **TEST-001:** Every version floor is pinned by an automated check so a
@@ -91,29 +91,52 @@ Record the before/after audit counts.
 
 - **GOAL-002:** Make `CONSTRAINTS.md` telling the truth about what CI checks.
 
-| Task     | Description                    | Ref      | Done | Date |
-| -------- | ------------------------------ | -------- | :--: | :--: |
-| TASK-201 | RED: prove gate ignores exit   | GATE-001 | [ ]  |      |
-| TASK-202 | GREEN: composer audit blocking | GATE-001 | [ ]  |      |
-| TASK-203 | GREEN: npm audit step          | GATE-001 | [ ]  |      |
-| TASK-20X | VERIFY: workflow run           | GATE-001 | [ ]  |      |
-| TASK-20Y | APPROVAL: CI sign-off          | PRN-001  | [ ]  |      |
+| Task     | Description                    | Ref      | Done | Date       |
+| -------- | ------------------------------ | -------- | :--: | :--------: |
+| TASK-201 | RED: prove gate ignores exit   | GATE-001 | [x]  | 2026-11-07 |
+| TASK-202 | GREEN: reviewed Composer gate  | GATE-001 | [x]  | 2026-11-07 |
+| TASK-203 | GREEN: full npm audit gate     | GATE-001 | [x]  | 2026-11-07 |
+| TASK-20L | VERIFY: local workflow checks  | GATE-001 | [x]  | 2026-11-07 |
+| TASK-20X | VERIFY: hosted workflow run    | GATE-001 | [ ]  |            |
+| TASK-20Y | APPROVAL: CI sign-off          | PRN-001  | [x]  | 2026-11-07 |
 
 TASK-201 is evidence, not code: run the audit locally, confirm exit 1 while
 the workflow step still succeeds, and attach both to the ticket.
 
-TASK-202 edits `.github/workflows/php-tests.yml:90-91`. Modifying CI
-configuration requires explicit user approval per
-`.agent/protocols/permissions.md`; do not apply it silently.
+TASK-202 edits `.github/workflows/php-tests.yml`. The user authorized Phase 2
+and selected a baseline of four reviewed Laravel GHSAs on 2026-11-07, rather
+than a zero-tolerance gate that remains red until Phase 4.
 
-TASK-203 must pin a policy, because npm has dev-only findings that no release
-should block on. Recommended: `npm audit --omit=dev` as the blocking gate for
-runtime surface, plus a non-blocking full report, and a comment explaining
-that axios ships through the bundle even though it is declared under
-`devDependencies`. Do not use `--audit-level=none`.
+`.github/ComposerAuditPolicy.php` permits only these IDs, only for
+`laravel/framework`, through 2026-11-21 UTC (owner: `kwanter`):
 
-Do not add a vulnerability allowlist. If a finding must be tolerated, it needs
-a named owner, a reason, and a review date in the workflow comment.
+- `GHSA-f9x3-7vq9-cph6`: no TokenGuard path in the reviewed session guard.
+- `GHSA-jh5r-qr3c-85q8`: debug exposure needs deployment review.
+- `GHSA-crmm-hgp2-wgrp`: no traced filesystem temporary URL API use.
+- `GHSA-5vg9-5847-vvmq`: SafeEmail rejects control characters at entry.
+
+These reasons are scoped triage, not proof of safety or release approval.
+Source duplicates of the same GHSA count once. Any other advisory, malformed
+or filtered report, inconsistent exit status, or expired tolerance fails.
+The workflow runs Composer without a metadata cache and preserves the raw
+status for the policy checker; it never substitutes unconditional success.
+
+TASK-203 runs `npm audit --include=dev --audit-level=high` against the
+lockfile. Unlike `--omit=dev`, it covers Axios shipped in the browser bundle
+and the build toolchain. Moderate findings remain visible but non-blocking;
+high/critical findings and audit service errors block. No severity threshold
+in `CONSTRAINTS.md` is lowered.
+
+TASK-20L covers local execution of the exact workflow commands, negative
+CLI cases, registry-error and high-devDependency probes, the full PHP suite,
+and workflow lint. TASK-20X remains pending until commit/push is authorized
+and the hosted workflow completes against that exact commit.
+
+Local verification passed: 18 policy tests / 21 assertions, seven CLI
+scenarios, three controlled npm registry cases, and the full PHP suite
+(623 tests / 4,628 assertions). Repository Pint passed 279 files and both
+`.github` helpers were checked explicitly. No hosted run is claimed before
+commit and push.
 
 ### Implementation Phase 3: Deployment-dependent advisories
 
@@ -175,6 +198,9 @@ a framework upgrade inside this plan.
 - **FILE-002:** `package.json`, `package-lock.json` (five npm floors).
 - **FILE-003:** `tests/Unit/DependencyFloorTest.php` and the npm floor check.
 - **FILE-004:** `.github/workflows/php-tests.yml` (audit gate).
+- **FILE-004A:** `.github/ComposerAuditPolicy.php`,
+  `.github/check-composer-audit.php`, and
+  `tests/Unit/ComposerAuditPolicyTest.php` (reviewed baseline gate).
 - **FILE-005:** `vite.config.js` (dev host).
 - **FILE-006:** `docs/review/dependency-review-monthly-pkp-2026-11-06.md`
   (topology decision and audit counts).
@@ -185,8 +211,9 @@ a framework upgrade inside this plan.
   `composer.json`, `package-lock.json`, `package.json`, run
   `composer install` and `npm ci`, rebuild assets, and re-run the suite. No
   schema or data change exists to undo.
-- **RBCK-002:** Phase 2 is a workflow edit. Revert the file; CI behavior
-  returns to the current non-blocking state.
+- **RBCK-002:** Phase 2 changes the workflow and adds a policy checker. Revert
+  them together only with approval; doing so restores the old audit bypass.
+  Never broaden the baseline or extend its expiry merely to pass CI.
 - **RBCK-003:** Phase 3 config change is reverted by restoring
   `vite.config.js`. If `SCRIPT_NAME` investigation reveals a proxy problem,
   fix the proxy, not the application.

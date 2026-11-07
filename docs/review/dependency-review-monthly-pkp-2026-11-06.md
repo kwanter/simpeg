@@ -296,3 +296,78 @@ Still open: the four Laravel advisories, which only the framework upgrade in
 Phase 4 closes. Every advisory that any in-range patch could clear is now
 cleared. Phase 2 needs explicit approval because it edits CI
 configuration.
+
+## 10. Phase 2 Audit Enforcement (2026-11-07)
+
+The user approved CI changes and explicitly selected a four-GHSA Laravel
+baseline instead of making CI permanently fail on the known framework debt.
+This implements the no-new-high/critical constraint without treating the
+existing vulnerabilities as fixed. The earlier review remains historical.
+
+### Composer policy
+
+The PHP workflow runs Composer with `--no-cache`, captures the raw audit JSON,
+and preserves the exit status for `.github/check-composer-audit.php`. The
+policy in `.github/ComposerAuditPolicy.php` accepts only four reviewed IDs
+on `laravel/framework`: `GHSA-f9x3-7vq9-cph6`, `GHSA-jh5r-qr3c-85q8`,
+`GHSA-crmm-hgp2-wgrp`, and `GHSA-5vg9-5847-vvmq`.
+
+- Owner: `kwanter`; review deadline: 2026-11-21 UTC, inclusive.
+- Reasons: session guard rather than TokenGuard, deployment-dependent debug
+  exposure, no traced filesystem temporary URL use, and SafeEmail validation.
+- A duplicate advisory from another source is deduplicated by GHSA identity;
+  another package cannot reuse an accepted ID to receive an exemption.
+- Any unreviewed advisory blocks, regardless of severity. Invalid or filtered
+  JSON, abandoned packages, inconsistent process status, missing identities,
+  and use of an expired tolerance also block.
+- A clean report can pass after the deadline because it uses no exception.
+- The raw report and accepted IDs remain visible in the workflow log. Gate
+  success is not a clean audit result or release approval.
+
+The original `composer audit --no-interaction || true` was executed before
+the change: it reported five records but returned exit 0. This is the
+observed failure being corrected. With the new workflow command, the same
+raw audit exits 1, while the policy exits 0 only after accepting the four
+documented IDs. There is no unconditional success fallback.
+
+### npm policy
+
+The workflow runs the following command after `npm ci`:
+
+```sh
+npm audit --include=dev --audit-level=high --package-lock-only --ignore-scripts
+```
+
+It includes dev dependencies because Axios ships in the browser bundle and
+the build toolchain is part of the attack surface. Moderate findings remain
+visible; high/critical findings and audit-service failures block. This
+replaces the earlier plan recommendation to omit dev dependencies, which
+would have missed shipped Axios. No quality threshold was lowered.
+
+### Local verification
+
+- Real workflow commands were extracted from the edited YAML and executed
+  under Bash with `-eo pipefail`: Composer policy exit 0 with exactly the
+  four reviewed GHSAs; npm exit 0 with zero vulnerabilities.
+- The policy regression suite passes 18 tests / 21 assertions, covering new
+  findings mixed with accepted ones, package mismatch, conflicting identities,
+  malformed/filtered reports, process failures, and expiry boundaries.
+- Seven CLI scenarios produced the expected status: baseline and clean
+  reports passed; a new critical finding, invalid JSON, network-error report,
+  missing schema, and unexpected process status failed.
+- The complete no-cache Composer workflow also failed with exit 1 against
+  an unreachable temporary repository; no cached audit was accepted.
+- Real npm was run against a disposable local registry fixture. A high
+  advisory in a devDependency returned exit 1, moderate returned exit 0, and
+  registry HTTP 503 returned exit 1. No dependency was installed or changed.
+- Full PHP suite: 623 passed / 4,628 assertions / 87.69 seconds.
+- Pint: 279 repository PHP files passed; the two `.github` PHP helpers were
+  also checked explicitly and are now included in the workflow lint command.
+  Both helpers passed `php -l`.
+- Workflow structure passed actionlint with external shellcheck disabled;
+  the new shell commands are executed by the smoke checks above.
+
+These are local results, not a hosted Actions run. Hosted validation remains
+pending commit and push. Application code, dependency manifests, lockfiles,
+and production configuration are unchanged by Phase 2. Laravel remediation
+and all deployment/release approvals remain separate.
