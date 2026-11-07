@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: In Progress (Phase 3 shipped-config verified; live parity deferred)
+status: In Progress (Phase 4 inventory done; upgrade spec awaits approval)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -215,19 +215,37 @@ until the user approves an upgrade spec.
 - **GOAL-004:** Decide the framework path before any release, with its own
   spec and plan.
 
-| Task     | Description            | Ref     | Done | Date |
-| -------- | ---------------------- | ------- | :--: | :--: |
-| TASK-401 | PROBE: break inventory | DEP-001 | [ ]  |      |
-| TASK-402 | DOC: recommend target  | DEP-001 | [ ]  |      |
-| TASK-40Y | APPROVAL: upgrade spec | PRN-001 | [ ]  |      |
+| Task     | Description            | Ref     | Done | Date       |
+| -------- | ---------------------- | ------- | :--: | :--------: |
+| TASK-401 | PROBE: break inventory | DEP-001 | [x]  | 2026-11-07 |
+| TASK-402 | DOC: recommend target  | DEP-001 | [x]  | 2026-11-07 |
+| TASK-40Y | APPROVAL: upgrade spec | PRN-001 | [ ]  |            |
 
-Four Laravel advisories, one of them critical, cannot be closed inside
-`^10.10`: security support ended 2025-02-04 and the patch floors are 12.68.0
-and 13.29.0. Laravel 12 keeps a PHP 8.2 floor, so the runtime images do not
-have to move. TASK-401 inventories the real breakage surface: `spatie`
-packages, `venturecraft/revisionable`, `barryvdh/laravel-dompdf`,
-`laravel/ui`, the custom `Kernel`, and the `TrimStrings` override. Do not start
-a framework upgrade inside this plan.
+TASK-401 resolved the dependency question by probe rather than by guesswork.
+Four Laravel advisories are closed at or above framework 12.69.0, and Laravel
+11 is not an intermediate stop: the same CRLF advisory covers
+`illuminate/mail` 11.x and Composer's advisory policy refuses to install it.
+
+Two findings decided the shape of the recommendation. First,
+`spatie/laravel-backup` has no application usage at all: no `config/backup.php`,
+no reference in `app/`, `routes/`, `resources/`, or the environment files, and
+no schedule entry. Removing it keeps the PHP floor at 8.2, because the PHP
+8.3 requirement came only from that package. Second, the application surface
+is small: one Carbon call site, nineteen deprecated PHPUnit annotations, and
+no `->change()`, `float`/`double`, `doctrine/dbal`, duplicate route names, or
+nested-merge usages.
+
+TASK-402 recommends Laravel 12.71 on PHP 8.2: remove the unused backup
+package, raise `spatie/laravel-permission` to `^6.25`, and move dev tooling to
+collision 8.9, PHPUnit 11, and ignition 2.12. That closes all four advisories
+with no Docker or CI-matrix change. Laravel 13.40 on PHP 8.3 stays documented
+as the later option; it additionally needs `laravel/tinker ^3.0` and
+`brick/math ^0.14.2 || ^1.0`.
+
+Evidence lives in
+`docs/review/laravel-eol-break-inventory-2026-11-07.md`. Do not start the
+upgrade inside this plan; TASK-40Y stays open until an upgrade spec is
+approved.
 
 ## 3. Structural Remedies & Alternatives
 
@@ -258,6 +276,8 @@ a framework upgrade inside this plan.
   confirmed to differ from the shipped configuration.
 - **FILE-006:** `docs/review/dependency-review-monthly-pkp-2026-11-06.md`
   (topology decision and audit counts).
+- **FILE-008:** `docs/review/laravel-eol-break-inventory-2026-11-07.md`
+  (framework upgrade inventory and recommendation).
 
 ## 5. Rollback / Recovery Plan
 
