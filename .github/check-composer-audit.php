@@ -16,21 +16,9 @@ try {
         throw new RuntimeException('The Composer audit report cannot be read.');
     }
 
-    $accepted = (new ComposerAuditPolicy)->check(
-        $json,
-        (int) $argv[2],
-        new DateTimeImmutable('now', new DateTimeZone('UTC')),
-    );
+    (new ComposerAuditPolicy)->check($json, (int) $argv[2]);
 
-    foreach ($accepted as $id => $reason) {
-        fwrite(STDOUT, "Accepted baseline {$id}: {$reason}\n");
-    }
-
-    if ($accepted !== []) {
-        fwrite(STDOUT, 'Owner: '.ComposerAuditPolicy::OWNER.'; review by '.ComposerAuditPolicy::REVIEW_BY." (UTC).\n");
-    }
-
-    fwrite(STDOUT, "Composer audit policy passed: no unreviewed advisories.\n");
+    fwrite(STDOUT, "Composer audit policy passed: no advisories reported.\n");
 } catch (RuntimeException $exception) {
     fwrite(STDERR, $exception->getMessage()."\n");
     exit(1);

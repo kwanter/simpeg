@@ -89,9 +89,10 @@ doc-comments remain.
 ### 4.4 Audit contract
 
 After the upgrade, `composer audit --locked` exits 0 with no advisories.
-`.github/ComposerAuditPolicy.php` may keep its four-entry baseline for
-historical reference, but the gate must pass because the report is empty, not
-because a baseline accepts it.
+`.github/ComposerAuditPolicy.php` carries **no** tolerated advisory: the
+four-entry baseline is deleted, the fail-closed report validation and exit-status
+checks stay, and any future advisory fails the build. Git history holds the old
+baseline rationale; a standing exception would silently re-permit a regression.
 
 ## 5. Acceptance Criteria & Testable Behaviors
 
@@ -105,7 +106,8 @@ because a baseline accepts it.
 - **AC-004:** No file under `tests/` contains `@dataProvider`.
 - **AC-005:** The full PHP suite passes with zero failures and zero skipped
   tests.
-- **AC-006:** `composer audit` exits 0 with no advisories.
+- **AC-006:** `composer audit` exits 0 with no advisories, and the audit
+  gate rejects any advisory, including the four that used to be tolerated.
 - **AC-007:** `npm audit --include=dev --audit-level=high` still exits 0.
 - **AC-008:** Both Chromium Playwright suites pass: the base suite and the PKP
   suite.

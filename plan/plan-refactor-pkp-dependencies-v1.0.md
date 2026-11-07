@@ -252,12 +252,11 @@ The user chose to drop the package on 2026-11-07, and that part is executed:
 `composer.json` no longer requires it, `PRODUCTION-RUNBOOK.md` now points the
 release gate at `simpeg-backup.service` and `simpeg-backup.timer`, and
 `tests/Unit/DependencyFloorTest.php` fails if the package returns. PHP stays at
-8.2. The framework line itself still waits on TASK-40Y.
-
-Evidence lives in
-`docs/review/laravel-eol-break-inventory-2026-11-07.md`. Do not start the
-upgrade inside this plan; TASK-40Y stays open until an upgrade spec is
-approved.
+8.2. The framework line is done: the upgrade ran on 2026-11-07 against
+`spec/spec-refactor-laravel-12-upgrade.md`, closing all four advisories, so
+`TASK-40Y` is satisfied. Evidence lives in
+`docs/review/laravel-eol-break-inventory-2026-11-07.md` and
+`docs/review/dependency-review-monthly-pkp-2026-11-06.md` section 12.
 
 ## 3. Structural Remedies & Alternatives
 

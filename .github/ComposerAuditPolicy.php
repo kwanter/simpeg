@@ -2,7 +2,6 @@
 
 namespace Simpeg\Ci;
 
-use DateTimeImmutable;
 use JsonException;
 use RuntimeException;
 
@@ -10,17 +9,15 @@ final class ComposerAuditPolicy
 {
     public const OWNER = 'kwanter';
 
-    public const REVIEW_BY = '2026-11-21';
-
-    private const REVIEWED_LARAVEL_ADVISORIES = [
-        'GHSA-f9x3-7vq9-cph6' => 'Only the web session guard is configured; no TokenGuard path was identified.',
-        'GHSA-jh5r-qr3c-85q8' => 'Debug-page exposure remains deployment-dependent; this is not release clearance.',
-        'GHSA-crmm-hgp2-wgrp' => 'No local-filesystem temporary URL API is used in the traced flows.',
-        'GHSA-5vg9-5847-vvmq' => 'SafeEmail rejects control characters in the reviewed mail entry points.',
-    ];
+    /**
+     * No advisory is tolerated. The four Laravel advisories that were carried
+     * as a reviewed baseline closed with the Laravel 12 upgrade on 2026-11-07,
+     * so the gate is now an absolute floor: any advisory fails the build.
+     */
+    private const REVIEWED_ADVISORIES = [];
 
     /** @return array<string, string> */
-    public function check(string $json, int $status, DateTimeImmutable $today): array
+    public function check(string $json, int $status): array
     {
         try {
             $report = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
@@ -57,21 +54,17 @@ final class ComposerAuditPolicy
 
                 $id = $this->githubAdvisoryId($advisory);
 
-                if ($package !== 'laravel/framework' || ! isset(self::REVIEWED_LARAVEL_ADVISORIES[$id])) {
+                if (! isset(self::REVIEWED_ADVISORIES[$id])) {
                     throw new RuntimeException("Unreviewed Composer advisory: {$package} {$id}.");
                 }
 
-                $accepted[$id] = self::REVIEWED_LARAVEL_ADVISORIES[$id];
+                $accepted[$id] = self::REVIEWED_ADVISORIES[$id];
                 $records++;
             }
         }
 
         if ($status !== ($records === 0 ? 0 : 1)) {
             throw new RuntimeException("Composer audit exit status {$status} does not match its report.");
-        }
-
-        if ($accepted !== [] && $today->format('Y-m-d') > self::REVIEW_BY) {
-            throw new RuntimeException('The Laravel advisory baseline has expired; owner: '.self::OWNER.'.');
         }
 
         return $accepted;

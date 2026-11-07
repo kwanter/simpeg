@@ -2,7 +2,7 @@
 
 > **Project:** SIMPEG (Sistem Informasi Kepegawaian)
 > **Mission:** Provide auditable, rule-compliant employee management, leave and permit workflows, two-level approvals, and official document generation.
-> **Technology:** Laravel 10, PHP 8.1+, Blade, Alpine.js, Vite, MySQL/SQLite, Spatie Laravel Permission, PHPUnit, Playwright, Docker.
+> **Technology:** Laravel 12, PHP 8.2+, Blade, Alpine.js, Vite, MySQL/SQLite, Spatie Laravel Permission, PHPUnit 11, Playwright, Docker.
 > **Established On:** 2026-09-24
 
 ## Core Principles
