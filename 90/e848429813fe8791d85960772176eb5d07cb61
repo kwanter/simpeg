@@ -1,0 +1,16 @@
+docs/review/dependency-review-monthly-pkp-2026-11-06.md
+  h_00672522f4dbdd 1-249
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 1-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "90e848429813fe8791d85960772176eb5d07cb61",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
