@@ -229,18 +229,23 @@ Four Laravel advisories are closed at or above framework 12.69.0, and Laravel
 Two findings decided the shape of the recommendation. First,
 `spatie/laravel-backup` has no application usage at all: no `config/backup.php`,
 no reference in `app/`, `routes/`, `resources/`, or the environment files, and
-no schedule entry. Removing it keeps the PHP floor at 8.2, because the PHP
-8.3 requirement came only from that package. Second, the application surface
-is small: one Carbon call site, nineteen deprecated PHPUnit annotations, and
-no `->change()`, `float`/`double`, `doctrine/dbal`, duplicate route names, or
-nested-merge usages.
+no schedule entry. That package is nevertheless named as a release gate in
+`PRODUCTION-RUNBOOK.md:97`, while `VPS-DEPLOYMENT-GUIDE.md:636-671` takes
+backups with a custom `pg_dump` plus storage tarball script. The two documents
+contradict each other, so dropping versus keeping the package is a decision,
+not a resolver outcome: dropping keeps the PHP floor at 8.2 and obliges
+revising the runbook gate in the same change; keeping it means bumping to 9.4,
+accepting PHP 8.3, and adding the configuration and schedule the package still
+lacks. Second, the application surface is small: one Carbon call site,
+nineteen deprecated PHPUnit annotations, and no `->change()`, `float`/`double`,
+`doctrine/dbal`, duplicate route names, or nested-merge usages.
 
-TASK-402 recommends Laravel 12.71 on PHP 8.2: remove the unused backup
-package, raise `spatie/laravel-permission` to `^6.25`, and move dev tooling to
-collision 8.9, PHPUnit 11, and ignition 2.12. That closes all four advisories
-with no Docker or CI-matrix change. Laravel 13.40 on PHP 8.3 stays documented
-as the later option; it additionally needs `laravel/tinker ^3.0` and
-`brick/math ^0.14.2 || ^1.0`.
+TASK-402 recommends Laravel 12.71 on PHP 8.2: drop the backup package and
+revise the runbook gate, raise `spatie/laravel-permission` to `^6.25`, and move
+dev tooling to collision 8.9, PHPUnit 11, and ignition 2.12. That closes all
+four advisories with no Docker or CI-matrix change. Laravel 13.40 on PHP 8.3
+stays documented as the later option; it additionally needs
+`laravel/tinker ^3.0` and `brick/math ^0.14.2 || ^1.0`.
 
 Evidence lives in
 `docs/review/laravel-eol-break-inventory-2026-11-07.md`. Do not start the

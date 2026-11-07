@@ -68,7 +68,7 @@ The resolvable Laravel 12 set on PHP 8.2 locks:
 - `venturecraft/revisionable` 1.43.0, `barryvdh/laravel-dompdf` v3.1.2,
   `sentry/sentry-laravel` 4.29.0, `laravel/ui` v4.6.3
 
-## 4. Finding: the backup package is unused
+## 4. Finding: the backup package is unreferenced in code
 
 `spatie/laravel-backup` is required in `composer.json` but no application code
 uses it:
@@ -77,13 +77,28 @@ uses it:
 - No reference exists in `app/`, `routes/`, `resources/`, `bootstrap/`, or the
   environment files.
 - `app/Console/Kernel.php` schedules only `cuti:update-balances`.
-- The single repository hit is package auto-discovery metadata in
+- The only code-side hit is package auto-discovery metadata in
   `bootstrap/cache/packages.php`.
 
-Removing it is therefore the smallest correct move, and it is what keeps the
-PHP floor at 8.2: the PHP 8.3 requirement in probes three and four came only
-from `spatie/laravel-backup`, not from the framework or from
-`spatie/laravel-permission`.
+Documentation is a different story, and it contradicts itself:
+
+- `PRODUCTION-RUNBOOK.md:97` makes the package a release gate: "Configure
+  `spatie/laravel-backup` destination outside app host."
+- `VPS-DEPLOYMENT-GUIDE.md:636-671` implements backup without it, through a
+  custom `pg_dump` plus `storage` tarball script driven by systemd.
+
+Both cannot be true of the same deployment. The runbook gate names a package
+that ships no configuration and runs no schedule here, while the deployment
+guide describes the mechanism that actually exists. Dropping the package
+therefore keeps the PHP floor at 8.2 — the PHP 8.3 requirement in probes three
+and four came only from `spatie/laravel-backup` — but it also obliges revising
+`PRODUCTION-RUNBOOK.md:97` in the same change. Leaving that line untouched
+would leave a release gate pointing at nothing.
+
+Keeping the package is the alternative, and it costs more than it looks:
+backup 9.4 raises the PHP floor to 8.3, and the package still has no
+`config/backup.php` and no schedule entry, so it would not take a backup until
+both were added — duplicating what the systemd script already does.
 
 ## 5. Application break surface, Laravel 10 to 12
 
@@ -132,15 +147,36 @@ and string-comparison range checks
 
 ## 7. Options
 
+### Decision required: drop or keep the backup package
+
+This is a product decision, not a resolver outcome, because the two documents
+disagree about it. Both branches are recorded here; neither is assumed.
+
+- **Drop:** the PHP floor stays 8.2, and `PRODUCTION-RUNBOOK.md:97` must be
+  revised in the same change to point at the systemd script in
+  `VPS-DEPLOYMENT-GUIDE.md` instead of the package. The release gate survives;
+  only its mechanism changes.
+- **Keep:** bump to `spatie/laravel-backup ^9.4`, accept PHP 8.3, and add the
+  `config/backup.php` and schedule entry the package needs before it can take
+  a backup — work the systemd script already does.
+
 ### Option A: Laravel 12.71 on PHP 8.2 (recommended)
 
-- Remove the unused `spatie/laravel-backup`.
+- Drop `spatie/laravel-backup` and revise `PRODUCTION-RUNBOOK.md:97`.
 - Raise `spatie/laravel-permission` to `^6.25` (same major).
 - Dev tooling: `nunomaduro/collision ^8.9`, `phpunit/phpunit ^11.0`,
   `spatie/laravel-ignition ^2.12`.
 - No Docker, CI-matrix, or runtime PHP change: the framework floor stays 8.2,
   matching `docker/apache/Dockerfile` and the `8.2` CI entry.
 - Closes all four advisories because the resolution lands on 12.71.0.
+
+### Option A′: Laravel 12.71 on PHP 8.3, keeping the package
+
+- Everything in Option A except the drop: `spatie/laravel-backup ^9.4`, plus
+  `config/backup.php` and a schedule entry, plus `docker/apache/Dockerfile`
+  and the CI matrix moving to 8.3.
+- Keep this only if the release gate must stay a framework feature rather than
+  the systemd script.
 
 ### Option B: Laravel 13.40 on PHP 8.3
 
@@ -154,10 +190,16 @@ and string-comparison range checks
 
 ## 8. Recommendation
 
-Take Option A. It closes every open framework advisory with the smallest
-change set, keeps the PHP 8.2 floor, touches no runtime image, and removes a
-dependency nothing uses. Option B remains available later as its own step,
-once Option A has settled.
+Take Option A, and settle the backup question with it rather than separately:
+the deployment guide already documents a working `pg_dump` plus storage
+tarball script, so the `spatie/laravel-backup` release gate in
+`PRODUCTION-RUNBOOK.md:97` is the stale half of that contradiction. Dropping
+the package closes every open framework advisory with the smallest change
+set, keeps the PHP 8.2 floor, and touches no runtime image.
+
+If you would rather the release gate stay a framework feature, take Option A′
+instead and accept PHP 8.3. Do not ship Option A with an unrevised runbook
+gate.
 
 The two behaviours that need explicit tests before and after are the Carbon 3
 tenure calculation in `CutiEligibilityService` and the PKP PDF/score output
