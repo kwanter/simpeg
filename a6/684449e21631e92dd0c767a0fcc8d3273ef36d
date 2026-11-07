@@ -1,0 +1,20 @@
+docs/review/dependency-review-monthly-pkp-2026-11-06.md
+  h_00672522f4dbdd 400-479
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 5,160-188,232
+tests/Unit/ViteDevServerHostTest.php
+  h_00672522f4dbdd 1-118
+vite.config.js
+  h_00672522f4dbdd 5-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6684449e21631e92dd0c767a0fcc8d3273ef36d",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
