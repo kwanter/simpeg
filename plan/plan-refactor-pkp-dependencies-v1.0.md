@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: In Progress (Phase 3 complete; Phase 4 awaits approval)
+status: In Progress (Phase 3 shipped-config verified; live parity open)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -157,22 +157,32 @@ approval. Phases 3 and 4 remain separate.
 - **GOAL-003:** Resolve or consciously accept the three findings that depend
   on live server topology.
 
-| Task     | Description              | Ref     | Done | Date       |
-| -------- | ------------------------ | ------- | :--: | :--------: |
-| TASK-301 | PROBE: live SCRIPT_NAME  | SEC-001 | [x]  | 2026-11-07 |
-| TASK-302 | GREEN: pin Vite host     | SEC-003 | [x]  | 2026-11-07 |
-| TASK-303 | DOC: topology decision   | SEC-001 | [x]  | 2026-11-07 |
-| TASK-30Y | APPROVAL: before Phase 4 | PRN-001 | [ ]  |            |
+| Task      | Description                   | Ref     | Done | Date       |
+| --------- | ----------------------------- | ------- | :--: | :--------: |
+| TASK-301  | PROBE: shipped Nginx config   | SEC-001 | [x]  | 2026-11-07 |
+| TASK-301L | PROBE: live stack parity      | SEC-001 | [ ]  |            |
+| TASK-302  | GREEN: pin Vite host          | SEC-003 | [x]  | 2026-11-07 |
+| TASK-303  | DOC: topology decision        | SEC-001 | [x]  | 2026-11-07 |
+| TASK-30Y  | APPROVAL: before Phase 4      | PRN-001 | [ ]  |            |
 
-TASK-301 answered the two questions on a running Nginx and PHP-FPM pair built
-from `docker/production/nginx/nginx.conf`, not from the repository examples:
-`SCRIPT_NAME` is always `/index.php`, `PATH_INFO` is always null, and the
-`^~ /storage/dokumen/` rule matches a different path than PHP parses.
-Comparing `symfony/http-foundation` 6.4.41 with 6.4.50 reproduced the
-script-name path bypass before the Phase 1 floor and showed it closed after.
-Protocol-relative and backslash request URIs produced no attacker-chosen base
-URL in either version, so no proxy change is required. Details live in
+TASK-301 ran the topology probe against the Nginx and PHP-FPM pair this
+repository ships, not against a live deployment: `SCRIPT_NAME` is always
+`/index.php`, `PATH_INFO` is always null, and the `^~ /storage/dokumen/` rule
+matches a different path than PHP parses. Comparing
+`symfony/http-foundation` 6.4.41 with 6.4.50 reproduced the script-name path
+bypass before the Phase 1 floor and showed it closed after. Protocol-relative
+and backslash request URIs produced no attacker-chosen base URL in either
+version. Details live in
 `docs/review/dependency-review-monthly-pkp-2026-11-06.md` section 11.
+
+TASK-301L stays open because these results describe the shipped
+configuration only. They become a statement about production once the owner
+confirms the live stack matches it: the front controller's `SCRIPT_NAME`,
+whether path information is split, and whether any proxy, CDN, or WAF path
+rule sits in front of PHP. If the live stack differs and exposes a
+proxy-level problem, the fix belongs in `docker/production/nginx/nginx.conf`
+(FILE-007) under its own approval, never in application code compensating for
+an unknown proxy.
 
 TASK-302 pinned `server.host: '127.0.0.1'` in `vite.config.js`. The guard in
 `tests/Unit/ViteDevServerHostTest.php` resolves the host through Vite and
@@ -182,10 +192,11 @@ unreachable through a published Docker port, running Vite inside Sail now
 needs the explicit `npm run dev -- --host 0.0.0.0` override that the guard
 also asserts.
 
-TASK-303 recorded the decision: the Symfony floor closes the script-name and
-base-URL advisories, the residual Nginx path-rule mismatch only reaches Laravel
-routes that authorize independently, and no application code compensates for
-proxy topology. Phase 4 stays blocked until the user approves an upgrade spec.
+TASK-303 recorded the decision for the shipped configuration: the Symfony
+floor closes the script-name and base-URL advisories, the residual Nginx
+path-rule mismatch only reaches Laravel routes that authorize independently,
+and no application code compensates for proxy topology. Phase 4 stays blocked
+until the user approves an upgrade spec.
 
 ### Implementation Phase 4: Laravel end-of-life decision
 
@@ -230,6 +241,9 @@ a framework upgrade inside this plan.
   `tests/Unit/ComposerAuditPolicyTest.php` (reviewed baseline gate).
 - **FILE-005:** `vite.config.js` (dev host).
 - **FILE-005A:** `tests/Unit/ViteDevServerHostTest.php` (dev-host guard).
+- **FILE-007:** `docker/production/nginx/nginx.conf`. Unchanged in Phase 3;
+  this is the only place a proxy-level fix may land if the live stack is
+  confirmed to differ from the shipped configuration.
 - **FILE-006:** `docs/review/dependency-review-monthly-pkp-2026-11-06.md`
   (topology decision and audit counts).
 

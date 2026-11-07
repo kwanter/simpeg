@@ -404,6 +404,15 @@ The three findings that depended on live server topology were probed against
 a running Nginx and PHP-FPM pair instead of being decided from the repository
 examples.
 
+**Scope:** the pair runs `docker/production/nginx/nginx.conf`, the
+configuration this repository ships. These results describe that
+configuration, not a confirmed production stack. The live deployment still
+needs owner confirmation of three facts: the front controller's `SCRIPT_NAME`,
+whether the live server splits path information, and whether any proxy, CDN,
+or WAF path rule sits in front of PHP. If the live stack differs and exposes a
+proxy-level problem, the fix belongs in that Nginx configuration rather than
+in application code; no such change has been made.
+
 ### Vite dev-server binding
 
 `laravel-vite-plugin` 3.1.3 widens the bind address whenever `LARAVEL_SAIL` is
@@ -462,8 +471,11 @@ version) and 6.4.50 (locked):
 
 ### Decision
 
+Recorded for the shipped configuration; production parity stays open with the
+owner.
+
 - No application code compensates for proxy topology; if a live proxy is later
-  found to differ, the proxy is fixed instead.
+  found to differ, that Nginx configuration is fixed instead.
 - The script-name and base-URL advisories are closed by the Symfony 6.4.50
   floor already pinned in `tests/Unit/DependencyFloorTest.php`. The residual
   Nginx path-rule mismatch only reaches Laravel routes that authorize
