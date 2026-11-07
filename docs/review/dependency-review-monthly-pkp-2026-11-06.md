@@ -533,6 +533,20 @@ No assertion was relaxed, no test was skipped, and no floor was lowered.
 - `npm run build`: vite 8.3.6, manifest regenerated.
 - Chromium Playwright: base suite 2 passed; PKP suite 12 passed.
 
+One hosted flake, recorded rather than explained away. The first Playwright run
+on `f09b0e7` failed three PKP scenarios: `owner can edit metadata and start a
+correction from approved details`, `official inspector reviews R1 while a
+different assessor owns the private R2 draft`, and `owner can submit an
+externally signed PKP and print its original PDF after approval`. Each failed
+waiting for the assessor decision form or its `Keputusan PKP berhasil disimpan.`
+status. A rerun of the same commit without any change passed 12 of 12, and the
+suite passes locally, so the code path is not reproducibly broken. Retries stay
+at 0: masking a flake with retries would hide the next real race, as happened
+with the reassignment scenario. The diagnostic gap is that the workflow uploads
+`playwright-report/` only, while the failure context Playwright writes lives in
+`test-results/`; capturing that directory on failure is the next step if this
+recurs.
+
 One environment trap surfaced during the browser run and is worth recording.
 The first PKP attempt failed 10 scenarios with `getByLabel('Judul indikator')`
 missing and a strict-mode violation on the navigation link. The cause was a
