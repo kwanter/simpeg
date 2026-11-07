@@ -22,6 +22,46 @@ class CutiEligibilityServiceTest extends SimpegTestCase
         $this->service = new CutiEligibilityService(new CutiBalanceService);
     }
 
+    /**
+     * Carbon 3 makes diffIn* signed. The hire date is earlier than now, so a
+     * raw delta turns negative and the five-year rule rejects everyone. Pin
+     * both sides of the boundary with a fixed clock so the semantics cannot
+     * drift with the Carbon major.
+     */
+    public function test_cuti_besar_tenure_uses_a_non_negative_year_delta(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 6, 15, 9, 0, 0));
+
+        try {
+            $eligible = Pegawai::factory()->create([
+                'tanggal_masuk' => '2018-01-02',
+            ]);
+            $ineligible = Pegawai::factory()->create([
+                'tanggal_masuk' => '2023-01-02',
+            ]);
+
+            $this->assertNull(
+                $this->service->checkCutiBesar(
+                    $eligible,
+                    Carbon::create(2026, 7, 1),
+                    Carbon::create(2026, 7, 3)
+                ),
+                'An eight-year employee must be able to request Cuti Besar.'
+            );
+
+            $error = $this->service->checkCutiBesar(
+                $ineligible,
+                Carbon::create(2026, 7, 1),
+                Carbon::create(2026, 7, 3)
+            );
+
+            $this->assertNotNull($error);
+            $this->assertStringContainsString('minimal 5 tahun', $error);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_annual_leave_passes_when_balance_sufficient(): void
     {
         $pegawai = Pegawai::factory()->create();

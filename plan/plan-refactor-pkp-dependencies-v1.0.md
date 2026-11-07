@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: In Progress (Phase 4 inventory done; upgrade spec awaits approval)
+status: Complete (Phase 4 upgrade executed)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -219,7 +219,7 @@ until the user approves an upgrade spec.
 | -------- | ---------------------- | ------- | :--: | :--------: |
 | TASK-401 | PROBE: break inventory | DEP-001 | [x]  | 2026-11-07 |
 | TASK-402 | DOC: recommend target  | DEP-001 | [x]  | 2026-11-07 |
-| TASK-40Y | APPROVAL: upgrade spec | PRN-001 | [ ]  |            |
+| TASK-40Y | APPROVAL: upgrade spec | PRN-001 | [x]  | 2026-11-07 |
 
 TASK-401 resolved the dependency question by probe rather than by guesswork.
 Four Laravel advisories are closed at or above framework 12.69.0, and Laravel

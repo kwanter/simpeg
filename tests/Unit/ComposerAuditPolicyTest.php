@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Simpeg\Ci\ComposerAuditPolicy;

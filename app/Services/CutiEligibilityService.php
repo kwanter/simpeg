@@ -45,7 +45,10 @@ class CutiEligibilityService
             return 'Tanggal masuk kerja pegawai tidak ditemukan untuk validasi Cuti Besar.';
         }
 
-        $masaKerja = Carbon::now()->diffInYears(Carbon::parse($pegawai->tanggal_masuk));
+        // Carbon 3 makes diffIn* signed, so ask for the absolute delta: the
+        // hire date is always earlier than now, and a negative result would
+        // reject every employee.
+        $masaKerja = (int) Carbon::now()->diffInYears(Carbon::parse($pegawai->tanggal_masuk), true);
         if ($masaKerja < 5) {
             return 'Cuti Besar hanya dapat diajukan oleh pegawai dengan masa kerja minimal 5 tahun.';
         }

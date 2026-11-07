@@ -14,6 +14,7 @@ use App\Services\PkpAssessorSettingsService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\SimpegTestCase;
 
 class PkpAssessmentTest extends SimpegTestCase

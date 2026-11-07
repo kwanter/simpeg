@@ -27,9 +27,9 @@ The repository is a single Laravel application with Blade-rendered pages and a s
 ## 2. High-Level Architecture & Tech Stack
 
 - **Primary Language:** PHP `^8.1` (CI matrix: PHP 8.2, 8.3, and 8.4); JavaScript ES modules for frontend tooling and browser tests.
-- **Frameworks/Libraries:** Laravel 10, Blade, Eloquent, Spatie Laravel Permission, Alpine.js, Tailwind CSS, and Laravel Vite Plugin.
+- **Frameworks/Libraries:** Laravel 12, Blade, Eloquent, Spatie Laravel Permission, Alpine.js, Tailwind CSS, and Laravel Vite Plugin.
 - **Architectural Pattern:** Laravel MVC monolith with service classes for selected business workflows; server-rendered Blade UI.
-- **Build/Tooling:** Composer, npm, Vite, Docker (Sail, Apache development, and Nginx/PHP-FPM production assets), Laravel Pint, PHPUnit 10, and Playwright.
+- **Build/Tooling:** Composer, npm, Vite, Docker (Sail, Apache development, and Nginx/PHP-FPM production assets), Laravel Pint 1.22.1, PHPUnit 11, and Playwright.
 - **Frontend scripts:** `npm run dev` and `npm run build`; `package.json` does not define JavaScript test, lint, or format scripts.
 - **PHP quality commands:** `php artisan test` and `./vendor/bin/pint --test`.
 
@@ -210,7 +210,7 @@ adapter for existing callers. Queue links select the exact revision.
 
 ## 10. Testing Strategy
 
-- **PHP framework:** PHPUnit 10 through Laravel; configured suites are `Unit` and `Feature`.
+- **PHP framework:** PHPUnit 11 through Laravel; configured suites are `Unit` and `Feature`. Data providers use `#[DataProvider]` attributes, not doc-comment annotations.
 - **PHP test locations:** `tests/Unit/`, `tests/Feature/`, and `tests/Integration/Pkp/` cover PKP authorization, owner/admin list scopes, exact calculation, lifecycle, reassignment, replacement, history retention, runtime PDF validation, and upload envelopes. `PkpWorkflowRaceTest` uses committed fixtures and two independent PHP workers. A further three files at the `tests/` root provide ordinary suite support.
 - **Browser framework:** Playwright; the dedicated PKP harness runs twelve Chromium flows against an isolated persistent test database, including desktop/mobile lists, reassignment, final replacement, metadata/correction, history navigation, dual-context inspection, printing, and external-source approval.
 - **Database:** Ordinary PHPUnit uses SQLite `:memory:` for fast isolated cases. The separate concurrency suite has passed on PostgreSQL 16 and MySQL 8.4 using independent connections/processes; this supplies real row-lock evidence for the covered transitions.

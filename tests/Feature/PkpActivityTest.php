@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\PkpSubmissionService;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\SimpegTestCase;
 
 class PkpActivityTest extends SimpegTestCase

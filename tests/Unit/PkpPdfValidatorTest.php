@@ -6,6 +6,7 @@ use App\Services\InvalidPdf;
 use App\Services\PdfValidatorUnavailable;
 use App\Services\PkpPdfValidator;
 use Barryvdh\DomPDF\Facade\Pdf;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
 

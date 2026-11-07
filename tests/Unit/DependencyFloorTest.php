@@ -17,6 +17,7 @@ final class DependencyFloorTest extends TestCase
      * Advisory patch floors for the locked PHP packages.
      */
     private const COMPOSER_FLOORS = [
+        'laravel/framework' => '12.69.0',
         'symfony/http-foundation' => '6.4.50',
         'symfony/http-kernel' => '6.4.50',
         'symfony/routing' => '6.4.50',

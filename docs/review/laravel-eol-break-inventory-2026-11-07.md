@@ -204,8 +204,12 @@ The two behaviours that need explicit tests before and after are the Carbon 3
 tenure calculation in `CutiEligibilityService` and the PKP PDF/score output
 that depends on `brick/math`.
 
-## 9. What this document does not authorize
+## 9. Execution status
 
-No dependency was changed. The upgrade itself needs its own specification and
-plan, and `TASK-40Y` in `plan/plan-refactor-pkp-dependencies-v1.0.md` stays
-open until that is approved.
+Option A was approved and executed on 2026-11-07 against
+`spec/spec-refactor-laravel-12-upgrade.md`, with the decision recorded in
+`docs/adr/0002-laravel-12-upgrade-target.md`. `composer audit` now reports no
+advisories. Execution evidence is in
+`docs/review/dependency-review-monthly-pkp-2026-11-06.md` section 12.
+
+Laravel 13 remains a separate future decision.

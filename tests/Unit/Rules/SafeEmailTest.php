@@ -4,6 +4,7 @@ namespace Tests\Unit\Rules;
 
 use App\Rules\SafeEmail;
 use Illuminate\Support\Facades\Validator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SafeEmailTest extends TestCase
@@ -13,9 +14,7 @@ class SafeEmailTest extends TestCase
         $this->assertTrue(Validator::make(['email' => 'user@example.com'], ['email' => [new SafeEmail]])->passes());
     }
 
-    /**
-     * @dataProvider unsafeEmails
-     */
+    #[DataProvider('unsafeEmails')]
     public function test_rejects_control_and_non_ascii_email(string $email): void
     {
         $this->assertFalse(Validator::make(['email' => $email], ['email' => [new SafeEmail]])->passes());

@@ -491,3 +491,57 @@ owner.
   `SubRequestHandler` usage exists.
 - Phase 3 changed one configuration file and added one guard test. No
   dependency, lockfile, workflow, or application behavior changed.
+
+## 12. Phase 4 Execution: Framework Upgrade (2026-11-07)
+
+The upgrade ran against `spec/spec-refactor-laravel-12-upgrade.md` with the
+decision recorded in `docs/adr/0002-laravel-12-upgrade-target.md`.
+
+### What moved
+
+- `laravel/framework` ^10.10 (10.50.2) to ^12.69 (12.71.0).
+- `phpunit/phpunit` ^10.1 to ^11.0 (11.5.57).
+- `nunomaduro/collision` ^7.0 to ^8.9 (8.9.5).
+- `spatie/laravel-ignition` ^2.0 to ^2.12 (2.12.1).
+- `spatie/laravel-permission` stayed on `^6.9`, resolving 6.20.0 to 6.25.0.
+- `brick/math` stayed at 0.12.3 and `laravel/tinker` at `^2.8`.
+- `laravel/pint` was pinned to 1.22.1. A lock refresh had pulled 1.32.1, whose
+  new rules reformat unrelated files; that reformat is a separate concern from
+  a framework upgrade.
+
+### Application seams the upgrade broke
+
+1. **Cuti Besar tenure.** `CutiEligibilityService:48` used
+   `Carbon::now()->diffInYears($hireDate)`. Carbon 3 makes `diffIn*` signed, so
+   the delta turned negative and the five-year rule rejected every employee —
+   three tests failed. The call now asks for the absolute delta, and
+   `test_cuti_besar_tenure_uses_a_non_negative_year_delta` pins both sides of
+   the boundary with a fixed clock.
+2. **PHPUnit 11 metadata.** Nineteen `@dataProvider` doc-comments became
+   `#[DataProvider('...')]` attributes across nine test files. Every provider
+   was already `public static`, which PHPUnit 11 requires.
+
+No assertion was relaxed, no test was skipped, and no floor was lowered.
+
+### Gates
+
+- Full PHP suite: 628 passed, 4,644 assertions, 76.48 s.
+- `composer audit --locked`: no advisories. The four-GHSA baseline in
+  `.github/ComposerAuditPolicy.php` is now inert rather than load-bearing.
+- `npm audit --include=dev --audit-level=high`: 0 vulnerabilities.
+- `vendor/bin/pint --test`: PASS, 280 files.
+- `npm run build`: vite 8.3.6, manifest regenerated.
+- Chromium Playwright: base suite 2 passed; PKP suite 12 passed.
+
+One environment trap surfaced during the browser run and is worth recording.
+The first PKP attempt failed 10 scenarios with `getByLabel('Judul indikator')`
+missing and a strict-mode violation on the navigation link. The cause was a
+stale `public/hot` file left by an earlier Vite smoke test: it pointed the
+application at a dev server on port 5198 that was no longer running, so every
+page shipped unbuilt asset URLs, Alpine never initialised, and the mobile and
+desktop navigation both stayed in the DOM. Removing the gitignored `public/hot`
+restored the built manifest, and the suite passed without any code change.
+Nothing in the upgrade caused it.
+
+Laravel 13 remains a separate future decision. It needs `laravel/tinker ^3.0`
+and `brick/math ^0.14.2 || ^1.0`, and it drops the PHP 8.2 floor.
