@@ -2,7 +2,7 @@
 goal: Clear reachable dependency risk and enforce the audit contract
 version: 1.0
 date_created: 2026-11-06
-status: In Progress (Phase 3 shipped-config verified; live parity open)
+status: In Progress (Phase 3 shipped-config verified; live parity deferred)
 tags: ["refactor", "security", "dependencies", "ci", "tdd"]
 ---
 
@@ -157,13 +157,13 @@ approval. Phases 3 and 4 remain separate.
 - **GOAL-003:** Resolve or consciously accept the three findings that depend
   on live server topology.
 
-| Task      | Description                   | Ref     | Done | Date       |
-| --------- | ----------------------------- | ------- | :--: | :--------: |
-| TASK-301  | PROBE: shipped Nginx config   | SEC-001 | [x]  | 2026-11-07 |
-| TASK-301L | PROBE: live stack parity      | SEC-001 | [ ]  |            |
-| TASK-302  | GREEN: pin Vite host          | SEC-003 | [x]  | 2026-11-07 |
-| TASK-303  | DOC: topology decision        | SEC-001 | [x]  | 2026-11-07 |
-| TASK-30Y  | APPROVAL: before Phase 4      | PRN-001 | [ ]  |            |
+| Task      | Description                        | Ref     | Done | Date       |
+| --------- | ---------------------------------- | ------- | :--: | :--------: |
+| TASK-301  | PROBE: shipped Nginx config        | SEC-001 | [x]  | 2026-11-07 |
+| TASK-301L | PROBE: live parity at first deploy | SEC-001 | [ ]  | deferred   |
+| TASK-302  | GREEN: pin Vite host               | SEC-003 | [x]  | 2026-11-07 |
+| TASK-303  | DOC: topology decision             | SEC-001 | [x]  | 2026-11-07 |
+| TASK-30Y  | APPROVAL: before Phase 4           | PRN-001 | [ ]  |            |
 
 TASK-301 ran the topology probe against the Nginx and PHP-FPM pair this
 repository ships, not against a live deployment: `SCRIPT_NAME` is always
@@ -176,13 +176,25 @@ version. Details live in
 `docs/review/dependency-review-monthly-pkp-2026-11-06.md` section 11.
 
 TASK-301L stays open because these results describe the shipped
-configuration only. They become a statement about production once the owner
-confirms the live stack matches it: the front controller's `SCRIPT_NAME`,
-whether path information is split, and whether any proxy, CDN, or WAF path
-rule sits in front of PHP. If the live stack differs and exposes a
-proxy-level problem, the fix belongs in `docker/production/nginx/nginx.conf`
-(FILE-007) under its own approval, never in application code compensating for
-an unknown proxy.
+configuration only. As of 2026-11-07 no production deployment exists, so the
+owner deferred it to the first deployment instead of confirming parity now.
+Run the following against the deployed host before the first release approval;
+none of it writes to the application:
+
+```sh
+BASE=https://host.example
+# A guarded path must be refused by the proxy itself.
+curl -s -o /dev/null -w '%{http_code}\n' --path-as-is "$BASE/storage/dokumen/x"
+# A script-name-prefixed variant must not behave like that path.
+curl -s -o /dev/null -w '%{http_code}\n' --path-as-is "$BASE/index.phpstorage/dokumen/x"
+# Generated links must never echo an attacker-chosen authority.
+curl -s --path-as-is "$BASE//evil.example/login" | grep -c 'evil.example'
+```
+
+The expected results are `404`, `404`, and `0`. Any deviation means the live
+stack differs from the shipped configuration, and the fix belongs in
+`docker/production/nginx/nginx.conf` (FILE-007) under its own approval, never
+in application code compensating for an unknown proxy.
 
 TASK-302 pinned `server.host: '127.0.0.1'` in `vite.config.js`. The guard in
 `tests/Unit/ViteDevServerHostTest.php` resolves the host through Vite and

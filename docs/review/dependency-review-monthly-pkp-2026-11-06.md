@@ -406,12 +406,14 @@ examples.
 
 **Scope:** the pair runs `docker/production/nginx/nginx.conf`, the
 configuration this repository ships. These results describe that
-configuration, not a confirmed production stack. The live deployment still
-needs owner confirmation of three facts: the front controller's `SCRIPT_NAME`,
-whether the live server splits path information, and whether any proxy, CDN,
-or WAF path rule sits in front of PHP. If the live stack differs and exposes a
-proxy-level problem, the fix belongs in that Nginx configuration rather than
-in application code; no such change has been made.
+configuration, not a confirmed production stack. As of 2026-11-07 no
+production deployment exists, so parity is deferred to the first deployment,
+where the front controller's `SCRIPT_NAME`, path-information splitting, and
+any proxy, CDN, or WAF path rule must be checked before the first release
+approval. `plan/plan-refactor-pkp-dependencies-v1.0.md` records the exact
+commands. If the live stack differs and exposes a proxy-level problem, the fix
+belongs in that Nginx configuration rather than in application code; no such
+change has been made.
 
 ### Vite dev-server binding
 
