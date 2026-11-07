@@ -1,0 +1,16 @@
+docs/review/code-review-monthly-pkp-2026-11-06.md
+  h_00672522f4dbdd 1-245
+plan/plan-refactor-monthly-pkp-v1.0.md
+  h_00672522f4dbdd 537,574-578,772-774
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f7adb10c681319f8a5ff7ece0bdf75aec80a77c3",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
