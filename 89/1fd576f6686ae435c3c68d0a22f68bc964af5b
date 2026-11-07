@@ -1,0 +1,16 @@
+docs/review/laravel-eol-break-inventory-2026-11-07.md
+  h_00672522f4dbdd 73-74,90-91,93-103
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 308-312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "891fd576f6686ae435c3c68d0a22f68bc964af5b",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
