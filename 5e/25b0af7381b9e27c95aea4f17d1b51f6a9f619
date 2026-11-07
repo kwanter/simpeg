@@ -1,0 +1,22 @@
+PRODUCTION-RUNBOOK.md
+  h_00672522f4dbdd 97-103
+composer.lock
+  h_00672522f4dbdd 7
+docs/review/laravel-eol-break-inventory-2026-11-07.md
+  h_00672522f4dbdd 150,152-156,158-160,164,174-176,183,189-192
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 250-256
+tests/Unit/DependencyFloorTest.php
+  h_00672522f4dbdd 85-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5e25b0af7381b9e27c95aea4f17d1b51f6a9f619",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
