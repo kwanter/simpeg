@@ -1,0 +1,26 @@
+.github/ComposerAuditPolicy.php
+  h_00672522f4dbdd 12-17,20,57,61
+.github/check-composer-audit.php
+  h_00672522f4dbdd 19,21
+.github/workflows/php-tests.yml
+  h_00672522f4dbdd 96-99
+CONSTITUTION.md
+  h_00672522f4dbdd 5
+plan/plan-refactor-pkp-dependencies-v1.0.md
+  h_00672522f4dbdd 255-259
+spec/spec-refactor-laravel-12-upgrade.md
+  h_00672522f4dbdd 92-95,109-110
+tests/Unit/ComposerAuditPolicyTest.php
+  h_00672522f4dbdd 14,16,19,22,29,39,41-53,60-61,65,68-70,74-79,81-82,86,88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88652f79d96e7b5df702f4864060d0c09de47fb7",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
