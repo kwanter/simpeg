@@ -1,0 +1,16 @@
+docs/pkp-verification.md
+  h_00672522f4dbdd 197-223
+e2e/pkp.spec.js
+  h_00672522f4dbdd 286-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b0f3f65fbf5c39fce9e7fdf93d7c8188524e856",
+  "prompts": {},
+  "humans": {
+    "h_00672522f4dbdd": {
+      "author": "ragrin <kwanterpepen@gmail.com>"
+    }
+  }
+}
